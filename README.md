@@ -84,7 +84,7 @@ sequenceDiagram
     UC->>VO: NovoDocumento(cpf) / NovaPlaca(placa)
     VO-->>UC: VOs válidos (ou erro de validação)
     UC->>OS: NovaOrdemServico(cliente, veiculo, itens)
-    Note over OS: valida invariantes; status = Recebida
+    Note over OS: valida invariantes, status = Recebida
     OS-->>UC: entidade OrdemServico
     UC->>Repo: Salvar(ctx, os)
     Repo->>Repo: toModel(os) → model (tags gorm)
@@ -208,36 +208,3 @@ tech-challenge-oficina/
 > **Migrations:** `.sql` versionado em `migrations/` na raiz (onde o avaliador procura). Migration é detalhe de persistência: vive fora do domínio.
 >
 > **Testes:** cada pacote tem um `*_test.go` de exemplo (unitário, ao lado do código); os de integração ficam em `test/integration/` (se tiver).
-
---- 
-
-## Exemplo
-```mermaid
-sequenceDiagram
-    actor Mec as Mecânico
-    participant H as Handler (http)
-    participant UC as UseCase AbrirOS (application)
-    participant VO as VOs Documento/Placa (domain)
-    participant OS as OrdemServico (domain)
-    participant Repo as Repository (mysql)
-    participant DB as MySQL
-
-    Mec->>H: POST /ordens-servico (JSON + JWT)
-    Note over H: middleware valida o JWT
-    H->>H: bind JSON → request DTO
-    H->>H: toInput() → AbrirOSInput
-    H->>UC: Executar(ctx, AbrirOSInput)
-    UC->>VO: NovoDocumento(cpf) / NovaPlaca(placa)
-    VO-->>UC: VOs válidos (ou erro de validação)
-    UC->>OS: NovaOrdemServico(cliente, veiculo, itens)
-    Note over OS: valida invariantes; status = Recebida
-    OS-->>UC: entidade OrdemServico
-    UC->>Repo: Salvar(ctx, os)
-    Repo->>Repo: toModel(os) → model (tags gorm)
-    Repo->>DB: INSERT ordens_servico (+ itens)
-    DB-->>Repo: ok
-    Repo-->>UC: nil (ou erro de domínio traduzido)
-    UC-->>H: AbrirOSOutput
-    H->>H: toResponse() → response DTO
-    H-->>Mec: 201 Created (JSON)
-```
