@@ -25,12 +25,19 @@ Back-end monolítico em **arquitetura em camadas** com DDD tático. **Stack:** G
 
 ### Injeção de dependência
 - Repositório injetado no use case via construtor, como **interface** (definida no domínio).
-- Use Case injetado no handler via construtor, como **interface** (definida no handler).
+- Use Case injetado no handler via construtor, como **interface** (definida no handler — consumidor).
 
 ### Três fronteiras de mapeamento (cada uma dona de uma camada)
 1. Handler (infra): HTTP DTO ↔ DTO da aplicação.
 2. Use case (aplicação): DTO de entrada → **entidade de domínio** (nunca para o model).
 3. Repositório (infra): entidade ↔ model (GORM).
+
+### Handlers magros — DTO e mapper de transporte
+- Para não inflar os handlers, cada agregado tem no pacote `http` dois arquivos além do handler: `*_dto.go` (structs de request/response com tags `json:`) e `*_mapper.go` (converte HTTP DTO ↔ DTO da aplicação, via `toInput()`/`toResponse()`).
+- O handler fica magro: `bind → toInput() → use case → toResponse() → resposta`.
+- **Dois DTOs, duas camadas — não confundir:** `application/ordemservico/dto.go` são os DTOs **da aplicação** (contrato do use case, agnóstico de HTTP); `http/ordem_servico_dto.go` são os DTOs **de transporte** (request/response HTTP). O mapper de transporte é a fronteira 1 entre eles.
+- O mapper de transporte é **DTO ↔ DTO**: nunca importa entidade de domínio nem constrói Value Object — passa primitivos; a validação (CPF/CNPJ, placa) fica no use case/VO. Mantê-lo **fino** (quase cópia) é o preço de manter a aplicação agnóstica de transporte.
+- Se o pacote `http` crescer demais, dá para namespacear `http/` por agregado (como na persistência); custa apenas aliases de import no `principal.go`.
 
 ### Regra de dependência
 - `infrastructure` → importa `application` e `domain`.
@@ -38,7 +45,8 @@ Back-end monolítico em **arquitetura em camadas** com DDD tático. **Stack:** G
 - `domain` → não importa nada de dentro do projeto.
 
 ### Value Objects auto-validáveis
-- `Documento` (CPF/CNPJ), `Placa`, `Status`. Nascem válidos ou não nascem. Validação de dados sensíveis mora aqui.
+- `Documento` (CPF/CNPJ), `Placa`, `Dinheiro`. Nascem válidos ou não nascem. Validação de dados sensíveis (CPF/CNPJ, placa) mora aqui.
+- `Status` (com máquina de estados) é VO **exclusivo da Ordem de Serviço** — vive em `ordemservico/status.go`, **não** em `shared/` (uma Peça não tem "Em diagnóstico").
 
 ### Segurança e qualidade
 - JWT (`golang-jwt/v5`) nas APIs administrativas.
@@ -47,10 +55,46 @@ Back-end monolítico em **arquitetura em camadas** com DDD tático. **Stack:** G
 
 ### Convenção de nomes (regra híbrida)
 - **Scaffolding técnico em inglês:** camadas e infra (`domain`, `application`, `infrastructure`, `persistence`) e artefatos de padrão (`repository.go`, `mapper.go`, `model.go`, `router.go`, `jwt.go`, `config.go`, `connection.go`).
-- **Negócio em português** (Linguagem Ubíqua): pacotes de agregado (`ordemservico`, `cliente`…) e arquivos de conceito (`ordem_servico.go`, `status.go`, `documento.go`). `compartilhado/` fica em PT por agrupar VOs de negócio.
+- **Negócio em português** (Linguagem Ubíqua): pacotes de agregado (`ordemservico`, `cliente`…) e arquivos de conceito (`ordem_servico.go`, `status.go`, `documento.go`). `shared/` fica em inglês por ser agrupamento técnico; os VOs dentro dele têm nome de negócio (PT).
 - **Pasta namespaceada por agregado → nome de arquivo genérico** (`model.go`, `repository.go`). **Pasta plana → prefixo por entidade** (ex.: `http/ordem_servico_handler.go`) para desambiguar.
 - **Pacotes** (= nome da pasta) em ASCII minúsculo, sem acento e sem underscore. **Arquivos** podem usar underscore.
 - `cmd/api/principal.go`: o arquivo tem nome PT, mas `package main` e `func main()` são fixos da linguagem.
+
+---
+
+## Fluxo da aplicação — exemplo: criar Ordem de Serviço
+
+Sequência de uma requisição de criação de OS atravessando as camadas. Mostra as três fronteiras de mapeamento (HTTP DTO → DTO da aplicação → entidade → model), a validação nos Value Objects e o invariante de status inicial (`Recebida`).
+
+```mermaid
+sequenceDiagram
+    actor Mec as Mecânico
+    participant H as Handler (http)
+    participant UC as UseCase AbrirOS (application)
+    participant VO as VOs Documento/Placa (domain)
+    participant OS as OrdemServico (domain)
+    participant Repo as Repository (mysql)
+    participant DB as MySQL
+
+    Mec->>H: POST /ordens-servico (JSON + JWT)
+    Note over H: middleware valida o JWT
+    H->>H: bind JSON → request DTO
+    H->>H: toInput() → AbrirOSInput
+    H->>UC: Executar(ctx, AbrirOSInput)
+    UC->>VO: NovoDocumento(cpf) / NovaPlaca(placa)
+    VO-->>UC: VOs válidos (ou erro de validação)
+    UC->>OS: NovaOrdemServico(cliente, veiculo, itens)
+    Note over OS: valida invariantes; status = Recebida
+    OS-->>UC: entidade OrdemServico
+    UC->>Repo: Salvar(ctx, os)
+    Repo->>Repo: toModel(os) → model (tags gorm)
+    Repo->>DB: INSERT ordens_servico (+ itens)
+    DB-->>Repo: ok
+    Repo-->>UC: nil (ou erro de domínio traduzido)
+    UC-->>H: AbrirOSOutput
+    H->>H: toResponse() → response DTO
+    H-->>Mec: 201 Created (JSON)
+```
 
 ---
 
@@ -60,6 +104,7 @@ Autorizadas pela permissão de "monolito em camadas" do enunciado; nenhuma delas
 
 - **Unit of Work formal** → a única transação multi-agregado (reserva de peça) resolve com um método transacional simples usando a `tx` do GORM.
 - **Eventos de domínio como objetos (`eventos.go`)** → o Event Storming continua como artefato de modelagem; no código, as políticas são orquestração direta dentro do use case (sem event bus).
+
 ---
 
 ## Estrutura de pastas (MVP)
@@ -76,7 +121,7 @@ tech-challenge-oficina/
 │   ├── domain/                                   # núcleo puro — sem gin/gorm
 │   │   ├── ordemservico/                         # agregado de referência
 │   │   │   ├── ordem_servico.go                  # entidade + agregado raiz; invariantes
-│   │   │   ├── status.go                         # VO Status + máquina de estados (transições válidas)
+│   │   │   ├── status.go                         # VO Status + máquina de estados (exclusivo da OS)
 │   │   │   ├── repository.go                     # INTERFACE do repositório (sem GORM)
 │   │   │   ├── errors.go                         # erros de domínio (ErrNaoEncontrada, ErrStatusInvalido...)
 │   │   │   └── ordem_servico_test.go             # teste unitário (invariantes + transições de status)
@@ -87,12 +132,12 @@ tech-challenge-oficina/
 │   │   └── shared/                               # value objects de negócio reutilizáveis
 │   │       ├── documento.go                      # VO CPF/CNPJ (auto-validável)
 │   │       ├── placa.go                          # VO Placa
-│   │       ├── status.go                         # VO Status
+│   │       ├── dinheiro.go                       # VO Dinheiro (orçamento, preços de serviço/peça)
 │   │       └── documento_test.go                 # teste unitário dos VOs (validação CPF/CNPJ, placa)
 │   │
 │   ├── application/                              # casos de uso — orquestra o domínio, não conhece GORM
 │   │   ├── ordemservico/
-│   │   │   ├── dto.go                            # DTOs de entrada/saída (fronteira da aplicação)
+│   │   │   ├── dto.go                            # DTOs DA APLICAÇÃO (input/output do use case)
 │   │   │   ├── abrir_ordem_servico.go            # caso de uso concreto (injeta o repositório)
 │   │   │   └── abrir_ordem_servico_test.go       # teste unitário (repositório mockado)
 │   │   ├── cliente/                              # mesmo padrão: dto.go, *_caso_uso.go, *_test.go
@@ -114,10 +159,13 @@ tech-challenge-oficina/
 │       │       ├── veiculo/
 │       │       ├── servico/
 │       │       └── peca/
-│       ├── http/                                 # entrega REST com Gin
+│       ├── http/                                 # entrega REST com Gin — handlers magros
 │       │   ├── router.go                         # rotas + middlewares
-│       │   ├── ordem_servico_handler.go          # handler (request → use case → response)
-│       │   ├── ordem_servico_handler_test.go     # teste unitário do handler (use case mockado, httptest)
+│       │   ├── ordem_servico_handler.go          # handler magro (bind → toInput → use case → toResponse)
+│       │   ├── ordem_servico_dto.go              # DTOs DE TRANSPORTE (request/response HTTP, tags json)
+│       │   ├── ordem_servico_mapper.go           # HTTP DTO ↔ DTO da aplicação (toInput/toResponse)
+│       │   ├── ordem_servico_handler_test.go     # teste do handler (use case mockado, httptest)
+│       │   ├── ordem_servico_mapper_test.go      # teste do mapeamento de transporte
 │       │   ├── authentication_handler.go         # login + emissão do JWT
 │       │   └── middleware/
 │       │       ├── authentication_middleware.go  # valida JWT nas rotas administrativas
@@ -160,3 +208,36 @@ tech-challenge-oficina/
 > **Migrations:** `.sql` versionado em `migrations/` na raiz (onde o avaliador procura). Migration é detalhe de persistência: vive fora do domínio.
 >
 > **Testes:** cada pacote tem um `*_test.go` de exemplo (unitário, ao lado do código); os de integração ficam em `test/integration/` (se tiver).
+
+--- 
+
+## Exemplo
+```mermaid
+sequenceDiagram
+    actor Mec as Mecânico
+    participant H as Handler (http)
+    participant UC as UseCase AbrirOS (application)
+    participant VO as VOs Documento/Placa (domain)
+    participant OS as OrdemServico (domain)
+    participant Repo as Repository (mysql)
+    participant DB as MySQL
+
+    Mec->>H: POST /ordens-servico (JSON + JWT)
+    Note over H: middleware valida o JWT
+    H->>H: bind JSON → request DTO
+    H->>H: toInput() → AbrirOSInput
+    H->>UC: Executar(ctx, AbrirOSInput)
+    UC->>VO: NovoDocumento(cpf) / NovaPlaca(placa)
+    VO-->>UC: VOs válidos (ou erro de validação)
+    UC->>OS: NovaOrdemServico(cliente, veiculo, itens)
+    Note over OS: valida invariantes; status = Recebida
+    OS-->>UC: entidade OrdemServico
+    UC->>Repo: Salvar(ctx, os)
+    Repo->>Repo: toModel(os) → model (tags gorm)
+    Repo->>DB: INSERT ordens_servico (+ itens)
+    DB-->>Repo: ok
+    Repo-->>UC: nil (ou erro de domínio traduzido)
+    UC-->>H: AbrirOSOutput
+    H->>H: toResponse() → response DTO
+    H-->>Mec: 201 Created (JSON)
+```
