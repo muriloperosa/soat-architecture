@@ -115,7 +115,7 @@ Um agregado (`ordemservico`) é mostrado como referência; os demais (`cliente`,
 tech-challenge-oficina/
 ├── cmd/
 │   └── api/
-│       └── principal.go                          # composition root: wiring / injeção de dependência
+│       └── main.go                               # composition root: wiring / injeção de dependência
 │
 ├── internal/
 │   ├── domain/                                   # núcleo puro — sem gin/gorm
