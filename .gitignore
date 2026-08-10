@@ -1,0 +1,18 @@
+# Binários
+/bin/
+/tmp/
+*.exe
+
+# Ambiente
+.env
+
+# IDE
+.idea/
+.vscode/
+
+# Testes/coverage
+*.out
+coverage.html
+
+# Go
+vendor/
