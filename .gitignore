@@ -1,0 +1,20 @@
+# Binários
+/bin/
+/tmp/
+*.exe
+
+# Ambiente
+.env
+
+# IDE
+.idea/
+.vscode/*
+!.vscode/launch.json
+
+# Testes/coverage
+*.out
+coverage.html
+
+# Go
+vendor/
+__debug_bin*

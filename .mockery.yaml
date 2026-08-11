@@ -1,0 +1,17 @@
+with-expecter: true
+dir: "{{.InterfaceDir}}/mocks"
+outpkg: mocks
+filename: "{{.InterfaceName}}.go"
+mockname: "{{.InterfaceName}}"
+resolve-type-alias: false
+disable-version-string: true
+issue-845-fix: true
+packages:
+  github.com/muriloperosa/soat-architecture/internal/domain:
+    config:
+      all: true
+      recursive: true
+  github.com/muriloperosa/soat-architecture/internal/application:
+    config:
+      all: true
+      recursive: true

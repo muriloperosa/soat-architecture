@@ -1,0 +1,27 @@
+.git
+.github/
+.vscode/
+.idea/
+bin/
+tmp/
+__debug_bin*
+*.md
+docs/adr/
+docs/ARQUITETURA.md
+test/
+**/*_test.go
+.dev/
+.claude/
+
+# Env / secrets
+.env.example
+
+# Test/coverage artifacts
+*.out
+coverage.html
+
+# Local dev files
+.air.toml
+.mockery.yaml
+compose.yml
+Makefile
