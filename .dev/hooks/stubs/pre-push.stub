@@ -3,6 +3,9 @@
 # Roda mocks, lint, testes e swagger antes de liberar o push.
 set -e
 
+export PATH="$PATH:$(go env GOPATH)/bin"
+export TERM="${TERM:-dumb}"
+
 echo "Running pre-push checks..."
 
 echo "-> make mocks"
