@@ -4,6 +4,20 @@ API de gestão de ordens de serviço de uma oficina mecânica. Back-end em Go, G
 
 Decisões e detalhes de arquitetura em [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md) e nos [ADRs](docs/adr/).
 
+## Wiring e rotas
+
+Composição de dependências (config, conexão de banco e, futuramente, repositórios e use cases por domínio) fica centralizada no `Container`, em `internal/infrastructure/wiring/container.go`. É o único lugar que monta o grafo de dependências da aplicação; `main.go` cria o `Container` e passa pra `httpinfra.NewRouter`.
+
+Rotas são registradas por domínio: cada domínio tem seu próprio `<dominio>_routes.go` dentro de `internal/infrastructure/http` (ex: `health_routes.go`), com uma função `Register<Dominio>Routes(rg *gin.RouterGroup, c *wiring.Container)`. `router.go` só monta o `*gin.Engine`, aplica middlewares globais e chama cada `Register*Routes` — não conhece detalhe de nenhum domínio.
+
+Ao implementar um novo domínio (ex: `cliente`):
+
+1. Adicione os campos necessários (repositório, use cases) no `Container` e construa-os em `NewContainer`.
+2. Crie `<dominio>_routes.go` com `Register<Dominio>Routes`.
+3. Registre a chamada em `router.go`.
+
+Ver spec completa em [`docs/superpowers/specs/2026-08-11-wiring-routes-design.md`](docs/superpowers/specs/2026-08-11-wiring-routes-design.md).
+
 ## Pré-requisitos
 
 - Go 1.26 ou superior
