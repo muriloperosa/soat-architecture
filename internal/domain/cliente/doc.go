@@ -1,7 +1,3 @@
-// Package cliente contém a entidade Cliente, que representa a pessoa que
-// solicita serviço na oficina, com seus dados cadastrais e documento de
-// identificação.
-//
-// Reúne também a interface de repositório e os erros de domínio do
-// agregado, seguindo o mesmo padrão estrutural de internal/domain/ordemservico.
+// Package cliente segue o mesmo padrão de internal/domain/ordemservico.
+// Implementação pendente.
 package cliente
