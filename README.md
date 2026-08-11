@@ -28,6 +28,9 @@ cp .env.example .env
 | `DB_USER` | Usuário do MySQL | `root` |
 | `DB_PASSWORD` | Senha do MySQL | `root` |
 | `DB_NAME` | Nome do banco | `mecanica` |
+| `DB_MAX_OPEN_CONNS` | Máximo de conexões abertas no pool | `25` |
+| `DB_MAX_IDLE_CONNS` | Máximo de conexões ociosas mantidas no pool | `5` |
+| `DB_CONN_MAX_LIFETIME_MINUTES` | Tempo máximo, em minutos, que uma conexão pode ficar aberta antes de ser reciclada | `5` |
 
 ## Comandos disponíveis
 

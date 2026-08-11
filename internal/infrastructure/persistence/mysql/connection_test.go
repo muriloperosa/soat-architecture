@@ -1,10 +1,10 @@
-package mysql_test
+package mysql
 
 import (
 	"testing"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/config"
-	"github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql"
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,7 +17,24 @@ func TestNewConnection_ErroComHostInvalido(t *testing.T) {
 		DBName:     "mecanica",
 	}
 
-	_, err := mysql.NewConnection(cfg)
+	_, err := NewConnection(cfg)
 
 	require.Error(t, err)
+}
+
+func TestConfigurePool_AplicaLimitesDoConfig(t *testing.T) {
+	sqlDB, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer sqlDB.Close()
+
+	cfg := &config.Config{
+		DBMaxOpenConns:           50,
+		DBMaxIdleConns:           10,
+		DBConnMaxLifetimeMinutes: 15,
+	}
+
+	configurePool(sqlDB, cfg)
+
+	stats := sqlDB.Stats()
+	require.Equal(t, 50, stats.MaxOpenConnections)
 }

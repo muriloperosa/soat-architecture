@@ -11,6 +11,10 @@ type Config struct {
 	DBUser     string `env:"DB_USER,required"`
 	DBPassword string `env:"DB_PASSWORD,required"`
 	DBName     string `env:"DB_NAME,required"`
+
+	DBMaxOpenConns           int `env:"DB_MAX_OPEN_CONNS" envDefault:"25"`
+	DBMaxIdleConns           int `env:"DB_MAX_IDLE_CONNS" envDefault:"5"`
+	DBConnMaxLifetimeMinutes int `env:"DB_CONN_MAX_LIFETIME_MINUTES" envDefault:"5"`
 }
 
 // Load lê as variáveis de ambiente do processo e retorna um Config validado.
