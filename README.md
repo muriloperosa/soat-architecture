@@ -139,6 +139,14 @@ open coverage.html
 make lint
 ```
 
+## Swagger
+
+```bash
+make swagger
+```
+
+Gera a documentação Swagger (via `swag`) a partir das anotações nos handlers, em `docs/swagger/` (`docs.go`, `swagger.json`, `swagger.yaml`). O `docs.go` é importado pelo módulo, então esses arquivos são versionados no repositório; rode `make swagger` de novo depois de anotar ou alterar um handler. Ainda não existe rota servindo a UI do Swagger, só a geração dos arquivos por enquanto.
+
 ## Mocks
 
 ```bash

@@ -1,4 +1,4 @@
-.PHONY: help run build test coverage lint up down db-up db-down tidy vendor setup dev debug mocks
+.PHONY: help run build test coverage lint up down db-up db-down tidy vendor setup dev debug mocks swagger
 
 GREEN := $(shell tput setaf 2)
 RESET := $(shell tput sgr0)
@@ -21,6 +21,7 @@ help:
 	@echo "  $(GREEN)dev$(RESET):      Run the API with hot reload (air)"
 	@echo "  $(GREEN)debug$(RESET):    Run the API under delve, headless, listening on :2345"
 	@echo "  $(GREEN)mocks$(RESET):    Generate mocks for domain/application interfaces (mockery)"
+	@echo "  $(GREEN)swagger$(RESET):  Generate Swagger docs into docs/swagger (swag)"
 
 run:
 	go run ./cmd/api
@@ -67,6 +68,9 @@ setup:
 
 mocks:
 	mockery
+
+swagger:
+	swag init -g cmd/api/main.go -o docs/swagger
 
 dev:
 	air -c .air.toml

@@ -8,6 +8,10 @@ import (
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql"
 )
 
+// @title Sistema de Oficina Mecanica API
+// @version 1.0
+// @description API de gestão de ordens de serviço de uma oficina mecânica.
+// @BasePath /
 func main() {
 	cfg, err := config.Load()
 	if err != nil {

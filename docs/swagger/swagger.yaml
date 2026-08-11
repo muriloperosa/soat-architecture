@@ -1,0 +1,29 @@
+basePath: /
+info:
+  contact: {}
+  description: API de gestao de ordens de servico de uma oficina mecanica.
+  title: Sistema de Oficina Mecanica API
+  version: "1.0"
+paths:
+  /health:
+    get:
+      description: Retorna 200 se a API e a conexao com o MySQL estao respondendo
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Verifica saude da API
+      tags:
+      - health
+swagger: "2.0"
