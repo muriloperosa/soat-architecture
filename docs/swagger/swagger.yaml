@@ -1,11 +1,11 @@
-basePath: /
+basePath: /v1
 info:
   contact: {}
   description: API de gestão de ordens de serviço de uma oficina mecânica.
   title: Sistema de Oficina Mecanica API
   version: "1.0"
 paths:
-  /v1/health:
+  /health:
     get:
       description: Retorna 200 se a API e a conexao com o MySQL estao respondendo
       produces:

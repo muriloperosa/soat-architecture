@@ -6,9 +6,9 @@
         "contact": {},
         "version": "1.0"
     },
-    "basePath": "/",
+    "basePath": "/v1",
     "paths": {
-        "/v1/health": {
+        "/health": {
             "get": {
                 "description": "Retorna 200 se a API e a conexao com o MySQL estao respondendo",
                 "produces": [

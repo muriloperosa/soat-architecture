@@ -11,7 +11,7 @@ import (
 // @title Sistema de Oficina Mecanica API
 // @version 1.0
 // @description API de gestão de ordens de serviço de uma oficina mecânica.
-// @BasePath /
+// @BasePath /v1
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
