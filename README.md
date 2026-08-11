@@ -139,6 +139,14 @@ open coverage.html
 make lint
 ```
 
+## Mocks
+
+```bash
+make mocks
+```
+
+Gera mocks (via `mockery`, configurado em `.mockery.yaml`) para as interfaces de `internal/domain/` e `internal/application/`, com o padrão `with-expecter` do `testify/mock`. Cada mock nasce em `mocks/` dentro do pacote da interface, por exemplo `internal/domain/ordemservico/mocks/Repository.go`. Os arquivos gerados são versionados no repositório; rode `make mocks` de novo sempre que uma interface mudar.
+
 ## Empacotamento com vendor
 
 ```bash

@@ -1,4 +1,4 @@
-.PHONY: help run build test coverage lint up down db-up db-down tidy vendor setup dev debug
+.PHONY: help run build test coverage lint up down db-up db-down tidy vendor setup dev debug mocks
 
 GREEN := $(shell tput setaf 2)
 RESET := $(shell tput sgr0)
@@ -17,9 +17,10 @@ help:
 	@echo "  $(GREEN)db-down$(RESET):  Stop only the MySQL container"
 	@echo "  $(GREEN)tidy$(RESET):     Run go mod tidy"
 	@echo "  $(GREEN)vendor$(RESET):   Run go mod vendor (after tidy)"
-	@echo "  $(GREEN)setup$(RESET):    Download deps and install dev tools (swag, migrate, air, delve)"
+	@echo "  $(GREEN)setup$(RESET):    Download deps and install dev tools (swag, migrate, air, delve, mockery)"
 	@echo "  $(GREEN)dev$(RESET):      Run the API with hot reload (air)"
 	@echo "  $(GREEN)debug$(RESET):    Run the API under delve, headless, listening on :2345"
+	@echo "  $(GREEN)mocks$(RESET):    Generate mocks for domain/application interfaces (mockery)"
 
 run:
 	go run ./cmd/api
@@ -62,6 +63,10 @@ setup:
 	go install github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 	go install github.com/air-verse/air@latest
 	go install github.com/go-delve/delve/cmd/dlv@latest
+	go install github.com/vektra/mockery/v2@latest
+
+mocks:
+	mockery
 
 dev:
 	air -c .air.toml
