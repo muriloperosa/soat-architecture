@@ -33,7 +33,7 @@ func TestHealthHandler_RetornaOKQuandoBancoResponde(t *testing.T) {
 
 	router := handler.NewRouter(db)
 
-	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/health", nil)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -47,7 +47,7 @@ func TestHealthHandler_Retorna503QuandoBancoFalha(t *testing.T) {
 
 	router := handler.NewRouter(db)
 
-	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/health", nil)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 

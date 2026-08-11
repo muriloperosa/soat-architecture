@@ -53,7 +53,7 @@ make up
 Confirma que a API está no ar:
 
 ```bash
-curl http://localhost:8080/health
+curl http://localhost:8080/v1/health
 # {"status":"ok"}
 ```
 
@@ -145,7 +145,13 @@ make lint
 make swagger
 ```
 
-Gera a documentação Swagger (via `swag`) a partir das anotações nos handlers, em `docs/swagger/` (`docs.go`, `swagger.json`, `swagger.yaml`). O `docs.go` é importado pelo módulo, então esses arquivos são versionados no repositório; rode `make swagger` de novo depois de anotar ou alterar um handler. Ainda não existe rota servindo a UI do Swagger, só a geração dos arquivos por enquanto.
+Gera a documentação Swagger (via `swag`) a partir das anotações nos handlers, em `docs/swagger/` (`docs.go`, `swagger.json`, `swagger.yaml`). O `docs.go` é importado pelo módulo, então esses arquivos são versionados no repositório; rode `make swagger` de novo depois de anotar ou alterar um handler.
+
+A UI fica em `/swagger/index.html`. Com a API no ar (`make up` ou `make dev`), acesse:
+
+```
+http://localhost:8080/swagger/index.html
+```
 
 ## Mocks
 

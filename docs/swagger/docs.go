@@ -15,7 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/health": {
+        "/v1/health": {
             "get": {
                 "description": "Retorna 200 se a API e a conexao com o MySQL estao respondendo",
                 "produces": [
@@ -57,7 +57,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "Sistema de Oficina Mecanica API",
-	Description:      "API de gestao de ordens de servico de uma oficina mecanica.",
+	Description:      "API de gestão de ordens de serviço de uma oficina mecânica.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

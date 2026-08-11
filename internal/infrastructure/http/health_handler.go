@@ -15,7 +15,7 @@ import (
 // @Produce json
 // @Success 200 {object} map[string]string
 // @Failure 503 {object} map[string]string
-// @Router /health [get]
+// @Router /v1/health [get]
 func NewHealthHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		sqlDB, err := db.DB()

@@ -1,5 +1,6 @@
 .git
 bin/
 *.md
-docs/
+docs/adr/
+docs/ARQUITETURA.md
 test/
