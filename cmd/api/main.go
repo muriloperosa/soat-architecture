@@ -6,6 +6,7 @@ import (
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/config"
 	httpinfra "github.com/muriloperosa/soat-architecture/internal/infrastructure/http"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/wiring"
 )
 
 // @title Sistema de Oficina Mecânica API
@@ -25,7 +26,8 @@ func main() {
 		log.Fatalf("error connecting to MySQL: %v", err)
 	}
 
-	router := httpinfra.NewRouter(db)
+	container := wiring.NewContainer(cfg, db)
+	router := httpinfra.NewRouter(container)
 
 	log.Printf("starting server on port %s\n", cfg.AppPort)
 	if err := router.Run(":" + cfg.AppPort); err != nil {

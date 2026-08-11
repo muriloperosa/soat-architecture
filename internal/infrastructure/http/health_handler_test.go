@@ -7,6 +7,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	handler "github.com/muriloperosa/soat-architecture/internal/infrastructure/http"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/wiring"
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -31,7 +32,7 @@ func TestHealthHandler_RetornaOKQuandoBancoResponde(t *testing.T) {
 	db, mock := newMockedGormDB(t)
 	mock.ExpectPing()
 
-	router := handler.NewRouter(db)
+	router := handler.NewRouter(wiring.NewContainer(nil, db))
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/health", nil)
 	rec := httptest.NewRecorder()
@@ -45,7 +46,7 @@ func TestHealthHandler_Retorna503QuandoBancoFalha(t *testing.T) {
 	db, mock := newMockedGormDB(t)
 	mock.ExpectPing().WillReturnError(sqlmock.ErrCancelled)
 
-	router := handler.NewRouter(db)
+	router := handler.NewRouter(wiring.NewContainer(nil, db))
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/health", nil)
 	rec := httptest.NewRecorder()
