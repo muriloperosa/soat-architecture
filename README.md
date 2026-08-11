@@ -73,7 +73,9 @@ Instala as dependências do módulo e as ferramentas de dev (`swag`, `migrate`, 
 make setup
 ```
 
-As ferramentas vão para `$(go env GOPATH)/bin`. Garanta que esse caminho está no `PATH` do seu shell.
+As ferramentas vão para `$(go env GOPATH)/bin`; o `Makefile` já chama todas por caminho completo, não precisa desse diretório estar no `PATH` do seu shell.
+
+`make run`, `make dev` e `make debug` carregam as variáveis do `.env` automaticamente (o `Makefile` faz `include .env` e exporta pro processo). Garanta que o `.env` existe (`cp .env.example .env`, seção Configuração acima) antes de rodar qualquer um desses.
 
 Sobe só o MySQL:
 

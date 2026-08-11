@@ -5,6 +5,11 @@ RESET := $(shell tput sgr0)
 
 GOBIN := $(shell go env GOPATH)/bin
 
+ifneq (,$(wildcard ./.env))
+include .env
+export
+endif
+
 help:
 	@echo "Available commands:"
 	@echo "  $(GREEN)help$(RESET):     See this help"
