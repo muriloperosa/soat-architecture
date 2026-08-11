@@ -161,6 +161,22 @@ make mocks
 
 Gera mocks (via `mockery`, configurado em `.mockery.yaml`) para as interfaces de `internal/domain/` e `internal/application/`, com o padrão `with-expecter` do `testify/mock`. Cada mock nasce em `mocks/` dentro do pacote da interface, por exemplo `internal/domain/ordemservico/mocks/Repository.go`. Os arquivos gerados são versionados no repositório; rode `make mocks` de novo sempre que uma interface mudar.
 
+## Git hooks
+
+O repositório tem um stub de hook `pre-push` em `.dev/hooks/stubs/pre-push.stub`, que roda `make mocks`, `make lint`, `make test` e `make swagger` antes de liberar o push. Ele não vem instalado por padrão (hooks do Git não são versionados dentro de `.git/`); cada dev instala localmente:
+
+```bash
+make hooks-install
+```
+
+Copia o stub para `.git/hooks/pre-push` e dá permissão de execução. Se o push falhar por causa do hook, corrija o que ele acusou (mocks desatualizados, lint, teste quebrado, swagger desatualizado) e tente de novo.
+
+Para remover:
+
+```bash
+make hooks-uninstall
+```
+
 ## Empacotamento com vendor
 
 ```bash

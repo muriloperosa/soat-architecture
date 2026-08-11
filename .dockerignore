@@ -4,3 +4,4 @@ bin/
 docs/adr/
 docs/ARQUITETURA.md
 test/
+.dev/

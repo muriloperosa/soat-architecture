@@ -1,0 +1,20 @@
+#!/bin/sh
+# pre-push hook: instalado via `make hooks-install`.
+# Roda mocks, lint, testes e swagger antes de liberar o push.
+set -e
+
+echo "Running pre-push checks..."
+
+echo "-> make mocks"
+make mocks
+
+echo "-> make lint"
+make lint
+
+echo "-> make test"
+make test
+
+echo "-> make swagger"
+make swagger
+
+echo "Pre-push checks passed."

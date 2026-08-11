@@ -1,4 +1,4 @@
-.PHONY: help run build test coverage lint up down db-up db-down tidy vendor setup dev debug mocks swagger
+.PHONY: help run build test coverage lint up down db-up db-down tidy vendor setup dev debug mocks swagger hooks-install hooks-uninstall
 
 GREEN := $(shell tput setaf 2)
 RESET := $(shell tput sgr0)
@@ -22,6 +22,8 @@ help:
 	@echo "  $(GREEN)debug$(RESET):    Run the API under delve, headless, listening on :2345"
 	@echo "  $(GREEN)mocks$(RESET):    Generate mocks for domain/application interfaces (mockery)"
 	@echo "  $(GREEN)swagger$(RESET):  Generate Swagger docs into docs/swagger (swag)"
+	@echo "  $(GREEN)hooks-install$(RESET):   Install the pre-push Git hook (mocks, lint, test, swagger)"
+	@echo "  $(GREEN)hooks-uninstall$(RESET): Uninstall the pre-push Git hook"
 
 run:
 	go run ./cmd/api
@@ -77,3 +79,14 @@ dev:
 
 debug:
 	dlv debug ./cmd/api --headless --listen=:2345 --api-version=2 --accept-multiclient
+
+hooks-install:
+	@echo "Installing Git hooks..."
+	@cp .dev/hooks/stubs/pre-push.stub .git/hooks/pre-push
+	@chmod +x .git/hooks/pre-push
+	@echo "$(GREEN)Git hooks installed successfully!$(RESET)"
+
+hooks-uninstall:
+	@echo "Uninstalling Git hooks..."
+	@rm -f .git/hooks/pre-push
+	@echo "$(GREEN)Git hooks uninstalled successfully!$(RESET)"
