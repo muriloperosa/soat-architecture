@@ -1,0 +1,17 @@
+# 0001. Monólito em camadas com DDD tático
+
+## Status
+Aceita
+
+## Contexto
+O enunciado do Tech Challenge Fase 1 permite explicitamente "monolito em camadas". O sistema tem poucos bounded contexts (ordem de serviço, cliente, veículo, serviço, peça) e prazo de MVP. Uma arquitetura de microsserviços ou hexagonal completa seria overengineering nesse estágio.
+
+## Decisão
+Adotar arquitetura em camadas (`domain` -> `application` -> `infrastructure`) com núcleo tático de DDD: entidades, Value Objects auto validáveis, agregados, repositórios como interface. Simplificações conscientes do MVP:
+- Sem Unit of Work formal. A única transação multi agregado (reserva de peça) usa a `tx` do GORM diretamente.
+- Sem barramento de eventos de domínio. Políticas são orquestração direta dentro do use case.
+
+## Consequências
+Positivas: onboarding rápido, menos infraestrutura acidental, domínio ainda testável e isolado de Gin e GORM.
+
+Negativas: não escala para múltiplos serviços ou times sem refatoração. Se o número de agregados crescer muito, a ausência de UoW formal e de event bus vira dívida técnica deliberada, a ser revisitada em uma ADR futura.
