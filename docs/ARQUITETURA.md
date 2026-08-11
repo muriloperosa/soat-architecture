@@ -124,3 +124,16 @@ soat-architecture/
 Migrations: `.sql` versionado em `migrations/` na raiz, onde o avaliador procura. Migration é detalhe de persistência, vive fora do domínio.
 
 Testes: cada pacote tem um `*_test.go` de exemplo, unitário, ao lado do código. Os de integração ficam em `test/integration/`.
+
+## Wiring e rotas
+
+Composição de dependências (config, conexão de banco e, futuramente, repositórios e use cases por domínio) fica centralizada no `Container`, em `internal/infrastructure/wiring/container.go`. É o único lugar que monta o grafo de dependências da aplicação; `main.go` cria o `Container` e passa pra `httpinfra.NewRouter`.
+
+Rotas são registradas por domínio: cada domínio tem seu próprio `<dominio>_routes.go` dentro de `internal/infrastructure/http` (ex: `health_routes.go`), com uma função `Register<Dominio>Routes(rg *gin.RouterGroup, c *wiring.Container)`. `router.go` só monta o `*gin.Engine`, aplica middlewares globais e chama cada `Register*Routes` — não conhece detalhe de nenhum domínio.
+
+Ao implementar um novo domínio (ex: `cliente`):
+
+1. Adicione os campos necessários (repositório, use cases) no `Container` e construa-os em `NewContainer`.
+2. Crie `<dominio>_routes.go` com `Register<Dominio>Routes`.
+3. Registre a chamada em `router.go`.
+
