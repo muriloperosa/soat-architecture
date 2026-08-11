@@ -8,10 +8,12 @@ import (
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql"
 )
 
-// @title Sistema de Oficina Mecanica API
+// @title Sistema de Oficina Mecânica API
 // @version 1.0
-// @description API de gestão de ordens de serviço de uma oficina mecânica.
-// @BasePath /v1
+// @description API de gestão de ordens de serviço de uma oficina mecânica. Tech Challenge Fase 1 - Soat.
+// @BasePath /
+// @Host http://localhost:8080
+// @Schemes http
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
