@@ -57,7 +57,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/",
 	Schemes:          []string{"http"},
 	Title:            "Sistema de Oficina Mecânica API",
-	Description:      "API de gestão de ordens de serviço de uma oficina mecânica.",
+	Description:      "API de gestão de ordens de serviço de uma oficina mecânica. Tech Challenge Fase 1 - Soat.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",
