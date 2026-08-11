@@ -116,6 +116,20 @@ make test
 
 Roda os testes unitários de todos os pacotes com cobertura. Testes de integração, MySQL real via `testcontainers`, ficam em `test/integration/`.
 
+### Cobertura
+
+```bash
+make coverage
+```
+
+Roda os testes com `-coverprofile`, imprime o total de cobertura no terminal e gera `coverage.html`. Pra ver o relatório detalhado por linha, abra o arquivo gerado no navegador:
+
+```bash
+open coverage.html
+```
+
+`coverage.out` e `coverage.html` são gitignored, ficam só localmente.
+
 ## Lint
 
 ```bash

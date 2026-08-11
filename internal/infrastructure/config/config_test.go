@@ -40,3 +40,16 @@ func TestLoad_UsaDefaultDeAppPort(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "8080", cfg.AppPort)
 }
+
+func TestLoad_ErroQuandoEnvObrigatoriaFaltando(t *testing.T) {
+	os.Unsetenv("DB_HOST")
+	t.Setenv("DB_PORT", "3306")
+	t.Setenv("DB_USER", "user")
+	t.Setenv("DB_PASSWORD", "pass")
+	t.Setenv("DB_NAME", "oficina_test")
+
+	cfg, err := config.Load()
+
+	require.Error(t, err)
+	require.Nil(t, cfg)
+}
