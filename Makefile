@@ -1,24 +1,25 @@
-.PHONY: help run build test lint up down db-up db-down tidy vendor setup dev debug
+.PHONY: help run build test coverage lint up down db-up db-down tidy vendor setup dev debug
 
 GREEN := $(shell tput setaf 2)
 RESET := $(shell tput sgr0)
 
 help:
 	@echo "Available commands:"
-	@echo "  $(GREEN)help$(RESET):    See this help"
-	@echo "  $(GREEN)run$(RESET):     Run the API locally (go run)"
-	@echo "  $(GREEN)build$(RESET):   Build the API binary into bin/api"
-	@echo "  $(GREEN)test$(RESET):    Run all tests with coverage"
-	@echo "  $(GREEN)lint$(RESET):    Run go vet"
-	@echo "  $(GREEN)up$(RESET):      Start API + MySQL via docker compose"
-	@echo "  $(GREEN)down$(RESET):    Stop the docker compose stack"
-	@echo "  $(GREEN)db-up$(RESET):   Start only the MySQL container"
-	@echo "  $(GREEN)db-down$(RESET): Stop only the MySQL container"
-	@echo "  $(GREEN)tidy$(RESET):    Run go mod tidy"
-	@echo "  $(GREEN)vendor$(RESET):  Run go mod vendor (after tidy)"
-	@echo "  $(GREEN)setup$(RESET):   Download deps and install dev tools (swag, migrate, air, delve)"
-	@echo "  $(GREEN)dev$(RESET):     Run the API with hot reload (air)"
-	@echo "  $(GREEN)debug$(RESET):   Run the API under delve, headless, listening on :2345"
+	@echo "  $(GREEN)help$(RESET):     See this help"
+	@echo "  $(GREEN)run$(RESET):      Run the API locally (go run)"
+	@echo "  $(GREEN)build$(RESET):    Build the API binary into bin/api"
+	@echo "  $(GREEN)test$(RESET):     Run all tests with coverage"
+	@echo "  $(GREEN)coverage$(RESET): Run tests and print total coverage + open HTML report"
+	@echo "  $(GREEN)lint$(RESET):     Run go vet"
+	@echo "  $(GREEN)up$(RESET):       Start API + MySQL via docker compose"
+	@echo "  $(GREEN)down$(RESET):     Stop the docker compose stack"
+	@echo "  $(GREEN)db-up$(RESET):    Start only the MySQL container"
+	@echo "  $(GREEN)db-down$(RESET):  Stop only the MySQL container"
+	@echo "  $(GREEN)tidy$(RESET):     Run go mod tidy"
+	@echo "  $(GREEN)vendor$(RESET):   Run go mod vendor (after tidy)"
+	@echo "  $(GREEN)setup$(RESET):    Download deps and install dev tools (swag, migrate, air, delve)"
+	@echo "  $(GREEN)dev$(RESET):      Run the API with hot reload (air)"
+	@echo "  $(GREEN)debug$(RESET):    Run the API under delve, headless, listening on :2345"
 
 run:
 	go run ./cmd/api
@@ -28,6 +29,11 @@ build:
 
 test:
 	go test ./... -v -cover
+
+coverage:
+	go test ./... -coverprofile=coverage.out
+	go tool cover -func=coverage.out | tail -1
+	go tool cover -html=coverage.out -o coverage.html
 
 lint:
 	go vet ./...
