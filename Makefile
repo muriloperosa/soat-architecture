@@ -3,6 +3,8 @@
 GREEN := $(shell tput setaf 2)
 RESET := $(shell tput sgr0)
 
+GOBIN := $(shell go env GOPATH)/bin
+
 help:
 	@echo "Available commands:"
 	@echo "  $(GREEN)help$(RESET):     See this help"
@@ -69,16 +71,16 @@ setup:
 	go install github.com/vektra/mockery/v2@latest
 
 mocks:
-	mockery
+	$(GOBIN)/mockery
 
 swagger:
-	swag init -g cmd/api/main.go -o docs/swagger
+	$(GOBIN)/swag init -g cmd/api/main.go -o docs/swagger
 
 dev:
-	air -c .air.toml
+	$(GOBIN)/air -c .air.toml
 
 debug:
-	dlv debug ./cmd/api --headless --listen=:2345 --api-version=2 --accept-multiclient
+	$(GOBIN)/dlv debug ./cmd/api --headless --listen=:2345 --api-version=2 --accept-multiclient
 
 hooks-install:
 	@echo "Installing Git hooks..."
