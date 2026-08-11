@@ -36,5 +36,5 @@ func TestConfigurePool_AplicaLimitesDoConfig(t *testing.T) {
 	configurePool(sqlDB, cfg)
 
 	stats := sqlDB.Stats()
-	require.Equal(t, 50, stats.MaxOpenConnections)
+	require.Equal(t, 60, stats.MaxOpenConnections)
 }
