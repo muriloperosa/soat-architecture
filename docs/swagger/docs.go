@@ -15,16 +15,16 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/health": {
+        "/v1/health": {
             "get": {
-                "description": "Retorna 200 se a API e a conexao com o MySQL estao respondendo",
+                "description": "Retorna 200 se a API e a conexão com o MySQL estão respondendo",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "health"
                 ],
-                "summary": "Verifica saude da API",
+                "summary": "Verifica saúde da API",
                 "responses": {
                     "200": {
                         "description": "OK",

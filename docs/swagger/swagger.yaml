@@ -7,9 +7,9 @@ info:
   title: Sistema de Oficina Mecânica API
   version: "1.0"
 paths:
-  /health:
+  /v1/health:
     get:
-      description: Retorna 200 se a API e a conexao com o MySQL estao respondendo
+      description: Retorna 200 se a API e a conexão com o MySQL estão respondendo
       produces:
       - application/json
       responses:
@@ -25,7 +25,7 @@ paths:
             additionalProperties:
               type: string
             type: object
-      summary: Verifica saude da API
+      summary: Verifica saúde da API
       tags:
       - health
 schemes:
