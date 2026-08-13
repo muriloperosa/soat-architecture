@@ -81,3 +81,25 @@ func TestRespondError_ErroDesconhecido_Retorna500Generico(t *testing.T) {
 	require.Equal(t, "internal", body.Type)
 	require.NotContains(t, body.Message, "algo inesperado")
 }
+
+func TestRespondError_ErroComKindInvalido_Retorna500Generico(t *testing.T) {
+	invalidKind := shared.ErrorKind("invalid_kind")
+
+	err := shared.AppError{
+		Kind:    invalidKind,
+		Err:     errors.New("erro desconhecido"),
+		Message: "erro desconhecido",
+		Details: []string{"erro desconhecido"},
+	}
+
+	rec := serveRespondError(&err)
+
+	require.Equal(t, http.StatusInternalServerError, rec.Code)
+
+	var body errorBody
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Equal(t, "invalid_kind", body.Type)
+	require.Equal(t, "erro desconhecido", body.Message)
+	require.Equal(t, []string{"erro desconhecido"}, body.Details)
+	require.Equal(t, rec.Code, http.StatusInternalServerError)
+}
