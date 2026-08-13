@@ -155,6 +155,41 @@ A UI fica em `/swagger/index.html`. Com a API no ar (`make up` ou `make dev`), a
 http://localhost:8080/swagger/index.html
 ```
 
+## Erros de domínio
+
+Erros de negócio (não encontrado, validação, conflito) trafegam da camada de domínio/aplicação até o HTTP como `*shared.AppError` (`internal/domain/shared/errors.go`):
+
+```go
+shared.NewNotFoundError("cliente não encontrado")
+shared.NewValidationErrorWithDetails("dados inválidos", []string{"nome é obrigatório"})
+shared.NewConflictError("ordem já finalizada")
+shared.NewInternalError("erro ao consultar banco", err) // encapsula erro de infra
+```
+
+Regra pros use cases: erro de regra de negócio nasce como `*shared.AppError` na origem (domain ou application); erro de infra (repositório, driver) é encapsulado com `shared.NewInternalError("mensagem", err)` antes de subir. `fmt.Errorf("...: %w", err)` no meio do caminho não quebra nada — o mapper HTTP usa `errors.As` e enxerga através do wrap.
+
+No handler, não monta `gin.H` na mão — delega pro mapper:
+
+```go
+if err != nil {
+    http.RespondError(c, err)
+    return
+}
+```
+
+`RespondError` (`internal/infrastructure/http/errors.go`) traduz `Kind` pra status HTTP e devolve `{"type", "message", "details"}`:
+
+| Kind         | Status |
+|--------------|--------|
+| `not_found`  | 404    |
+| `validation` | 400    |
+| `conflict`   | 409    |
+| `internal`   | 500    |
+
+Erro que não é `*shared.AppError` (ou `Kind` desconhecido) cai em 500 genérico — mensagem interna nunca vaza pra resposta.
+
+`health_handler.go` é exceção: é probe de infra (ping no banco), não erro de domínio, então continua montando a resposta 503 direto.
+
 ## Mocks
 
 ```bash
