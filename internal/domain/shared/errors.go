@@ -38,7 +38,7 @@ func NewValidationError(msg string) *AppError {
 	return &AppError{Kind: KindValidation, Message: msg}
 }
 
-func NewValidationErrorComDetails(msg string, details []string) *AppError {
+func NewValidationErrorWithDetails(msg string, details []string) *AppError {
 	return &AppError{Kind: KindValidation, Message: msg, Details: details}
 }
 

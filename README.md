@@ -161,7 +161,7 @@ Erros de negócio (não encontrado, validação, conflito) trafegam da camada de
 
 ```go
 shared.NewNotFoundError("cliente não encontrado")
-shared.NewValidationErrorComDetails("dados inválidos", []string{"nome é obrigatório"})
+shared.NewValidationErrorWithDetails("dados inválidos", []string{"nome é obrigatório"})
 shared.NewConflictError("ordem já finalizada")
 shared.NewInternalError("erro ao consultar banco", err) // encapsula erro de infra
 ```

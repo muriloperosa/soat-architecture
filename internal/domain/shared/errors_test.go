@@ -62,8 +62,8 @@ func TestConstrutores_DefinemKindEDetails(t *testing.T) {
 	}
 }
 
-func TestNewValidationErrorComDetails_DefineDetails(t *testing.T) {
-	err := NewValidationErrorComDetails("dados inválidos", []string{"nome é obrigatório", "email inválido"})
+func TestNewValidationErrorWithDetails_DefineDetails(t *testing.T) {
+	err := NewValidationErrorWithDetails("dados inválidos", []string{"nome é obrigatório", "email inválido"})
 
 	if err.Kind != KindValidation {
 		t.Fatalf("got Kind %q, want %q", err.Kind, KindValidation)

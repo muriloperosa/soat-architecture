@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	handler "github.com/muriloperosa/soat-architecture/internal/infrastructure/http"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
+	handler "github.com/muriloperosa/soat-architecture/internal/infrastructure/http"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,7 +44,7 @@ func TestRespondError_NotFound_Retorna404(t *testing.T) {
 }
 
 func TestRespondError_Validation_Retorna400ComDetails(t *testing.T) {
-	rec := serveRespondError(shared.NewValidationErrorComDetails("dados inválidos", []string{"nome é obrigatório"}))
+	rec := serveRespondError(shared.NewValidationErrorWithDetails("dados inválidos", []string{"nome é obrigatório"}))
 
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 
