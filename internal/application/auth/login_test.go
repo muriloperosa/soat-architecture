@@ -23,8 +23,8 @@ func hashSenha(t *testing.T, senha string) string {
 }
 
 func TestLoginUseCase_Executar_CredencialValida_RetornaTokens(t *testing.T) {
-	credenciaisRepo := mocks.NewRepositorioCredenciais(t)
-	refreshTokensRepo := mocks.NewRepositorioRefreshToken(t)
+	credenciaisRepo := mocks.NewCredenciaisRepository(t)
+	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
 	jwtAuth := infraauth.NewAuthenticatorJWT("segredo-de-teste", 15*time.Minute)
 	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, jwtAuth, domainauth.TipoCliente, 168*time.Hour)
 
@@ -57,8 +57,8 @@ func TestLoginUseCase_Executar_CredencialValida_RetornaTokens(t *testing.T) {
 }
 
 func TestLoginUseCase_Executar_UsuarioInterno_PropagaPapel(t *testing.T) {
-	credenciaisRepo := mocks.NewRepositorioCredenciais(t)
-	refreshTokensRepo := mocks.NewRepositorioRefreshToken(t)
+	credenciaisRepo := mocks.NewCredenciaisRepository(t)
+	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
 	jwtAuth := infraauth.NewAuthenticatorJWT("segredo-de-teste", 15*time.Minute)
 	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, jwtAuth, domainauth.TipoInterno, 168*time.Hour)
 
@@ -86,8 +86,8 @@ func TestLoginUseCase_Executar_UsuarioInterno_PropagaPapel(t *testing.T) {
 }
 
 func TestLoginUseCase_Executar_SenhaErrada_ErroGenerico(t *testing.T) {
-	credenciaisRepo := mocks.NewRepositorioCredenciais(t)
-	refreshTokensRepo := mocks.NewRepositorioRefreshToken(t)
+	credenciaisRepo := mocks.NewCredenciaisRepository(t)
+	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
 	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, infraauth.NewAuthenticatorJWT("s", time.Minute), domainauth.TipoCliente, time.Hour)
 
 	credenciaisRepo.EXPECT().
@@ -101,8 +101,8 @@ func TestLoginUseCase_Executar_SenhaErrada_ErroGenerico(t *testing.T) {
 }
 
 func TestLoginUseCase_Executar_ErroAoGerarAccessToken_RetornaErroInterno(t *testing.T) {
-	credenciaisRepo := mocks.NewRepositorioCredenciais(t)
-	refreshTokensRepo := mocks.NewRepositorioRefreshToken(t)
+	credenciaisRepo := mocks.NewCredenciaisRepository(t)
+	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
 	jwtAuth := mocks.NewJWTProvider(t)
 	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, jwtAuth, domainauth.TipoCliente, time.Hour)
 
@@ -120,8 +120,8 @@ func TestLoginUseCase_Executar_ErroAoGerarAccessToken_RetornaErroInterno(t *test
 }
 
 func TestLoginUseCase_Executar_ErroAoGerarRefreshTokenBruto_RetornaErroInterno(t *testing.T) {
-	credenciaisRepo := mocks.NewRepositorioCredenciais(t)
-	refreshTokensRepo := mocks.NewRepositorioRefreshToken(t)
+	credenciaisRepo := mocks.NewCredenciaisRepository(t)
+	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
 	jwtAuth := mocks.NewJWTProvider(t)
 	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, jwtAuth, domainauth.TipoCliente, time.Hour)
 
@@ -142,8 +142,8 @@ func TestLoginUseCase_Executar_ErroAoGerarRefreshTokenBruto_RetornaErroInterno(t
 }
 
 func TestLoginUseCase_Executar_ErroAoSalvarRefreshToken_RetornaErroInterno(t *testing.T) {
-	credenciaisRepo := mocks.NewRepositorioCredenciais(t)
-	refreshTokensRepo := mocks.NewRepositorioRefreshToken(t)
+	credenciaisRepo := mocks.NewCredenciaisRepository(t)
+	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
 	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, infraauth.NewAuthenticatorJWT("s", time.Minute), domainauth.TipoCliente, time.Hour)
 
 	credenciaisRepo.EXPECT().
@@ -160,8 +160,8 @@ func TestLoginUseCase_Executar_ErroAoSalvarRefreshToken_RetornaErroInterno(t *te
 }
 
 func TestLoginUseCase_Executar_EmailNaoEncontrado_MesmoErroGenerico(t *testing.T) {
-	credenciaisRepo := mocks.NewRepositorioCredenciais(t)
-	refreshTokensRepo := mocks.NewRepositorioRefreshToken(t)
+	credenciaisRepo := mocks.NewCredenciaisRepository(t)
+	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
 	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, infraauth.NewAuthenticatorJWT("s", time.Minute), domainauth.TipoCliente, time.Hour)
 
 	credenciaisRepo.EXPECT().

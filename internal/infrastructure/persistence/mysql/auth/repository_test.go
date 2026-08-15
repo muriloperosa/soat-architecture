@@ -24,9 +24,9 @@ func setupGormMock(t *testing.T) (*gorm.DB, sqlmock.Sqlmock) {
 	return gdb, mock
 }
 
-func TestRepositorioRefreshToken_Salvar_ExecutaInsert(t *testing.T) {
+func TestRefreshTokenRepository_Salvar_ExecutaInsert(t *testing.T) {
 	gdb, mock := setupGormMock(t)
-	repo := mysqlauth.NewRepositorioRefreshToken(gdb)
+	repo := mysqlauth.NewRefreshTokenRepository(gdb)
 
 	mock.ExpectBegin()
 	mock.ExpectExec("INSERT INTO `refresh_tokens`").WillReturnResult(sqlmock.NewResult(1, 1))
@@ -40,9 +40,9 @@ func TestRepositorioRefreshToken_Salvar_ExecutaInsert(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestRepositorioRefreshToken_BuscarPorHash_RetornaEntidade(t *testing.T) {
+func TestRefreshTokenRepository_BuscarPorHash_RetornaEntidade(t *testing.T) {
 	gdb, mock := setupGormMock(t)
-	repo := mysqlauth.NewRepositorioRefreshToken(gdb)
+	repo := mysqlauth.NewRefreshTokenRepository(gdb)
 
 	expiraEm := time.Now().Add(time.Hour)
 	rows := sqlmock.NewRows([]string{"id", "usuario_id", "tipo", "papel", "token_hash", "expira_em", "revogado_em"}).
@@ -57,9 +57,9 @@ func TestRepositorioRefreshToken_BuscarPorHash_RetornaEntidade(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestRepositorioRefreshToken_Revogar_ExecutaUpdate(t *testing.T) {
+func TestRefreshTokenRepository_Revogar_ExecutaUpdate(t *testing.T) {
 	gdb, mock := setupGormMock(t)
-	repo := mysqlauth.NewRepositorioRefreshToken(gdb)
+	repo := mysqlauth.NewRefreshTokenRepository(gdb)
 
 	mock.ExpectBegin()
 	mock.ExpectExec("UPDATE `refresh_tokens`").WillReturnResult(sqlmock.NewResult(0, 1))

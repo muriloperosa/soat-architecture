@@ -13,7 +13,7 @@ type Repository struct {
 	db *gorm.DB
 }
 
-func NewRepositorioRefreshToken(db *gorm.DB) domainauth.RepositorioRefreshToken {
+func NewRefreshTokenRepository(db *gorm.DB) domainauth.RefreshTokenRepository {
 	return &Repository{db: db}
 }
 

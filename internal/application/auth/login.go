@@ -16,8 +16,8 @@ const msgCredenciaisInvalidas = "credenciais inválidas"
 // A fonte de credenciais (interno ou cliente) e o TipoUsuario já vêm decididos
 // no wiring, não em runtime.
 type LoginUseCase struct {
-	credenciais   domainauth.RepositorioCredenciais
-	refreshTokens domainauth.RepositorioRefreshToken
+	credenciais   domainauth.CredenciaisRepository
+	refreshTokens domainauth.RefreshTokenRepository
 	jwtAuth       domainauth.JWTProvider
 	tipo          domainauth.TipoUsuario
 	refreshTTL    time.Duration
@@ -26,8 +26,8 @@ type LoginUseCase struct {
 // NewLoginUseCase monta o use case com a fonte de credenciais e o TipoUsuario
 // já decididos (injetados pelo wiring, um por endpoint de login).
 func NewLoginUseCase(
-	credenciais domainauth.RepositorioCredenciais,
-	refreshTokens domainauth.RepositorioRefreshToken,
+	credenciais domainauth.CredenciaisRepository,
+	refreshTokens domainauth.RefreshTokenRepository,
 	jwtAuth domainauth.JWTProvider,
 	tipo domainauth.TipoUsuario,
 	refreshTTL time.Duration,
@@ -59,7 +59,7 @@ func (uc *LoginUseCase) Executar(ctx context.Context, input LoginInput) (LoginOu
 
 // gerarTokens gera e persiste um novo par access+refresh token pro usuário.
 // Reusado pelo RefreshUseCase na rotação.
-func gerarTokens(ctx context.Context, refreshTokens domainauth.RepositorioRefreshToken, jwtAuth domainauth.JWTProvider, tipo domainauth.TipoUsuario, papel domainauth.PapelUsuario, refreshTTL time.Duration, usuarioID string) (LoginOutput, error) {
+func gerarTokens(ctx context.Context, refreshTokens domainauth.RefreshTokenRepository, jwtAuth domainauth.JWTProvider, tipo domainauth.TipoUsuario, papel domainauth.PapelUsuario, refreshTTL time.Duration, usuarioID string) (LoginOutput, error) {
 	accessToken, err := jwtAuth.GerarAccessToken(usuarioID, tipo, papel)
 	if err != nil {
 		return LoginOutput{}, shared.NewInternalError("erro ao gerar access token", err)

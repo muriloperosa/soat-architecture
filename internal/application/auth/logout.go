@@ -10,12 +10,12 @@ import (
 // LogoutUseCase revoga um refresh token. Idempotente: se o token não existir
 // ou já estiver revogado, não é erro (no-op).
 type LogoutUseCase struct {
-	refreshTokens domainauth.RepositorioRefreshToken
+	refreshTokens domainauth.RefreshTokenRepository
 }
 
 // NewLogoutUseCase monta o use case com o repositório de refresh tokens,
 // compartilhado entre interno e cliente (o token já carrega o TipoUsuario).
-func NewLogoutUseCase(refreshTokens domainauth.RepositorioRefreshToken) *LogoutUseCase {
+func NewLogoutUseCase(refreshTokens domainauth.RefreshTokenRepository) *LogoutUseCase {
 	return &LogoutUseCase{refreshTokens: refreshTokens}
 }
 

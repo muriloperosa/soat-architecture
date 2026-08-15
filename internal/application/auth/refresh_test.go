@@ -15,7 +15,7 @@ import (
 )
 
 func TestRefreshUseCase_Executar_TokenValido_RotacionaERetornaNovoPar(t *testing.T) {
-	refreshTokensRepo := mocks.NewRepositorioRefreshToken(t)
+	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
 	bruto, _ := infraauth.GerarRefreshTokenBruto()
 	rtAntigo := &domainauth.RefreshToken{
 		ID: "rt-1", UsuarioID: "user-1", Tipo: domainauth.TipoCliente,
@@ -39,7 +39,7 @@ func TestRefreshUseCase_Executar_TokenValido_RotacionaERetornaNovoPar(t *testing
 }
 
 func TestRefreshUseCase_Executar_ErroAoRevogar_RetornaErroInterno(t *testing.T) {
-	refreshTokensRepo := mocks.NewRepositorioRefreshToken(t)
+	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
 	bruto, _ := infraauth.GerarRefreshTokenBruto()
 	rt := &domainauth.RefreshToken{
 		ID: "rt-1", TokenHash: infraauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
@@ -56,7 +56,7 @@ func TestRefreshUseCase_Executar_ErroAoRevogar_RetornaErroInterno(t *testing.T) 
 }
 
 func TestRefreshUseCase_Executar_ErroAoSalvarNovoPar_PropagaErro(t *testing.T) {
-	refreshTokensRepo := mocks.NewRepositorioRefreshToken(t)
+	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
 	bruto, _ := infraauth.GerarRefreshTokenBruto()
 	rt := &domainauth.RefreshToken{
 		ID: "rt-1", TokenHash: infraauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
@@ -76,7 +76,7 @@ func TestRefreshUseCase_Executar_ErroAoSalvarNovoPar_PropagaErro(t *testing.T) {
 }
 
 func TestRefreshUseCase_Executar_TokenJaRevogado_Erro(t *testing.T) {
-	refreshTokensRepo := mocks.NewRepositorioRefreshToken(t)
+	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
 	bruto, _ := infraauth.GerarRefreshTokenBruto()
 	agora := time.Now()
 	rt := &domainauth.RefreshToken{
@@ -93,7 +93,7 @@ func TestRefreshUseCase_Executar_TokenJaRevogado_Erro(t *testing.T) {
 }
 
 func TestRefreshUseCase_Executar_TokenInexistente_Erro(t *testing.T) {
-	refreshTokensRepo := mocks.NewRepositorioRefreshToken(t)
+	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
 	uc := appauth.NewRefreshUseCase(refreshTokensRepo, infraauth.NewAuthenticatorJWT("s", time.Minute), time.Hour)
 
 	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, infraauth.HashRefreshToken("inexistente")).Return(nil, errors.New("nao encontrado"))
