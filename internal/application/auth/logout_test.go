@@ -16,7 +16,7 @@ import (
 
 func TestLogoutUseCase_Executar_TokenExistente_Revoga(t *testing.T) {
 	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
-	bruto, _ := infraauth.GerarRefreshToken()
+	bruto, _ := infraauth.NewAuthenticatorJWT("s", time.Minute).GerarRefreshToken()
 	rt := &domainauth.RefreshToken{
 		ID: "rt-1", TokenHash: infraauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
 	}
@@ -32,7 +32,7 @@ func TestLogoutUseCase_Executar_TokenExistente_Revoga(t *testing.T) {
 
 func TestLogoutUseCase_Executar_TokenJaRevogado_NoOpSemErro(t *testing.T) {
 	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
-	bruto, _ := infraauth.GerarRefreshToken()
+	bruto, _ := infraauth.NewAuthenticatorJWT("s", time.Minute).GerarRefreshToken()
 	agora := time.Now()
 	rt := &domainauth.RefreshToken{
 		ID: "rt-1", TokenHash: infraauth.HashRefreshToken(bruto),

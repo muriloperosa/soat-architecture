@@ -1,6 +1,10 @@
 package auth
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"time"
 
@@ -9,7 +13,8 @@ import (
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 )
 
-// AuthenticatorJWT gera e valida access tokens HS256.
+// AuthenticatorJWT gera e valida access tokens HS256, e gera o valor bruto
+// do refresh token.
 type AuthenticatorJWT struct {
 	secret    []byte
 	accessTTL time.Duration
@@ -40,10 +45,14 @@ func (a *AuthenticatorJWT) GerarAccessToken(subject string, tipo domainauth.Tipo
 	return token.SignedString(a.secret)
 }
 
-// GerarRefreshToken delega pra função de mesmo nome em refresh_hash.go,
-// método existe só pra satisfazer domainauth.JWTProvider (mockável nos use cases).
+// GerarRefreshToken gera um valor aleatório de alta entropia (32 bytes)
+// codificado em base64, pra ser entregue ao cliente.
 func (a *AuthenticatorJWT) GerarRefreshToken() (string, error) {
-	return GerarRefreshToken()
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
 }
 
 // ValidarAccessToken verifica assinatura HS256 e expiração do token bruto e,
@@ -64,4 +73,11 @@ func (a *AuthenticatorJWT) ValidarAccessToken(tokenBruto string) (*domainauth.Ap
 		return nil, errors.New("token invalido")
 	}
 	return claims, nil
+}
+
+// HashRefreshToken calcula o hash (SHA-256) do token bruto pra persistência
+// e busca, nunca o valor bruto é armazenado.
+func HashRefreshToken(bruto string) string {
+	sum := sha256.Sum256([]byte(bruto))
+	return hex.EncodeToString(sum[:])
 }

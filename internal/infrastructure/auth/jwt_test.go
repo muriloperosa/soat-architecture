@@ -43,3 +43,27 @@ func TestValidarAccessToken_AssinaturaInvalida(t *testing.T) {
 	_, err = validador.ValidarAccessToken(token)
 	require.Error(t, err)
 }
+
+func TestGerarRefreshToken_GeraValorNaoVazioEUnico(t *testing.T) {
+	autenticador := infraauth.NewAuthenticatorJWT("segredo-de-teste", 15*time.Minute)
+
+	a, err := autenticador.GerarRefreshToken()
+	require.NoError(t, err)
+	require.NotEmpty(t, a)
+
+	b, err := autenticador.GerarRefreshToken()
+	require.NoError(t, err)
+	require.NotEqual(t, a, b)
+}
+
+func TestHashRefreshToken_MesmaEntradaMesmoHash(t *testing.T) {
+	bruto := "token-bruto-de-teste"
+
+	require.Equal(t, infraauth.HashRefreshToken(bruto), infraauth.HashRefreshToken(bruto))
+}
+
+func TestHashRefreshToken_NuncaIgualAoBruto(t *testing.T) {
+	bruto := "token-bruto-de-teste"
+
+	require.NotEqual(t, bruto, infraauth.HashRefreshToken(bruto))
+}
