@@ -20,7 +20,7 @@ func NewLogoutUseCase(refreshTokens domainauth.RepositorioRefreshToken) *LogoutU
 }
 
 // Executar revoga o refresh token informado. Token inexistente ou já revogado
-// não é erro — logout é idempotente por natureza.
+// não é erro (logout é idempotente por natureza).
 func (uc *LogoutUseCase) Executar(ctx context.Context, input LogoutInput) error {
 	hash := infraauth.HashRefreshToken(input.RefreshTokenBruto)
 	rt, err := uc.refreshTokens.BuscarPorHash(ctx, hash)
