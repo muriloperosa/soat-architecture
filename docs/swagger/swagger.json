@@ -12,6 +12,264 @@
     "host": "http://localhost:8080",
     "basePath": "/",
     "paths": {
+        "/v1/auth/cliente/login": {
+            "post": {
+                "description": "Autentica por email+senha e emite o par access+refresh token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth-cliente"
+                ],
+                "summary": "Login de cliente",
+                "parameters": [
+                    {
+                        "description": "Credenciais",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/http.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.TokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/auth/cliente/logout": {
+            "post": {
+                "description": "Revoga o refresh token informado (idempotente)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth-cliente"
+                ],
+                "summary": "Logout de cliente",
+                "parameters": [
+                    {
+                        "description": "Refresh token",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/http.RefreshRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Sem conteúdo"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/auth/cliente/refresh": {
+            "post": {
+                "description": "Troca um refresh token válido por um novo par access+refresh (rotação)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth-cliente"
+                ],
+                "summary": "Refresh de token de cliente",
+                "parameters": [
+                    {
+                        "description": "Refresh token",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/http.RefreshRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.TokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/auth/login": {
+            "post": {
+                "description": "Autentica por email+senha e emite o par access+refresh token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth-interno"
+                ],
+                "summary": "Login de usuário interno",
+                "parameters": [
+                    {
+                        "description": "Credenciais",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/http.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.TokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/auth/logout": {
+            "post": {
+                "description": "Revoga o refresh token informado (idempotente)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth-interno"
+                ],
+                "summary": "Logout de usuário interno",
+                "parameters": [
+                    {
+                        "description": "Refresh token",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/http.RefreshRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Sem conteúdo"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/auth/refresh": {
+            "post": {
+                "description": "Troca um refresh token válido por um novo par access+refresh (rotação)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth-interno"
+                ],
+                "summary": "Refresh de token de usuário interno",
+                "parameters": [
+                    {
+                        "description": "Refresh token",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/http.RefreshRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.TokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/health": {
             "get": {
                 "description": "Retorna 200 se a API e a conexão com o MySQL estão respondendo",
@@ -41,6 +299,77 @@
                             }
                         }
                     }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "http.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "description": "Details lista mensagens de validação campo a campo, quando aplicável",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "message": {
+                    "description": "Message é a mensagem legível pro cliente",
+                    "type": "string",
+                    "example": "corpo inválido"
+                },
+                "type": {
+                    "description": "Type é o shared.ErrorKind do erro (validation, unauthorized, forbidden, not_found, conflict, internal)",
+                    "type": "string",
+                    "example": "validation"
+                }
+            }
+        },
+        "http.LoginRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "senha"
+            ],
+            "properties": {
+                "email": {
+                    "description": "Email cadastrado do usuário",
+                    "type": "string",
+                    "example": "usuario@oficina.com"
+                },
+                "senha": {
+                    "description": "Senha em texto plano, validada contra o hash bcrypt armazenado",
+                    "type": "string",
+                    "example": "senha123"
+                }
+            }
+        },
+        "http.RefreshRequest": {
+            "type": "object",
+            "required": [
+                "refresh_token"
+            ],
+            "properties": {
+                "refresh_token": {
+                    "description": "RefreshToken bruto emitido em um login ou refresh anterior",
+                    "type": "string",
+                    "example": "9f8c1e...b3a0"
+                }
+            }
+        },
+        "http.TokenResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "description": "AccessToken JWT (HS256) de curta duração, usado no header Authorization",
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIs..."
+                },
+                "refresh_token": {
+                    "description": "RefreshToken bruto de longa duração, revogado e rotacionado a cada uso",
+                    "type": "string",
+                    "example": "9f8c1e...b3a0"
                 }
             }
         }

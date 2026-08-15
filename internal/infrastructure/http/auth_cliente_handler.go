@@ -19,10 +19,20 @@ func NewAuthClienteHandler(login *appauth.LoginUseCase, refresh *appauth.Refresh
 	return &AuthClienteHandler{login: login, refresh: refresh, logout: logout}
 }
 
+// @Summary Login de cliente
+// @Description Autentica por email+senha e emite o par access+refresh token
+// @Tags auth-cliente
+// @Accept json
+// @Produce json
+// @Param request body LoginRequest true "Credenciais"
+// @Success 200 {object} TokenResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router /v1/auth/cliente/login [post]
 func (h *AuthClienteHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"type": "validation", "message": "corpo inválido"})
+		RespondValidationError(c, "corpo inválido")
 		return
 	}
 
@@ -35,10 +45,20 @@ func (h *AuthClienteHandler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, toTokenResponse(out.AccessToken, out.RefreshToken))
 }
 
+// @Summary Refresh de token de cliente
+// @Description Troca um refresh token válido por um novo par access+refresh (rotação)
+// @Tags auth-cliente
+// @Accept json
+// @Produce json
+// @Param request body RefreshRequest true "Refresh token"
+// @Success 200 {object} TokenResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router /v1/auth/cliente/refresh [post]
 func (h *AuthClienteHandler) Refresh(c *gin.Context) {
 	var req RefreshRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"type": "validation", "message": "corpo inválido"})
+		RespondValidationError(c, "corpo inválido")
 		return
 	}
 
@@ -51,10 +71,19 @@ func (h *AuthClienteHandler) Refresh(c *gin.Context) {
 	c.JSON(http.StatusOK, toTokenResponse(out.AccessToken, out.RefreshToken))
 }
 
+// @Summary Logout de cliente
+// @Description Revoga o refresh token informado (idempotente)
+// @Tags auth-cliente
+// @Accept json
+// @Produce json
+// @Param request body RefreshRequest true "Refresh token"
+// @Success 204 "Sem conteúdo"
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/auth/cliente/logout [post]
 func (h *AuthClienteHandler) Logout(c *gin.Context) {
 	var req RefreshRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"type": "validation", "message": "corpo inválido"})
+		RespondValidationError(c, "corpo inválido")
 		return
 	}
 

@@ -102,6 +102,92 @@ func TestRespondError_ErroDesconhecido_Retorna500Generico(t *testing.T) {
 	require.NotContains(t, body.Message, "algo inesperado")
 }
 
+func serveRespond(fn func(c *gin.Context)) *httptest.ResponseRecorder {
+	gin.SetMode(gin.TestMode)
+	engine := gin.New()
+	engine.GET("/x", fn)
+
+	req := httptest.NewRequest(http.MethodGet, "/x", nil)
+	rec := httptest.NewRecorder()
+	engine.ServeHTTP(rec, req)
+	return rec
+}
+
+func TestRespondValidationError_Retorna400(t *testing.T) {
+	rec := serveRespond(func(c *gin.Context) {
+		handler.RespondValidationError(c, "corpo inválido")
+	})
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var body errorBody
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Equal(t, "validation", body.Type)
+	require.Equal(t, "corpo inválido", body.Message)
+}
+
+func TestRespondNotFoundError_Retorna404(t *testing.T) {
+	rec := serveRespond(func(c *gin.Context) {
+		handler.RespondNotFoundError(c, "cliente não encontrado")
+	})
+
+	require.Equal(t, http.StatusNotFound, rec.Code)
+
+	var body errorBody
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Equal(t, "not_found", body.Type)
+	require.Equal(t, "cliente não encontrado", body.Message)
+}
+
+func TestRespondConflictError_Retorna409(t *testing.T) {
+	rec := serveRespond(func(c *gin.Context) {
+		handler.RespondConflictError(c, "ordem já finalizada")
+	})
+
+	require.Equal(t, http.StatusConflict, rec.Code)
+
+	var body errorBody
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Equal(t, "conflict", body.Type)
+}
+
+func TestRespondForbiddenError_Retorna403(t *testing.T) {
+	rec := serveRespond(func(c *gin.Context) {
+		handler.RespondForbiddenError(c, "acesso não permitido")
+	})
+
+	require.Equal(t, http.StatusForbidden, rec.Code)
+
+	var body errorBody
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Equal(t, "forbidden", body.Type)
+}
+
+func TestRespondUnauthorizedError_Retorna401(t *testing.T) {
+	rec := serveRespond(func(c *gin.Context) {
+		handler.RespondUnauthorizedError(c, "token inválido")
+	})
+
+	require.Equal(t, http.StatusUnauthorized, rec.Code)
+
+	var body errorBody
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Equal(t, "unauthorized", body.Type)
+}
+
+func TestRespondInternalError_Retorna500SemVazarDetalheInterno(t *testing.T) {
+	rec := serveRespond(func(c *gin.Context) {
+		handler.RespondInternalError(c, "erro ao consultar banco", errors.New("connection refused"))
+	})
+
+	require.Equal(t, http.StatusInternalServerError, rec.Code)
+
+	var body errorBody
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Equal(t, "internal", body.Type)
+	require.NotContains(t, body.Message, "connection refused")
+}
+
 func TestRespondError_ErroComKindInvalido_Retorna500Generico(t *testing.T) {
 	invalidKind := shared.ErrorKind("invalid_kind")
 
