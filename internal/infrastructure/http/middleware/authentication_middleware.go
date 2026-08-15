@@ -1,0 +1,40 @@
+package middleware
+
+import (
+	"strings"
+
+	"github.com/gin-gonic/gin"
+	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
+	infraauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/auth"
+	httphandler "github.com/muriloperosa/soat-architecture/internal/infrastructure/http"
+)
+
+// ClaimsContextKey é a chave usada pra guardar *domainauth.AppClaims no gin.Context.
+const ClaimsContextKey = "auth.claims"
+
+const msgTokenInvalido = "token ausente, inválido ou expirado"
+
+// AuthenticationMiddleware valida assinatura e expiração do JWT recebido no
+// header Authorization (Bearer) e injeta os claims tipados no contexto.
+// Não decide autorização por tipo — isso é AuthorizationMiddleware.
+func AuthenticationMiddleware(jwtAuth *infraauth.AutenticadorJWT) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		header := c.GetHeader("Authorization")
+		tokenBruto, achou := strings.CutPrefix(header, "Bearer ")
+		if !achou || tokenBruto == "" {
+			httphandler.RespondError(c, shared.NewUnauthorizedError(msgTokenInvalido))
+			c.Abort()
+			return
+		}
+
+		claims, err := jwtAuth.ValidarAccessToken(tokenBruto)
+		if err != nil {
+			httphandler.RespondError(c, shared.NewUnauthorizedError(msgTokenInvalido))
+			c.Abort()
+			return
+		}
+
+		c.Set(ClaimsContextKey, claims)
+		c.Next()
+	}
+}
