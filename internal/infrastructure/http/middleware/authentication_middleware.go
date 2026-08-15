@@ -5,7 +5,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
-	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httperror"
 )
 
@@ -19,14 +18,14 @@ func AuthenticationMiddleware(jwtAuth domainauth.JWTProvider) gin.HandlerFunc {
 		header := c.GetHeader("Authorization")
 		tokenBruto, ok := strings.CutPrefix(header, "Bearer ")
 		if !ok || tokenBruto == "" {
-			httperror.RespondError(c, shared.NewUnauthorizedError("Requisição não autorizada."))
+			httperror.RespondUnauthorizedError(c, "Requisição não autorizada.")
 			c.Abort()
 			return
 		}
 
 		claims, err := jwtAuth.ValidarAccessToken(tokenBruto)
 		if err != nil {
-			httperror.RespondError(c, shared.NewUnauthorizedError("Requisição não autorizada."))
+			httperror.RespondUnauthorizedError(c, "Requisição não autorizada.")
 			c.Abort()
 			return
 		}

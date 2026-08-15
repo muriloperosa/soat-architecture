@@ -15,7 +15,7 @@ func AuthorizationMiddleware(tipoEsperado domainauth.TipoUsuario) gin.HandlerFun
 		valor, existe := c.Get(ClaimsContextKey)
 		claims, ok := valor.(*domainauth.AppClaims)
 		if !existe || !ok || claims.Tipo != tipoEsperado {
-			httperror.RespondForbiddenError(c, "acesso não permitido para este tipo de usuário")
+			httperror.RespondForbiddenError(c, "Acesso não permitido para este tipo de usuário.")
 			c.AbortWithStatus(http.StatusForbidden)
 			return
 		}
