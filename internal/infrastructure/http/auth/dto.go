@@ -1,4 +1,4 @@
-package http
+package auth
 
 // LoginRequest é o corpo HTTP de POST /v1/auth/login e /v1/auth/cliente/login.
 type LoginRequest struct {

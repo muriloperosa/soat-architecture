@@ -1,4 +1,4 @@
-package http_test
+package httperror_test
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
-	handler "github.com/muriloperosa/soat-architecture/internal/infrastructure/http"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httperror"
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,7 +17,7 @@ func serveRespondError(err error) *httptest.ResponseRecorder {
 	gin.SetMode(gin.TestMode)
 	engine := gin.New()
 	engine.GET("/x", func(c *gin.Context) {
-		handler.RespondError(c, err)
+		httperror.RespondError(c, err)
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/x", nil)
@@ -115,7 +115,7 @@ func serveRespond(fn func(c *gin.Context)) *httptest.ResponseRecorder {
 
 func TestRespondValidationError_Retorna400(t *testing.T) {
 	rec := serveRespond(func(c *gin.Context) {
-		handler.RespondValidationError(c, "corpo inválido")
+		httperror.RespondValidationError(c, "corpo inválido")
 	})
 
 	require.Equal(t, http.StatusBadRequest, rec.Code)
@@ -128,7 +128,7 @@ func TestRespondValidationError_Retorna400(t *testing.T) {
 
 func TestRespondNotFoundError_Retorna404(t *testing.T) {
 	rec := serveRespond(func(c *gin.Context) {
-		handler.RespondNotFoundError(c, "cliente não encontrado")
+		httperror.RespondNotFoundError(c, "cliente não encontrado")
 	})
 
 	require.Equal(t, http.StatusNotFound, rec.Code)
@@ -141,7 +141,7 @@ func TestRespondNotFoundError_Retorna404(t *testing.T) {
 
 func TestRespondConflictError_Retorna409(t *testing.T) {
 	rec := serveRespond(func(c *gin.Context) {
-		handler.RespondConflictError(c, "ordem já finalizada")
+		httperror.RespondConflictError(c, "ordem já finalizada")
 	})
 
 	require.Equal(t, http.StatusConflict, rec.Code)
@@ -153,7 +153,7 @@ func TestRespondConflictError_Retorna409(t *testing.T) {
 
 func TestRespondForbiddenError_Retorna403(t *testing.T) {
 	rec := serveRespond(func(c *gin.Context) {
-		handler.RespondForbiddenError(c, "acesso não permitido")
+		httperror.RespondForbiddenError(c, "acesso não permitido")
 	})
 
 	require.Equal(t, http.StatusForbidden, rec.Code)
@@ -165,7 +165,7 @@ func TestRespondForbiddenError_Retorna403(t *testing.T) {
 
 func TestRespondUnauthorizedError_Retorna401(t *testing.T) {
 	rec := serveRespond(func(c *gin.Context) {
-		handler.RespondUnauthorizedError(c, "token inválido")
+		httperror.RespondUnauthorizedError(c, "token inválido")
 	})
 
 	require.Equal(t, http.StatusUnauthorized, rec.Code)
@@ -177,7 +177,7 @@ func TestRespondUnauthorizedError_Retorna401(t *testing.T) {
 
 func TestRespondInternalError_Retorna500SemVazarDetalheInterno(t *testing.T) {
 	rec := serveRespond(func(c *gin.Context) {
-		handler.RespondInternalError(c, "erro ao consultar banco", errors.New("connection refused"))
+		httperror.RespondInternalError(c, "erro ao consultar banco", errors.New("connection refused"))
 	})
 
 	require.Equal(t, http.StatusInternalServerError, rec.Code)

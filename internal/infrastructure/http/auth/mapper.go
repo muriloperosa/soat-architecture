@@ -1,4 +1,4 @@
-package http
+package auth
 
 import appauth "github.com/muriloperosa/soat-architecture/internal/application/auth"
 

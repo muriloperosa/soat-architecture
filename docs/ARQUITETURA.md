@@ -22,11 +22,11 @@ Cada uma dona de uma camada:
 
 ## Handlers magros: DTO e mapper de transporte
 
-- Para não inflar os handlers, cada agregado tem no pacote `http` dois arquivos além do handler: `*_dto.go` (structs de request/response com tags `json:`) e `*_mapper.go` (converte HTTP DTO em DTO da aplicação, via `toInput()`/`toResponse()`).
+- `internal/infrastructure/http/` é namespaceado por agregado (ver [ADR 0005](adr/0005-convencao-de-nomes.md)): cada domínio ganha sua própria pasta/pacote (`http/ordemservico/`, `http/auth/`, `http/health/`...), com `dto.go` (structs de request/response com tags `json:`), `mapper.go` (converte HTTP DTO em DTO da aplicação, via `toInput()`/`toResponse()`) e o(s) handler(s). Dentro da pasta do domínio os nomes ficam sem prefixo — o pacote já desambigua.
 - O handler fica magro: bind, `toInput()`, use case, `toResponse()`, resposta.
-- Dois DTOs, duas camadas, não confundir: `application/ordemservico/dto.go` são os DTOs da aplicação, contrato do use case, agnóstico de HTTP. `http/ordem_servico_dto.go` são os DTOs de transporte, request/response HTTP. O mapper de transporte é a fronteira 1 entre eles.
+- Dois DTOs, duas camadas, não confundir: `application/ordemservico/dto.go` são os DTOs da aplicação, contrato do use case, agnóstico de HTTP. `http/ordemservico/dto.go` são os DTOs de transporte, request/response HTTP. O mapper de transporte é a fronteira 1 entre eles.
 - O mapper de transporte é DTO para DTO: nunca importa entidade de domínio nem constrói Value Object, só passa primitivos. A validação (CPF/CNPJ, placa) fica no use case ou no VO. Mantê lo fino, quase uma cópia, é o preço de manter a aplicação agnóstica de transporte.
-- Se o pacote `http` crescer demais, dá pra namespacear `http/` por agregado, como na persistência. Custa só aliases de import no `main.go`.
+- `internal/infrastructure/http/httperror/` é a exceção: fica fora de qualquer pasta de domínio, de propósito, pra evitar ciclo de import entre `router.go` (raiz, importa cada domínio pra registrar rotas) e os domínios (que precisam de `RespondError` pra responder erro). Ver ADR 0005.
 
 ## Regra de dependência
 
@@ -103,9 +103,15 @@ soat-architecture/
 │   │   ├── ordemservico/{dto,abrir_ordem_servico}.go + _test
 │   │   └── cliente/ veiculo/ servico/ peca/  (mesmo padrão)
 │   └── infrastructure/
-│       ├── persistence/mysql/{connection.go, ordemservico/, cliente/, veiculo/, servico/, peca/}
-│       ├── http/{router.go, ordem_servico_handler.go, ordem_servico_dto.go, ordem_servico_mapper.go, middleware/}
-│       ├── authentication/jwt.go
+│       ├── persistence/mysql/{connection.go, ordemservico/, cliente/, veiculo/, servico/, peca/, auth/}
+│       ├── http/
+│       │   ├── router.go            # monta o *gin.Engine, chama Register*Routes de cada domínio
+│       │   ├── httperror/           # ErrorResponse + RespondError, pacote-folha (ver ADR 0005)
+│       │   ├── auth/{interno_handler,cliente_handler,dto,mapper}.go + _test
+│       │   ├── health/{handler,routes}.go
+│       │   ├── ordemservico/{handler,dto,mapper,routes}.go  # mesmo padrão, demais domínios
+│       │   └── middleware/{authentication,authorization}_middleware.go
+│       ├── auth/jwt.go              # geração/validação de JWT, hash de refresh token
 │       └── config/config.go
 ├── migrations/            # schema MySQL versionado (.sql com up/down)
 ├── test/integration/      # testcontainers (MySQL real)
@@ -129,11 +135,13 @@ Testes: cada pacote tem um `*_test.go` de exemplo, unitário, ao lado do código
 
 Composição de dependências (config, conexão de banco e, futuramente, repositórios e use cases por domínio) fica centralizada no `Container`, em `internal/infrastructure/wiring/container.go`. É o único lugar que monta o grafo de dependências da aplicação; `main.go` cria o `Container` e passa pra `httpinfra.NewRouter`.
 
-Rotas são registradas por domínio: cada domínio tem seu próprio `<dominio>_routes.go` dentro de `internal/infrastructure/http` (ex: `health_routes.go`), com uma função `Register<Dominio>Routes(rg *gin.RouterGroup, c *wiring.Container)`. `router.go` só monta o `*gin.Engine`, aplica middlewares globais e chama cada `Register*Routes` — não conhece detalhe de nenhum domínio.
+Rotas são registradas por domínio: cada domínio tem seu próprio pacote dentro de `internal/infrastructure/http/<dominio>/` (ex: `http/health/routes.go`), com uma função `Register<Dominio>Routes(rg *gin.RouterGroup, c *wiring.Container)`. `router.go` (raiz) só monta o `*gin.Engine`, aplica middlewares globais e chama cada `<dominio>.Register<Dominio>Routes` — não conhece detalhe de nenhum domínio, só importa o pacote de cada um.
 
 Ao implementar um novo domínio (ex: `cliente`):
 
 1. Adicione os campos necessários (repositório, use cases) no `Container` e construa-os em `NewContainer`.
-2. Crie `<dominio>_routes.go` com `Register<Dominio>Routes`.
-3. Registre a chamada em `router.go`.
+2. Crie `internal/infrastructure/http/cliente/routes.go` com `RegisterClienteRoutes`.
+3. Registre a chamada em `router.go` (raiz), importando o pacote `cliente`.
+
+Cuidado com ciclo de import: o pacote de domínio nunca importa o pacote raiz `http` (é o inverso — raiz importa domínio). Se o handler precisar responder erro, importa `internal/infrastructure/http/httperror`, não a raiz. Ver ADR 0005.
 

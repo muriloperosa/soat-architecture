@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	infraauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/auth"
-	httphandler "github.com/muriloperosa/soat-architecture/internal/infrastructure/http"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httperror"
 )
 
 // ClaimsContextKey é a chave usada pra guardar *domainauth.AppClaims no gin.Context.
@@ -21,14 +21,14 @@ func AuthenticationMiddleware(jwtAuth *infraauth.AutenticadorJWT) gin.HandlerFun
 		header := c.GetHeader("Authorization")
 		tokenBruto, ok := strings.CutPrefix(header, "Bearer ")
 		if !ok || tokenBruto == "" {
-			httphandler.RespondError(c, shared.NewUnauthorizedError(msgTokenInvalido))
+			httperror.RespondError(c, shared.NewUnauthorizedError(msgTokenInvalido))
 			c.Abort()
 			return
 		}
 
 		claims, err := jwtAuth.ValidarAccessToken(tokenBruto)
 		if err != nil {
-			httphandler.RespondError(c, shared.NewUnauthorizedError(msgTokenInvalido))
+			httperror.RespondError(c, shared.NewUnauthorizedError(msgTokenInvalido))
 			c.Abort()
 			return
 		}

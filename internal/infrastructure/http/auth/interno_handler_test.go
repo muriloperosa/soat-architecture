@@ -1,4 +1,4 @@
-package http_test
+package auth_test
 
 import (
 	"bytes"
@@ -14,7 +14,7 @@ import (
 	appauth "github.com/muriloperosa/soat-architecture/internal/application/auth"
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 	infraauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/auth"
-	httphandler "github.com/muriloperosa/soat-architecture/internal/infrastructure/http"
+	httpauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/auth"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -71,12 +71,12 @@ func credenciaisComUsuarioValido(t *testing.T) *credenciaisFakeHTTP {
 func TestAuthInternoHandler_Login_CredencialValida_Retorna200ComTokens(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	loginUC := appauth.NewLoginUseCase(credenciaisComUsuarioValido(t), &refreshTokensFakeHTTP{}, infraauth.NewAuthenticatorJWT("s", 15*time.Minute), domainauth.TipoInterno, time.Hour)
-	handler := httphandler.NewAuthInternoHandler(loginUC, nil, nil)
+	h := httpauth.NewAuthInternoHandler(loginUC, nil, nil)
 
 	engine := gin.New()
-	engine.POST("/v1/auth/login", handler.Login)
+	engine.POST("/v1/auth/login", h.Login)
 
-	body, _ := json.Marshal(httphandler.LoginRequest{Email: "func@oficina.com", Senha: "senha123"})
+	body, _ := json.Marshal(httpauth.LoginRequest{Email: "func@oficina.com", Senha: "senha123"})
 	req := httptest.NewRequest(http.MethodPost, "/v1/auth/login", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -84,7 +84,7 @@ func TestAuthInternoHandler_Login_CredencialValida_Retorna200ComTokens(t *testin
 
 	require.Equal(t, http.StatusOK, rec.Code)
 
-	var resp httphandler.TokenResponse
+	var resp httpauth.TokenResponse
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 	require.NotEmpty(t, resp.AccessToken)
 	require.NotEmpty(t, resp.RefreshToken)
@@ -93,12 +93,12 @@ func TestAuthInternoHandler_Login_CredencialValida_Retorna200ComTokens(t *testin
 func TestAuthInternoHandler_Login_CredencialInvalida_Retorna401(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	loginUC := appauth.NewLoginUseCase(&credenciaisFakeHTTP{}, &refreshTokensFakeHTTP{}, infraauth.NewAuthenticatorJWT("s", 15*time.Minute), domainauth.TipoInterno, time.Hour)
-	handler := httphandler.NewAuthInternoHandler(loginUC, nil, nil)
+	h := httpauth.NewAuthInternoHandler(loginUC, nil, nil)
 
 	engine := gin.New()
-	engine.POST("/v1/auth/login", handler.Login)
+	engine.POST("/v1/auth/login", h.Login)
 
-	body, _ := json.Marshal(httphandler.LoginRequest{Email: "naoexiste@oficina.com", Senha: "x"})
+	body, _ := json.Marshal(httpauth.LoginRequest{Email: "naoexiste@oficina.com", Senha: "x"})
 	req := httptest.NewRequest(http.MethodPost, "/v1/auth/login", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -113,15 +113,15 @@ func TestAuthInternoHandler_Refresh_TokenValido_Retorna200(t *testing.T) {
 	refreshTokens := &refreshTokensFakeHTTP{}
 	loginUC := appauth.NewLoginUseCase(credenciaisComUsuarioValido(t), refreshTokens, jwtAuth, domainauth.TipoInterno, time.Hour)
 	refreshUC := appauth.NewRefreshUseCase(refreshTokens, jwtAuth, time.Hour)
-	handler := httphandler.NewAuthInternoHandler(loginUC, refreshUC, nil)
+	h := httpauth.NewAuthInternoHandler(loginUC, refreshUC, nil)
 
 	out, err := loginUC.Executar(context.Background(), appauth.LoginInput{Email: "func@oficina.com", Senha: "senha123"})
 	require.NoError(t, err)
 
 	engine := gin.New()
-	engine.POST("/v1/auth/refresh", handler.Refresh)
+	engine.POST("/v1/auth/refresh", h.Refresh)
 
-	body, _ := json.Marshal(httphandler.RefreshRequest{RefreshToken: out.RefreshToken})
+	body, _ := json.Marshal(httpauth.RefreshRequest{RefreshToken: out.RefreshToken})
 	req := httptest.NewRequest(http.MethodPost, "/v1/auth/refresh", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -136,15 +136,15 @@ func TestAuthInternoHandler_Logout_TokenValido_Retorna204(t *testing.T) {
 	refreshTokens := &refreshTokensFakeHTTP{}
 	loginUC := appauth.NewLoginUseCase(credenciaisComUsuarioValido(t), refreshTokens, jwtAuth, domainauth.TipoInterno, time.Hour)
 	logoutUC := appauth.NewLogoutUseCase(refreshTokens)
-	handler := httphandler.NewAuthInternoHandler(loginUC, nil, logoutUC)
+	h := httpauth.NewAuthInternoHandler(loginUC, nil, logoutUC)
 
 	out, err := loginUC.Executar(context.Background(), appauth.LoginInput{Email: "func@oficina.com", Senha: "senha123"})
 	require.NoError(t, err)
 
 	engine := gin.New()
-	engine.POST("/v1/auth/logout", handler.Logout)
+	engine.POST("/v1/auth/logout", h.Logout)
 
-	body, _ := json.Marshal(httphandler.RefreshRequest{RefreshToken: out.RefreshToken})
+	body, _ := json.Marshal(httpauth.RefreshRequest{RefreshToken: out.RefreshToken})
 	req := httptest.NewRequest(http.MethodPost, "/v1/auth/logout", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()

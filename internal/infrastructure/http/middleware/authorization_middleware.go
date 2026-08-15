@@ -5,8 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
-	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
-	httphandler "github.com/muriloperosa/soat-architecture/internal/infrastructure/http"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httperror"
 )
 
 const msgAcessoNaoPermitido = "acesso não permitido para este tipo de usuário"
@@ -18,7 +17,7 @@ func AuthorizationMiddleware(tipoEsperado domainauth.TipoUsuario) gin.HandlerFun
 		valor, existe := c.Get(ClaimsContextKey)
 		claims, ok := valor.(*domainauth.AppClaims)
 		if !existe || !ok || claims.Tipo != tipoEsperado {
-			httphandler.RespondError(c, shared.NewForbiddenError(msgAcessoNaoPermitido))
+			httperror.RespondForbiddenError(c, msgAcessoNaoPermitido)
 			c.AbortWithStatus(http.StatusForbidden)
 			return
 		}

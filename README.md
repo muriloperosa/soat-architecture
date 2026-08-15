@@ -168,27 +168,31 @@ shared.NewInternalError("erro ao consultar banco", err) // encapsula erro de inf
 
 Regra pros use cases: erro de regra de negócio nasce como `*shared.AppError` na origem (domain ou application); erro de infra (repositório, driver) é encapsulado com `shared.NewInternalError("mensagem", err)` antes de subir. `fmt.Errorf("...: %w", err)` no meio do caminho não quebra nada — o mapper HTTP usa `errors.As` e enxerga através do wrap.
 
-No handler, não monta `gin.H` na mão — delega pro mapper:
+No handler, não monta `gin.H` na mão — delega pro pacote de erro HTTP:
 
 ```go
 if err != nil {
-    http.RespondError(c, err)
+    httperror.RespondError(c, err)
     return
 }
 ```
 
-`RespondError` (`internal/infrastructure/http/errors.go`) traduz `Kind` pra status HTTP e devolve `{"type", "message", "details"}`:
+`RespondError` (`internal/infrastructure/http/httperror/errors.go`) traduz `Kind` pra status HTTP e devolve `{"type", "message", "details"}` (`httperror.ErrorResponse`). Há também um atalho por `Kind` — `RespondNotFoundError`, `RespondValidationError`, `RespondConflictError`, `RespondForbiddenError`, `RespondUnauthorizedError`, `RespondInternalError` — pra handlers que já sabem o `Kind` sem montar um `*shared.AppError` primeiro:
 
-| Kind         | Status |
-|--------------|--------|
-| `not_found`  | 404    |
-| `validation` | 400    |
-| `conflict`   | 409    |
-| `internal`   | 500    |
+| Kind           | Status | Atalho                       |
+|----------------|--------|-------------------------------|
+| `not_found`    | 404    | `RespondNotFoundError`         |
+| `validation`   | 400    | `RespondValidationError`       |
+| `conflict`     | 409    | `RespondConflictError`         |
+| `forbidden`    | 403    | `RespondForbiddenError`        |
+| `unauthorized` | 401    | `RespondUnauthorizedError`     |
+| `internal`     | 500    | `RespondInternalError`         |
 
 Erro que não é `*shared.AppError` (ou `Kind` desconhecido) cai em 500 genérico — mensagem interna nunca vaza pra resposta.
 
-`health_handler.go` é exceção: é probe de infra (ping no banco), não erro de domínio, então continua montando a resposta 503 direto.
+`httperror` é um pacote-folha deliberado: fica fora da raiz de `internal/infrastructure/http/` justamente pra domínios (`auth/`, `health/`) poderem importá-lo sem criar ciclo com `router.go`, que por sua vez importa os pacotes de domínio pra registrar rotas (ver ADR 0005).
+
+`health/handler.go` é exceção: é probe de infra (ping no banco), não erro de domínio, então continua montando a resposta 503 direto.
 
 ## Mocks
 
