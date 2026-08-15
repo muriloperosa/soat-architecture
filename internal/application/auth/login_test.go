@@ -100,6 +100,65 @@ func TestLoginUseCase_Executar_SenhaErrada_ErroGenerico(t *testing.T) {
 	require.Contains(t, err.Error(), "credenciais inválidas")
 }
 
+func TestLoginUseCase_Executar_ErroAoGerarAccessToken_RetornaErroInterno(t *testing.T) {
+	credenciaisRepo := mocks.NewRepositorioCredenciais(t)
+	refreshTokensRepo := mocks.NewRepositorioRefreshToken(t)
+	jwtAuth := mocks.NewJWTProvider(t)
+	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, jwtAuth, domainauth.TipoCliente, time.Hour)
+
+	credenciaisRepo.EXPECT().
+		BuscarPorEmail(mock.Anything, "a@a.com").
+		Return(&domainauth.Credencial{ID: "user-1", SenhaHash: hashSenha(t, "senha123"), Papel: domainauth.PapelCliente}, nil)
+	jwtAuth.EXPECT().
+		GerarAccessToken("user-1", domainauth.TipoCliente, domainauth.PapelCliente).
+		Return("", errors.New("chave de assinatura invalida"))
+
+	_, err := uc.Executar(context.Background(), appauth.LoginInput{Email: "a@a.com", Senha: "senha123"})
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "erro ao gerar access token")
+}
+
+func TestLoginUseCase_Executar_ErroAoGerarRefreshTokenBruto_RetornaErroInterno(t *testing.T) {
+	credenciaisRepo := mocks.NewRepositorioCredenciais(t)
+	refreshTokensRepo := mocks.NewRepositorioRefreshToken(t)
+	jwtAuth := mocks.NewJWTProvider(t)
+	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, jwtAuth, domainauth.TipoCliente, time.Hour)
+
+	credenciaisRepo.EXPECT().
+		BuscarPorEmail(mock.Anything, "a@a.com").
+		Return(&domainauth.Credencial{ID: "user-1", SenhaHash: hashSenha(t, "senha123"), Papel: domainauth.PapelCliente}, nil)
+	jwtAuth.EXPECT().
+		GerarAccessToken("user-1", domainauth.TipoCliente, domainauth.PapelCliente).
+		Return("access-token-valido", nil)
+	jwtAuth.EXPECT().
+		GerarRefreshTokenBruto().
+		Return("", errors.New("entropia insuficiente"))
+
+	_, err := uc.Executar(context.Background(), appauth.LoginInput{Email: "a@a.com", Senha: "senha123"})
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "erro ao gerar refresh token")
+}
+
+func TestLoginUseCase_Executar_ErroAoSalvarRefreshToken_RetornaErroInterno(t *testing.T) {
+	credenciaisRepo := mocks.NewRepositorioCredenciais(t)
+	refreshTokensRepo := mocks.NewRepositorioRefreshToken(t)
+	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, infraauth.NewAuthenticatorJWT("s", time.Minute), domainauth.TipoCliente, time.Hour)
+
+	credenciaisRepo.EXPECT().
+		BuscarPorEmail(mock.Anything, "a@a.com").
+		Return(&domainauth.Credencial{ID: "user-1", SenhaHash: hashSenha(t, "senha123"), Papel: domainauth.PapelCliente}, nil)
+	refreshTokensRepo.EXPECT().
+		Salvar(mock.Anything, mock.AnythingOfType("*auth.RefreshToken")).
+		Return(errors.New("conexao recusada"))
+
+	_, err := uc.Executar(context.Background(), appauth.LoginInput{Email: "a@a.com", Senha: "senha123"})
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "erro ao salvar refresh token")
+}
+
 func TestLoginUseCase_Executar_EmailNaoEncontrado_MesmoErroGenerico(t *testing.T) {
 	credenciaisRepo := mocks.NewRepositorioCredenciais(t)
 	refreshTokensRepo := mocks.NewRepositorioRefreshToken(t)

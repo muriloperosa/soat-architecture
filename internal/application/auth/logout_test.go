@@ -30,6 +30,23 @@ func TestLogoutUseCase_Executar_TokenExistente_Revoga(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestLogoutUseCase_Executar_TokenJaRevogado_NoOpSemErro(t *testing.T) {
+	refreshTokensRepo := mocks.NewRepositorioRefreshToken(t)
+	bruto, _ := infraauth.GerarRefreshTokenBruto()
+	agora := time.Now()
+	rt := &domainauth.RefreshToken{
+		ID: "rt-1", TokenHash: infraauth.HashRefreshToken(bruto),
+		ExpiraEm: time.Now().Add(time.Hour), RevogadoEm: &agora,
+	}
+	uc := appauth.NewLogoutUseCase(refreshTokensRepo)
+
+	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, infraauth.HashRefreshToken(bruto)).Return(rt, nil)
+
+	err := uc.Executar(context.Background(), appauth.LogoutInput{RefreshTokenBruto: bruto})
+
+	require.NoError(t, err)
+}
+
 func TestLogoutUseCase_Executar_TokenInexistente_NoOpSemErro(t *testing.T) {
 	refreshTokensRepo := mocks.NewRepositorioRefreshToken(t)
 	uc := appauth.NewLogoutUseCase(refreshTokensRepo)
