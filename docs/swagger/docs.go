@@ -25,7 +25,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "auth-cliente"
+                    "Auth Cliente"
                 ],
                 "summary": "Login de cliente",
                 "parameters": [
@@ -71,7 +71,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "auth-cliente"
+                    "Auth Cliente"
                 ],
                 "summary": "Logout de cliente",
                 "parameters": [
@@ -108,7 +108,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "auth-cliente"
+                    "Auth Cliente"
                 ],
                 "summary": "Refresh de token de cliente",
                 "parameters": [
@@ -154,7 +154,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "auth-interno"
+                    "Auth Interno"
                 ],
                 "summary": "Login de usuário interno",
                 "parameters": [
@@ -200,7 +200,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "auth-interno"
+                    "Auth Interno"
                 ],
                 "summary": "Logout de usuário interno",
                 "parameters": [
@@ -237,7 +237,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "auth-interno"
+                    "Auth Interno"
                 ],
                 "summary": "Refresh de token de usuário interno",
                 "parameters": [
@@ -280,7 +280,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "health"
+                    "Health"
                 ],
                 "summary": "Verifica saúde da API",
                 "responses": {
@@ -309,12 +309,10 @@ const docTemplate = `{
             ],
             "properties": {
                 "email": {
-                    "description": "Email cadastrado do usuário",
                     "type": "string",
                     "example": "usuario@oficina.com"
                 },
                 "senha": {
-                    "description": "Senha em texto plano, validada contra o hash bcrypt armazenado",
                     "type": "string",
                     "example": "senha123"
                 }
@@ -327,7 +325,6 @@ const docTemplate = `{
             ],
             "properties": {
                 "refresh_token": {
-                    "description": "RefreshToken bruto emitido em um login ou refresh anterior",
                     "type": "string",
                     "example": "9f8c1e...b3a0"
                 }
@@ -337,12 +334,10 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "access_token": {
-                    "description": "AccessToken JWT (HS256) de curta duração, usado no header Authorization",
                     "type": "string",
                     "example": "eyJhbGciOiJIUzI1NiIs..."
                 },
                 "refresh_token": {
-                    "description": "RefreshToken bruto de longa duração, revogado e rotacionado a cada uso",
                     "type": "string",
                     "example": "9f8c1e...b3a0"
                 }
@@ -352,7 +347,6 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "status": {
-                    "description": "Status é sempre \"ok\" quando a API e o banco estão respondendo",
                     "type": "string",
                     "example": "ok"
                 }

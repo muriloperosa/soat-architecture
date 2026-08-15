@@ -3,11 +3,9 @@ definitions:
   auth.LoginRequest:
     properties:
       email:
-        description: Email cadastrado do usuário
         example: usuario@oficina.com
         type: string
       senha:
-        description: Senha em texto plano, validada contra o hash bcrypt armazenado
         example: senha123
         type: string
     required:
@@ -17,7 +15,6 @@ definitions:
   auth.RefreshRequest:
     properties:
       refresh_token:
-        description: RefreshToken bruto emitido em um login ou refresh anterior
         example: 9f8c1e...b3a0
         type: string
     required:
@@ -26,19 +23,15 @@ definitions:
   auth.TokenResponse:
     properties:
       access_token:
-        description: AccessToken JWT (HS256) de curta duração, usado no header Authorization
         example: eyJhbGciOiJIUzI1NiIs...
         type: string
       refresh_token:
-        description: RefreshToken bruto de longa duração, revogado e rotacionado a
-          cada uso
         example: 9f8c1e...b3a0
         type: string
     type: object
   health.HealthCheckResponse:
     properties:
       status:
-        description: Status é sempre "ok" quando a API e o banco estão respondendo
         example: ok
         type: string
     type: object
@@ -96,7 +89,7 @@ paths:
             $ref: '#/definitions/httperror.ErrorResponse'
       summary: Login de cliente
       tags:
-      - auth-cliente
+      - Auth Cliente
   /v1/auth/cliente/logout:
     post:
       consumes:
@@ -120,7 +113,7 @@ paths:
             $ref: '#/definitions/httperror.ErrorResponse'
       summary: Logout de cliente
       tags:
-      - auth-cliente
+      - Auth Cliente
   /v1/auth/cliente/refresh:
     post:
       consumes:
@@ -150,7 +143,7 @@ paths:
             $ref: '#/definitions/httperror.ErrorResponse'
       summary: Refresh de token de cliente
       tags:
-      - auth-cliente
+      - Auth Cliente
   /v1/auth/login:
     post:
       consumes:
@@ -180,7 +173,7 @@ paths:
             $ref: '#/definitions/httperror.ErrorResponse'
       summary: Login de usuário interno
       tags:
-      - auth-interno
+      - Auth Interno
   /v1/auth/logout:
     post:
       consumes:
@@ -204,7 +197,7 @@ paths:
             $ref: '#/definitions/httperror.ErrorResponse'
       summary: Logout de usuário interno
       tags:
-      - auth-interno
+      - Auth Interno
   /v1/auth/refresh:
     post:
       consumes:
@@ -234,7 +227,7 @@ paths:
             $ref: '#/definitions/httperror.ErrorResponse'
       summary: Refresh de token de usuário interno
       tags:
-      - auth-interno
+      - Auth Interno
   /v1/health:
     get:
       description: Retorna 200 se a API e a conexão com o MySQL estão respondendo
@@ -251,7 +244,7 @@ paths:
             $ref: '#/definitions/httperror.ErrorResponse'
       summary: Verifica saúde da API
       tags:
-      - health
+      - Health
 schemes:
 - http
 swagger: "2.0"

@@ -22,7 +22,7 @@ func NewAuthInternoHandler(login *appauth.LoginUseCase, refresh *appauth.Refresh
 
 // @Summary Login de usuário interno
 // @Description Autentica por email+senha e emite o par access+refresh token
-// @Tags auth-interno
+// @Tags Auth Interno
 // @Accept json
 // @Produce json
 // @Param request body LoginRequest true "Credenciais"
@@ -48,7 +48,7 @@ func (h *AuthInternoHandler) Login(c *gin.Context) {
 
 // @Summary Refresh de token de usuário interno
 // @Description Troca um refresh token válido por um novo par access+refresh (rotação)
-// @Tags auth-interno
+// @Tags Auth Interno
 // @Accept json
 // @Produce json
 // @Param request body RefreshRequest true "Refresh token"
@@ -74,7 +74,7 @@ func (h *AuthInternoHandler) Refresh(c *gin.Context) {
 
 // @Summary Logout de usuário interno
 // @Description Revoga o refresh token informado (idempotente)
-// @Tags auth-interno
+// @Tags Auth Interno
 // @Accept json
 // @Produce json
 // @Param request body RefreshRequest true "Refresh token"

@@ -22,7 +22,7 @@ func NewAuthClienteHandler(login *appauth.LoginUseCase, refresh *appauth.Refresh
 
 // @Summary Login de cliente
 // @Description Autentica por email+senha e emite o par access+refresh token
-// @Tags auth-cliente
+// @Tags Auth Cliente
 // @Accept json
 // @Produce json
 // @Param request body LoginRequest true "Credenciais"
@@ -33,7 +33,7 @@ func NewAuthClienteHandler(login *appauth.LoginUseCase, refresh *appauth.Refresh
 func (h *AuthClienteHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		httperror.RespondValidationError(c, "corpo inválido")
+		httperror.RespondValidationError(c, "Request body inválido.")
 		return
 	}
 
@@ -48,7 +48,7 @@ func (h *AuthClienteHandler) Login(c *gin.Context) {
 
 // @Summary Refresh de token de cliente
 // @Description Troca um refresh token válido por um novo par access+refresh (rotação)
-// @Tags auth-cliente
+// @Tags Auth Cliente
 // @Accept json
 // @Produce json
 // @Param request body RefreshRequest true "Refresh token"
@@ -74,7 +74,7 @@ func (h *AuthClienteHandler) Refresh(c *gin.Context) {
 
 // @Summary Logout de cliente
 // @Description Revoga o refresh token informado (idempotente)
-// @Tags auth-cliente
+// @Tags Auth Cliente
 // @Accept json
 // @Produce json
 // @Param request body RefreshRequest true "Refresh token"

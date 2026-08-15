@@ -15,7 +15,7 @@ const msgBancoIndisponivel = "Banco de dados relacional indisponível."
 //
 // @Summary Verifica saúde da API
 // @Description Retorna 200 se a API e a conexão com o MySQL estão respondendo
-// @Tags health
+// @Tags Health
 // @Produce json
 // @Success 200 {object} HealthCheckResponse
 // @Failure 503 {object} httperror.ErrorResponse
