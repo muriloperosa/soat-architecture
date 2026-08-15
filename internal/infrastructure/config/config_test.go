@@ -15,6 +15,7 @@ func TestLoad_UsaValoresDasEnvs(t *testing.T) {
 	t.Setenv("DB_USER", "user")
 	t.Setenv("DB_PASSWORD", "pass")
 	t.Setenv("DB_NAME", "oficina_test")
+	t.Setenv("JWT_SECRET", "segredo-de-teste")
 
 	cfg, err := config.Load()
 
@@ -36,6 +37,7 @@ func TestLoad_UsaValoresDoPoolDasEnvs(t *testing.T) {
 	t.Setenv("DB_MAX_OPEN_CONNS", "50")
 	t.Setenv("DB_MAX_IDLE_CONNS", "10")
 	t.Setenv("DB_CONN_MAX_LIFETIME_MINUTES", "15")
+	t.Setenv("JWT_SECRET", "segredo-de-teste")
 
 	cfg, err := config.Load()
 
@@ -54,6 +56,7 @@ func TestLoad_UsaDefaultsDoPoolQuandoEnvsNaoDefinidas(t *testing.T) {
 	t.Setenv("DB_USER", "user")
 	t.Setenv("DB_PASSWORD", "pass")
 	t.Setenv("DB_NAME", "oficina_test")
+	t.Setenv("JWT_SECRET", "segredo-de-teste")
 
 	cfg, err := config.Load()
 
@@ -70,6 +73,7 @@ func TestLoad_UsaDefaultDeAppPort(t *testing.T) {
 	t.Setenv("DB_USER", "user")
 	t.Setenv("DB_PASSWORD", "pass")
 	t.Setenv("DB_NAME", "oficina_test")
+	t.Setenv("JWT_SECRET", "segredo-de-teste")
 
 	cfg, err := config.Load()
 
@@ -79,6 +83,37 @@ func TestLoad_UsaDefaultDeAppPort(t *testing.T) {
 
 func TestLoad_ErroQuandoEnvObrigatoriaFaltando(t *testing.T) {
 	os.Unsetenv("DB_HOST")
+	t.Setenv("DB_PORT", "3306")
+	t.Setenv("DB_USER", "user")
+	t.Setenv("DB_PASSWORD", "pass")
+	t.Setenv("DB_NAME", "oficina_test")
+	t.Setenv("JWT_SECRET", "segredo-de-teste")
+
+	cfg, err := config.Load()
+
+	require.Error(t, err)
+	require.Nil(t, cfg)
+}
+
+func TestLoad_CamposJWT(t *testing.T) {
+	t.Setenv("DB_HOST", "db-host")
+	t.Setenv("DB_PORT", "3306")
+	t.Setenv("DB_USER", "user")
+	t.Setenv("DB_PASSWORD", "pass")
+	t.Setenv("DB_NAME", "oficina_test")
+	t.Setenv("JWT_SECRET", "segredo-de-teste")
+
+	cfg, err := config.Load()
+
+	require.NoError(t, err)
+	require.Equal(t, "segredo-de-teste", cfg.JWTSecret)
+	require.Equal(t, 15, cfg.JWTAccessTokenTTLMinutes)
+	require.Equal(t, 168, cfg.JWTRefreshTokenTTLHours)
+}
+
+func TestLoad_JWTSecretObrigatorio(t *testing.T) {
+	os.Unsetenv("JWT_SECRET")
+	t.Setenv("DB_HOST", "db-host")
 	t.Setenv("DB_PORT", "3306")
 	t.Setenv("DB_USER", "user")
 	t.Setenv("DB_PASSWORD", "pass")

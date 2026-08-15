@@ -15,6 +15,10 @@ type Config struct {
 	DBMaxOpenConns           int `env:"DB_MAX_OPEN_CONNS" envDefault:"25"`
 	DBMaxIdleConns           int `env:"DB_MAX_IDLE_CONNS" envDefault:"5"`
 	DBConnMaxLifetimeMinutes int `env:"DB_CONN_MAX_LIFETIME_MINUTES" envDefault:"5"`
+
+	JWTSecret                string `env:"JWT_SECRET,required"`
+	JWTAccessTokenTTLMinutes int    `env:"JWT_ACCESS_TOKEN_TTL_MINUTES" envDefault:"15"`
+	JWTRefreshTokenTTLHours  int    `env:"JWT_REFRESH_TOKEN_TTL_HOURS" envDefault:"168"`
 }
 
 // Load lê as variáveis de ambiente do processo e retorna um Config validado.
