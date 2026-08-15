@@ -23,6 +23,8 @@ type LoginUseCase struct {
 	refreshTTL    time.Duration
 }
 
+// NewLoginUseCase monta o use case com a fonte de credenciais e o TipoUsuario
+// já decididos (injetados pelo wiring, um por endpoint de login).
 func NewLoginUseCase(
 	credenciais domainauth.RepositorioCredenciais,
 	refreshTokens domainauth.RepositorioRefreshToken,
@@ -39,6 +41,9 @@ func NewLoginUseCase(
 	}
 }
 
+// Executar valida email+senha contra a credencial cadastrada e, se válida,
+// emite um novo par access+refresh token. Credencial inexistente e senha
+// errada retornam o mesmo erro genérico.
 func (uc *LoginUseCase) Executar(ctx context.Context, input LoginInput) (LoginOutput, error) {
 	cred, err := uc.credenciais.BuscarPorEmail(ctx, input.Email)
 	if err != nil {
