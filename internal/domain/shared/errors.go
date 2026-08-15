@@ -4,10 +4,12 @@ package shared
 type ErrorKind string
 
 const (
-	KindNotFound   ErrorKind = "not_found"
-	KindValidation ErrorKind = "validation"
-	KindConflict   ErrorKind = "conflict"
-	KindInternal   ErrorKind = "internal"
+	KindNotFound     ErrorKind = "not_found"
+	KindValidation   ErrorKind = "validation"
+	KindConflict     ErrorKind = "conflict"
+	KindInternal     ErrorKind = "internal"
+	KindForbidden    ErrorKind = "forbidden"
+	KindUnauthorized ErrorKind = "unauthorized"
 )
 
 // AppError é o erro tipado que domain/application retornam quando o erro
@@ -48,4 +50,12 @@ func NewConflictError(msg string) *AppError {
 
 func NewInternalError(msg string, err error) *AppError {
 	return &AppError{Kind: KindInternal, Message: msg, Err: err}
+}
+
+func NewForbiddenError(msg string) *AppError {
+	return &AppError{Kind: KindForbidden, Message: msg}
+}
+
+func NewUnauthorizedError(msg string) *AppError {
+	return &AppError{Kind: KindUnauthorized, Message: msg}
 }
