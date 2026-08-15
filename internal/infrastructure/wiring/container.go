@@ -15,7 +15,7 @@ type Container struct {
 	Config *config.Config
 	DB     *gorm.DB
 
-	JWTAuth *infraauth.AutenticadorJWT
+	JWTAuth *infraauth.AuthenticatorJWT
 
 	// TODO(Task 14): AuthInternoHandler *httphandler.AuthInternoHandler e
 	// AuthClienteHandler *httphandler.AuthClienteHandler ficam bloqueados até

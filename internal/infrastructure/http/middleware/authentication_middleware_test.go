@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setupEngine(jwtAuth *infraauth.AutenticadorJWT) *gin.Engine {
+func setupEngine(jwtAuth *infraauth.AuthenticatorJWT) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	engine := gin.New()
 	engine.GET("/protegido", middleware.AuthenticationMiddleware(jwtAuth), func(c *gin.Context) {

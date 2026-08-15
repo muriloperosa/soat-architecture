@@ -9,17 +9,22 @@ import (
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 )
 
-// AutenticadorJWT gera e valida access tokens HS256.
-type AutenticadorJWT struct {
+// AuthenticatorJWT gera e valida access tokens HS256.
+type AuthenticatorJWT struct {
 	secret    []byte
 	accessTTL time.Duration
 }
 
-func NewAuthenticatorJWT(secret string, accessTTL time.Duration) *AutenticadorJWT {
-	return &AutenticadorJWT{secret: []byte(secret), accessTTL: accessTTL}
+// NewAuthenticatorJWT monta o autenticador com o secret HS256 e o TTL do
+// access token. secret é lido de Config.JWTSecret; accessTTL de
+// Config.JWTAccessTokenTTLMinutes.
+func NewAuthenticatorJWT(secret string, accessTTL time.Duration) *AuthenticatorJWT {
+	return &AuthenticatorJWT{secret: []byte(secret), accessTTL: accessTTL}
 }
 
-func (a *AutenticadorJWT) GerarAccessToken(subject string, tipo domainauth.TipoUsuario, papel domainauth.PapelUsuario) (string, error) {
+// GerarAccessToken assina um novo access token JWT (HS256) pro par
+// usuário/papel, com expiração em now+accessTTL.
+func (a *AuthenticatorJWT) GerarAccessToken(subject string, tipo domainauth.TipoUsuario, papel domainauth.PapelUsuario) (string, error) {
 	now := time.Now()
 	claims := domainauth.AppClaims{
 		Subject: subject,
@@ -37,11 +42,14 @@ func (a *AutenticadorJWT) GerarAccessToken(subject string, tipo domainauth.TipoU
 
 // GerarRefreshToken delega pra função de mesmo nome em refresh_hash.go —
 // método existe só pra satisfazer domainauth.JWTProvider (mockável nos use cases).
-func (a *AutenticadorJWT) GerarRefreshToken() (string, error) {
+func (a *AuthenticatorJWT) GerarRefreshToken() (string, error) {
 	return GerarRefreshToken()
 }
 
-func (a *AutenticadorJWT) ValidarAccessToken(tokenBruto string) (*domainauth.AppClaims, error) {
+// ValidarAccessToken verifica assinatura HS256 e expiração do token bruto e,
+// se válido, devolve os claims tipados. Rejeita qualquer método de assinatura
+// diferente de HMAC.
+func (a *AuthenticatorJWT) ValidarAccessToken(tokenBruto string) (*domainauth.AppClaims, error) {
 	claims := &domainauth.AppClaims{}
 	token, err := jwt.ParseWithClaims(tokenBruto, claims, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
