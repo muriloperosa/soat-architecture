@@ -194,6 +194,58 @@ Erro que não é `*shared.AppError` (ou `Kind` desconhecido) cai em 500 genéric
 
 `health/handler.go` é exceção: é probe de infra (ping no banco), não erro de domínio, então continua montando a resposta 503 direto.
 
+## Middlewares de autenticação/autorização
+
+`internal/infrastructure/http/middleware/` tem dois middlewares Gin, pensados pra empilhar em sequência numa rota protegida.
+
+### `AuthenticationMiddleware` — valida o JWT
+
+Lê o header `Authorization: Bearer <token>`, valida assinatura (HS256) e expiração via `AutenticadorJWT.ValidarAccessToken`, e injeta os claims (`*domainauth.AppClaims`) no `gin.Context` sob a chave `middleware.ClaimsContextKey`. Sem token, token malformado ou inválido → 401 (`httperror.RespondError` com `shared.NewUnauthorizedError`).
+
+```go
+middleware.AuthenticationMiddleware(c.JWTAuth) // c é *wiring.Container
+```
+
+Não decide quem pode acessar o quê — só garante "esse token é válido e é desse usuário". Isso é trabalho do próximo middleware.
+
+### `AuthorizationMiddleware` — valida o tipo de usuário
+
+Lê o `*domainauth.AppClaims` que o `AuthenticationMiddleware` deixou no contexto e compara `claims.Tipo` com o `TipoUsuario` esperado pra rota. Tipo errado (ou claims ausente, ou `AuthenticationMiddleware` não rodou antes) → 403 (`httperror.RespondForbiddenError`).
+
+```go
+middleware.AuthorizationMiddleware(domainauth.TipoInterno) // ou domainauth.TipoCliente
+```
+
+**Sempre nessa ordem** — `AuthorizationMiddleware` depende do que `AuthenticationMiddleware` põe no contexto:
+
+```go
+rg.GET(
+    "/ordens-servico",
+    middleware.AuthenticationMiddleware(c.JWTAuth),
+    middleware.AuthorizationMiddleware(domainauth.TipoInterno),
+    handler.Listar,
+)
+```
+
+### Adicionando numa rota nova
+
+Em `Register<Dominio>Routes(rg *gin.RouterGroup, c *wiring.Container)` (ex. `internal/infrastructure/http/ordemservico/routes.go`), encadeie os middlewares antes do handler final — Gin aceita quantos `gin.HandlerFunc` forem passados, executados em ordem:
+
+```go
+func RegisterOrdemServicoRoutes(rg *gin.RouterGroup, c *wiring.Container) {
+	os := rg.Group("/ordens-servico")
+	os.Use(middleware.AuthenticationMiddleware(c.JWTAuth))
+
+	os.GET("", c.OrdemServicoHandler.Listar) // qualquer tipo autenticado
+	os.POST("",
+		middleware.AuthorizationMiddleware(domainauth.TipoInterno), // só interno
+		c.OrdemServicoHandler.Criar,
+	)
+}
+```
+
+`rg.Use(...)` aplica o middleware a todas as rotas daquele grupo; middleware passado direto no verbo HTTP (`os.POST("", middleware..., handler)`) vale só pra aquela rota. Rota sem nenhum dos dois fica pública (ex. `/v1/health`, `/v1/auth/login`).
+
 ## Mocks
 
 ```bash
