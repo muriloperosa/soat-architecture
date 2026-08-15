@@ -13,10 +13,14 @@ type LogoutUseCase struct {
 	refreshTokens domainauth.RepositorioRefreshToken
 }
 
+// NewLogoutUseCase monta o use case com o repositório de refresh tokens,
+// compartilhado entre interno e cliente (o token já carrega o TipoUsuario).
 func NewLogoutUseCase(refreshTokens domainauth.RepositorioRefreshToken) *LogoutUseCase {
 	return &LogoutUseCase{refreshTokens: refreshTokens}
 }
 
+// Executar revoga o refresh token informado. Token inexistente ou já revogado
+// não é erro — logout é idempotente por natureza.
 func (uc *LogoutUseCase) Executar(ctx context.Context, input LogoutInput) error {
 	hash := infraauth.HashRefreshToken(input.RefreshTokenBruto)
 	rt, err := uc.refreshTokens.BuscarPorHash(ctx, hash)

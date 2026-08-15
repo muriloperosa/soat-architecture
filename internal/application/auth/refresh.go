@@ -19,10 +19,17 @@ type RefreshUseCase struct {
 	refreshTTL    time.Duration
 }
 
+// NewRefreshUseCase monta o use case com o repositório de refresh tokens e o
+// autenticador JWT, compartilhados entre interno e cliente (o token antigo já
+// carrega o TipoUsuario, propagado pro novo par).
 func NewRefreshUseCase(refreshTokens domainauth.RepositorioRefreshToken, jwtAuth *infraauth.AutenticadorJWT, refreshTTL time.Duration) *RefreshUseCase {
 	return &RefreshUseCase{refreshTokens: refreshTokens, jwtAuth: jwtAuth, refreshTTL: refreshTTL}
 }
 
+// Executar valida o refresh token bruto (existe, não expirado, não revogado),
+// revoga-o e emite um novo par access+refresh, rotação real, o token antigo
+// nunca é reaproveitado mesmo que a chamada seguinte falhe antes de persistir
+// o novo par.
 func (uc *RefreshUseCase) Executar(ctx context.Context, input RefreshInput) (RefreshOutput, error) {
 	hash := infraauth.HashRefreshToken(input.RefreshTokenBruto)
 	rt, err := uc.refreshTokens.BuscarPorHash(ctx, hash)
