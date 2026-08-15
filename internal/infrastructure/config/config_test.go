@@ -107,7 +107,7 @@ func TestLoad_CamposJWT(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, "segredo-de-teste", cfg.JWTSecret)
-	require.Equal(t, 15, cfg.JWTAccessTokenTTLMinutes)
+	require.Equal(t, 60, cfg.JWTAccessTokenTTLMinutes)
 	require.Equal(t, 168, cfg.JWTRefreshTokenTTLHours)
 }
 
