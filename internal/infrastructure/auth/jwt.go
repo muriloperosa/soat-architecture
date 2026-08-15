@@ -15,8 +15,6 @@ type AutenticadorJWT struct {
 	accessTTL time.Duration
 }
 
-var _ domainauth.JWTProvider = (*AutenticadorJWT)(nil)
-
 func NewAuthenticatorJWT(secret string, accessTTL time.Duration) *AutenticadorJWT {
 	return &AutenticadorJWT{secret: []byte(secret), accessTTL: accessTTL}
 }
@@ -35,6 +33,12 @@ func (a *AutenticadorJWT) GerarAccessToken(subject string, tipo domainauth.TipoU
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(a.secret)
+}
+
+// GerarRefreshTokenBruto delega pra função de mesmo nome em refresh_hash.go —
+// método existe só pra satisfazer domainauth.JWTProvider (mockável nos use cases).
+func (a *AutenticadorJWT) GerarRefreshTokenBruto() (string, error) {
+	return GerarRefreshTokenBruto()
 }
 
 func (a *AutenticadorJWT) ValidarAccessToken(tokenBruto string) (*domainauth.AppClaims, error) {

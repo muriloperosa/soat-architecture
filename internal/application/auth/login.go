@@ -65,7 +65,7 @@ func gerarTokens(ctx context.Context, refreshTokens domainauth.RepositorioRefres
 		return LoginOutput{}, shared.NewInternalError("erro ao gerar access token", err)
 	}
 
-	refreshBruto, err := infraauth.GerarRefreshTokenBruto()
+	refreshBruto, err := jwtAuth.GerarRefreshTokenBruto()
 	if err != nil {
 		return LoginOutput{}, shared.NewInternalError("erro ao gerar refresh token", err)
 	}

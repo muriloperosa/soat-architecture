@@ -78,6 +78,61 @@ func (_c *JWTProvider_GerarAccessToken_Call) RunAndReturn(run func(string, auth.
 	return _c
 }
 
+// GerarRefreshTokenBruto provides a mock function with no fields
+func (_m *JWTProvider) GerarRefreshTokenBruto() (string, error) {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GerarRefreshTokenBruto")
+	}
+
+	var r0 string
+	var r1 error
+	if rf, ok := ret.Get(0).(func() (string, error)); ok {
+		return rf()
+	}
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// JWTProvider_GerarRefreshTokenBruto_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GerarRefreshTokenBruto'
+type JWTProvider_GerarRefreshTokenBruto_Call struct {
+	*mock.Call
+}
+
+// GerarRefreshTokenBruto is a helper method to define mock.On call
+func (_e *JWTProvider_Expecter) GerarRefreshTokenBruto() *JWTProvider_GerarRefreshTokenBruto_Call {
+	return &JWTProvider_GerarRefreshTokenBruto_Call{Call: _e.mock.On("GerarRefreshTokenBruto")}
+}
+
+func (_c *JWTProvider_GerarRefreshTokenBruto_Call) Run(run func()) *JWTProvider_GerarRefreshTokenBruto_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *JWTProvider_GerarRefreshTokenBruto_Call) Return(_a0 string, _a1 error) *JWTProvider_GerarRefreshTokenBruto_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *JWTProvider_GerarRefreshTokenBruto_Call) RunAndReturn(run func() (string, error)) *JWTProvider_GerarRefreshTokenBruto_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewJWTProvider creates a new instance of JWTProvider. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewJWTProvider(t interface {
