@@ -8,12 +8,20 @@ CREATE TABLE ordens_servico (
 
     quilometragem_entrada INT UNSIGNED NOT NULL,
 
-    status VARCHAR(30) NOT NULL,
+    status ENUM(
+        'RECEBIDA',
+        'EM_DIAGNOSTICO',
+        'AGUARDANDO_APROVACAO',
+        'APROVADA',
+        'REJEITADA',
+        'EM_EXECUCAO',
+        'FINALIZADA',
+        'ENTREGUE'
+    ) NOT NULL,
 
     diagnostico TEXT NULL,
     observacoes TEXT NULL,
 
-    -- Usuário responsável pela abertura da OS.
     criado_por BIGINT UNSIGNED NOT NULL,
 
     data_cadastro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -36,21 +44,7 @@ CREATE TABLE ordens_servico (
 
     CONSTRAINT fk_ordens_servico_criado_por
         FOREIGN KEY (criado_por)
-        REFERENCES usuarios(id),
-
-    CONSTRAINT chk_ordens_servico_status
-        CHECK (
-            status IN (
-                'RECEBIDA',
-                'EM_DIAGNOSTICO',
-                'AGUARDANDO_APROVACAO',
-                'APROVADA',
-                'REJEITADA',
-                'EM_EXECUCAO',
-                'FINALIZADA',
-                'ENTREGUE'
-            )
-        )
+        REFERENCES usuarios(id)
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;

@@ -1,7 +1,12 @@
 CREATE TABLE usuarios (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 
-    papel VARCHAR(20) NOT NULL,
+    papel ENUM(
+        'ADMINISTRADOR',
+        'ATENDENTE',
+        'MECANICO'
+    ) NOT NULL,
+
     nome VARCHAR(150) NOT NULL,
     email VARCHAR(255) NOT NULL,
     senha_hash VARCHAR(255) NOT NULL,
@@ -12,20 +17,9 @@ CREATE TABLE usuarios (
     data_atualizacao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
         ON UPDATE CURRENT_TIMESTAMP,
 
-    CONSTRAINT pk_usuarios
-        PRIMARY KEY (id),
+    CONSTRAINT pk_usuarios PRIMARY KEY (id),
 
-    CONSTRAINT uk_usuarios_email
-        UNIQUE (email),
-
-    CONSTRAINT chk_usuarios_papel
-        CHECK (
-            papel IN (
-                'ADMINISTRADOR',
-                'ATENDENTE',
-                'MECANICO'
-            )
-        )
+    CONSTRAINT uk_usuarios_email UNIQUE (email)
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;

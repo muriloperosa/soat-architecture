@@ -37,10 +37,12 @@ class Cliente:::root {
     -nome: string
     -email: Email
     -telefone: Telefone
+    -senha: SenhaHash
     -ativo: bool
     -dataCadastro: DateTime
     -dataAtualizacao: DateTime
     +NewCliente(...) (Cliente, error)
+    +alterarSenha(...) error
     +atualizar(...) error
     +ativar()
     +inativar()
@@ -115,18 +117,14 @@ class Peca:::root {
     -descricao: string
     -preco: float64
     -quantidadeEmEstoque: int
-    -quantidadeReservada: int
     -estoqueMinimo: int
     -ativo: bool
     -dataCadastro: DateTime
     -dataAtualizacao: DateTime
     +NewPeca(...) (Peca, error)
     +atualizar(...) error
-    +reservar(quantidade) error
-    +removerReserva(quantidade) error
     +consumir(quantidade) error
     +repor(quantidade) error
-    +quantidadeDisponivel() int
     +ativar()
     +inativar()
 }
@@ -183,6 +181,17 @@ class HistoricoStatus:::entity {
     -alteradoPor: uint64
     -motivo: string?
     +NewHistoricoStatus(...) (HistoricoStatus, error)
+}
+
+class ReservaPeca:::entity {
+    -id: uint64
+    -ordemServicoID: uint64
+    -pecaID: uint64
+    -quantidade: int
+    -criadaEm: DateTime
+    -atualizadaEm: DateTime
+    +NewReservaPeca(...) (ReservaPeca, error)
+    +alterarQuantidade(quantidade) error
 }
 
 %% =========================================================
@@ -272,12 +281,14 @@ Veiculo "1" -- "0..*" OrdemServico : atendimentos
 
 OrdemServico "1" *-- "0..1" Orcamento
 OrdemServico "1" *-- "1..*" HistoricoStatus
+OrdemServico "1" *-- "0..*" ReservaPeca : reservas
 
 Orcamento "1" *-- "0..*" ItemServico
 Orcamento "1" *-- "0..*" ItemPeca
 
 ItemServico "*" --> "1" Servico
 ItemPeca "*" --> "1" Peca
+ReservaPeca "*" --> "1" Peca : peca
 
 OrdemServico ..> StatusOrdemServico
 HistoricoStatus ..> StatusOrdemServico
@@ -294,7 +305,9 @@ note for OrdemServico "quilometragemEntrada preserva a quilometragem da abertura
 
 note for Orcamento "O Orcamento nao possui status proprio.\nA aprovacao/rejeicao pertence ao status da OS.\nApos APROVADA, o Orcamento deixa de ser editavel."
 
-note for Peca "reservar() e consumir() bloqueiam a operacao\nse o estoque ficar abaixo de estoqueMinimo."
+note for Peca "quantidadeEmEstoque representa o estoque fisico.\nAs reservas sao controladas por ReservaPeca.\nconsumir() nao pode deixar o estoque abaixo de estoqueMinimo."
+
+note for ReservaPeca "Representa a quantidade de uma Peca reservada para uma OS.\nDisponibilidade = estoque fisico - soma das reservas.\nUma OS possui no maximo uma reserva por Peca.\nA persistencia deve ser transacional."
 
 note for ItemServico "quantidade permite repetir o mesmo servico\nsem duplicar itens. subtotal = valor * quantidade."
 
@@ -320,6 +333,10 @@ Todas as Entidades e Value Objects devem ser criados pelos construtores `New...`
 ### Identificadores
 
 Os IDs internos serão `uint64` no domínio e `BIGINT UNSIGNED AUTO_INCREMENT` no MySQL. Identificadores de negócio, como `NumeroOrdemServico`, permanecem separados e são gerados pela aplicação.
+
+### Cliente e senha
+
+Cliente possui credencial própria e reutiliza o Value Object `SenhaHash`. A senha em texto puro nunca é persistida; no banco é armazenado apenas `senha_hash VARCHAR(255)`.
 
 ### Cliente e Veículo
 
@@ -385,29 +402,39 @@ subtotal = valor * quantidade
 
 ### Estoque
 
+`Peca` mantém somente o estoque físico e o estoque mínimo. A quantidade reservada não é duplicada na peça.
+
 Quantidade disponível:
 
 ```text
-quantidadeEmEstoque - quantidadeReservada
+quantidadeEmEstoque - soma(reservas_pecas.quantidade)
 ```
 
-Reserva:
+Para uma nova reserva:
 
 ```text
-quantidadeDisponivel - quantidade >= estoqueMinimo
+quantidadeEmEstoque - reservasExistentes - novaQuantidade >= estoqueMinimo
 ```
 
-Consumo:
+Para consumo, a operação também não pode deixar o estoque físico abaixo de `estoqueMinimo`.
+
+`ItemPeca` representa a peça incluída no orçamento e preserva seu valor histórico. Ele não representa uma reserva de estoque.
+
+### Reserva de peça
+
+`ReservaPeca` é uma entidade que representa a quantidade de uma peça comprometida com uma Ordem de Serviço.
+
+Uma mesma combinação de OS e peça possui no máximo uma reserva corrente:
 
 ```text
-quantidadeEmEstoque - quantidade >= estoqueMinimo
+UNIQUE(ordem_servico_id, peca_id)
 ```
 
-Se a regra for violada, a operação retorna erro e não altera a entidade.
+A tabela `reservas_pecas` é a única fonte de verdade para as quantidades reservadas. Não existe `pecas.quantidade_reservada`.
 
 ### Reserva transacional
 
-A persistência terá uma tabela `reservas_pecas` para registrar qual OS originou cada reserva. `pecas.quantidade_reservada` permanece como saldo agregado.
+A persistência da reserva deve ocorrer em uma transação para impedir que duas operações concorrentes utilizem a mesma disponibilidade.
 
 Fluxo:
 
@@ -416,20 +443,24 @@ BEGIN
   ↓
 SELECT peça FOR UPDATE
   ↓
+consultar SUM(reservas_pecas.quantidade)
+  ↓
 validar estoque mínimo
   ↓
-registrar/atualizar reserva
-  ↓
-atualizar quantidade_reservada
+INSERT/UPDATE reservas_pecas
   ↓
 COMMIT
 ```
 
 Em caso de erro: `ROLLBACK`.
 
+A transação e o bloqueio são responsabilidades da infraestrutura de persistência; a regra que determina se a reserva é válida continua protegida pelo domínio/aplicação.
+
 ### Persistência dos enums
 
-Enums serão persistidos como `VARCHAR + CHECK`. O banco protege valores possíveis; o domínio protege as transições permitidas.
+Enums de conjunto fechado são persistidos com `ENUM` no MySQL, incluindo `PapelUsuario`, `TipoPessoa` e `StatusOrdemServico`.
+
+O domínio também mantém seus próprios tipos, protegendo regras e transições, enquanto o banco impede a persistência de valores fora do conjunto permitido.
 
 ### Persistência
 
@@ -454,6 +485,7 @@ Enums serão persistidos como `VARCHAR + CHECK`. O banco protege valores possív
 - ItemServico
 - ItemPeca
 - HistoricoStatus
+- ReservaPeca
 
 ## Value Objects
 
@@ -468,7 +500,7 @@ Enums serão persistidos como `VARCHAR + CHECK`. O banco protege valores possív
 
 ## Principais invariantes
 
-**Cliente:** Documento válido, TipoPessoa compatível, Email válido e Telefone válido.
+**Cliente:** Documento válido, TipoPessoa compatível, Email válido, Telefone válido e SenhaHash válida.
 
 **Veículo:** Placa válida, ano válido, quilometragem não negativa e sem regressão.
 
@@ -476,7 +508,9 @@ Enums serão persistidos como `VARCHAR + CHECK`. O banco protege valores possív
 
 **Orçamento:** pertence a uma OS, pode ser editado antes da aprovação e após rejeição, mas não após aprovação; totais não negativos.
 
-**Peça:** estoque, reserva e estoque mínimo não negativos; reserva e consumo não podem violar o estoque mínimo.
+**Peça:** estoque físico e estoque mínimo não negativos; consumo não pode deixar o estoque abaixo do mínimo.
+
+**ReservaPeca:** OS e peça obrigatórias, quantidade > 0, uma reserva corrente por combinação OS + peça e operação sem violar o estoque mínimo.
 
 **ItemServico:** serviço obrigatório, quantidade > 0, valor válido e duração estimada válida.
 
