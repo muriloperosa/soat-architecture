@@ -33,7 +33,7 @@ func TestRefreshUseCase_Executar_TokenValido_RotacionaERetornaNovoPar(t *testing
 
 	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, infraauth.HashRefreshToken(bruto)).Return(rtAntigo, nil)
 	refreshTokensRepo.EXPECT().Revogar(mock.Anything, "rt-1").Return(nil)
-	jwtAuth.EXPECT().GerarAccessToken("user-1", domainauth.TipoCliente, domainauth.PapelCliente).Return("novo-access-token", nil)
+	jwtAuth.EXPECT().GerarAccessToken("user-1", domainauth.TipoCliente, domainauth.PapelCliente).Return("novo-access-token", "jti-novo", nil)
 	jwtAuth.EXPECT().GerarRefreshToken().Return("novo-refresh-bruto", nil)
 	refreshTokensRepo.EXPECT().
 		Salvar(mock.Anything, mock.AnythingOfType("*auth.RefreshToken")).
@@ -77,7 +77,7 @@ func TestRefreshUseCase_Executar_ErroAoSalvarNovoPar_PropagaErro(t *testing.T) {
 
 	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, infraauth.HashRefreshToken(bruto)).Return(rt, nil)
 	refreshTokensRepo.EXPECT().Revogar(mock.Anything, "rt-1").Return(nil)
-	jwtAuth.EXPECT().GerarAccessToken("user-1", domainauth.TipoCliente, domainauth.PapelCliente).Return("novo-access-token", nil)
+	jwtAuth.EXPECT().GerarAccessToken("user-1", domainauth.TipoCliente, domainauth.PapelCliente).Return("novo-access-token", "jti-novo", nil)
 	jwtAuth.EXPECT().GerarRefreshToken().Return("novo-refresh-bruto", nil)
 	refreshTokensRepo.EXPECT().
 		Salvar(mock.Anything, mock.AnythingOfType("*auth.RefreshToken")).

@@ -8,6 +8,7 @@ type RefreshTokenRepository interface {
 	Salvar(ctx context.Context, rt *RefreshToken) error
 	BuscarPorHash(ctx context.Context, tokenHash string) (*RefreshToken, error)
 	Revogar(ctx context.Context, id string) error
+	AccessTokenRevogado(ctx context.Context, jti string) (bool, error)
 }
 
 // CredenciaisRepository busca a credencial de login por email.

@@ -33,7 +33,7 @@ func NewAuthInternoHandler(login *appauth.LoginUseCase, refresh *appauth.Refresh
 func (h *AuthInternoHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		httperror.RespondValidationError(c, "corpo inválido")
+		httperror.RespondValidationError(c, "Request body inválido.")
 		return
 	}
 
@@ -59,7 +59,7 @@ func (h *AuthInternoHandler) Login(c *gin.Context) {
 func (h *AuthInternoHandler) Refresh(c *gin.Context) {
 	var req RefreshRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		httperror.RespondValidationError(c, "corpo inválido")
+		httperror.RespondValidationError(c, "Request body inválido.")
 		return
 	}
 
@@ -84,7 +84,7 @@ func (h *AuthInternoHandler) Refresh(c *gin.Context) {
 func (h *AuthInternoHandler) Logout(c *gin.Context) {
 	var req RefreshRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		httperror.RespondValidationError(c, "corpo inválido")
+		httperror.RespondValidationError(c, "Request body inválido.")
 		return
 	}
 

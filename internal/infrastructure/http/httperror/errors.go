@@ -9,13 +9,10 @@ import (
 )
 
 // ErrorResponse é o corpo de erro emitido por RespondError e pelas validações
-// de binding dos handlers (Details vazio nesse segundo caso).
+// de binding dos handlers.
 type ErrorResponse struct {
-	// Type é o shared.ErrorKind do erro (validation, unauthorized, forbidden, not_found, conflict, internal, unavailable)
-	Type string `json:"type" example:"validation"`
-	// Message é a mensagem legível pro cliente
-	Message string `json:"message" example:"corpo inválido"`
-	// Details lista mensagens de validação campo a campo, quando aplicável
+	Type    string   `json:"type" example:"validation"`
+	Message string   `json:"message" example:"corpo inválido"`
 	Details []string `json:"details,omitempty"`
 }
 

@@ -50,10 +50,12 @@ func TestLoginUseCase_Executar_CredencialValida_RetornaTokens(t *testing.T) {
 	require.Equal(t, "user-1", rtSalvo.UsuarioID)
 	require.Equal(t, domainauth.TipoCliente, rtSalvo.Tipo)
 	require.Equal(t, domainauth.PapelCliente, rtSalvo.Papel)
+	require.NotEmpty(t, rtSalvo.AccessTokenJti)
 
 	claims, err := jwtAuth.ValidarAccessToken(out.AccessToken)
 	require.NoError(t, err)
 	require.Equal(t, domainauth.PapelCliente, claims.Papel)
+	require.Equal(t, rtSalvo.AccessTokenJti, claims.Jti)
 }
 
 func TestLoginUseCase_Executar_UsuarioInterno_PropagaPapel(t *testing.T) {
@@ -83,6 +85,7 @@ func TestLoginUseCase_Executar_UsuarioInterno_PropagaPapel(t *testing.T) {
 	require.Equal(t, domainauth.PapelMecanico, claims.Papel)
 	require.NotNil(t, rtSalvo)
 	require.Equal(t, domainauth.PapelMecanico, rtSalvo.Papel)
+	require.Equal(t, rtSalvo.AccessTokenJti, claims.Jti)
 }
 
 func TestLoginUseCase_Executar_SenhaErrada_ErroGenerico(t *testing.T) {
@@ -111,7 +114,7 @@ func TestLoginUseCase_Executar_ErroAoGerarAccessToken_RetornaErroInterno(t *test
 		Return(&domainauth.Credencial{ID: "user-1", SenhaHash: hashSenha(t, "senha123"), Papel: domainauth.PapelCliente}, nil)
 	jwtAuth.EXPECT().
 		GerarAccessToken("user-1", domainauth.TipoCliente, domainauth.PapelCliente).
-		Return("", errors.New("chave de assinatura invalida"))
+		Return("", "", errors.New("chave de assinatura invalida"))
 
 	_, err := uc.Executar(context.Background(), appauth.LoginInput{Email: "a@a.com", Senha: "senha123"})
 
@@ -130,7 +133,7 @@ func TestLoginUseCase_Executar_ErroAoGerarRefreshToken_RetornaErroInterno(t *tes
 		Return(&domainauth.Credencial{ID: "user-1", SenhaHash: hashSenha(t, "senha123"), Papel: domainauth.PapelCliente}, nil)
 	jwtAuth.EXPECT().
 		GerarAccessToken("user-1", domainauth.TipoCliente, domainauth.PapelCliente).
-		Return("access-token-valido", nil)
+		Return("access-token-valido", "jti-1", nil)
 	jwtAuth.EXPECT().
 		GerarRefreshToken().
 		Return("", errors.New("entropia insuficiente"))

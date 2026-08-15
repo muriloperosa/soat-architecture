@@ -21,7 +21,7 @@ func (_m *JWTProvider) EXPECT() *JWTProvider_Expecter {
 }
 
 // GerarAccessToken provides a mock function with given fields: subject, tipo, papel
-func (_m *JWTProvider) GerarAccessToken(subject string, tipo auth.TipoUsuario, papel auth.PapelUsuario) (string, error) {
+func (_m *JWTProvider) GerarAccessToken(subject string, tipo auth.TipoUsuario, papel auth.PapelUsuario) (string, string, error) {
 	ret := _m.Called(subject, tipo, papel)
 
 	if len(ret) == 0 {
@@ -29,8 +29,9 @@ func (_m *JWTProvider) GerarAccessToken(subject string, tipo auth.TipoUsuario, p
 	}
 
 	var r0 string
-	var r1 error
-	if rf, ok := ret.Get(0).(func(string, auth.TipoUsuario, auth.PapelUsuario) (string, error)); ok {
+	var r1 string
+	var r2 error
+	if rf, ok := ret.Get(0).(func(string, auth.TipoUsuario, auth.PapelUsuario) (string, string, error)); ok {
 		return rf(subject, tipo, papel)
 	}
 	if rf, ok := ret.Get(0).(func(string, auth.TipoUsuario, auth.PapelUsuario) string); ok {
@@ -39,13 +40,19 @@ func (_m *JWTProvider) GerarAccessToken(subject string, tipo auth.TipoUsuario, p
 		r0 = ret.Get(0).(string)
 	}
 
-	if rf, ok := ret.Get(1).(func(string, auth.TipoUsuario, auth.PapelUsuario) error); ok {
+	if rf, ok := ret.Get(1).(func(string, auth.TipoUsuario, auth.PapelUsuario) string); ok {
 		r1 = rf(subject, tipo, papel)
 	} else {
-		r1 = ret.Error(1)
+		r1 = ret.Get(1).(string)
 	}
 
-	return r0, r1
+	if rf, ok := ret.Get(2).(func(string, auth.TipoUsuario, auth.PapelUsuario) error); ok {
+		r2 = rf(subject, tipo, papel)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // JWTProvider_GerarAccessToken_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GerarAccessToken'
@@ -68,12 +75,12 @@ func (_c *JWTProvider_GerarAccessToken_Call) Run(run func(subject string, tipo a
 	return _c
 }
 
-func (_c *JWTProvider_GerarAccessToken_Call) Return(_a0 string, _a1 error) *JWTProvider_GerarAccessToken_Call {
-	_c.Call.Return(_a0, _a1)
+func (_c *JWTProvider_GerarAccessToken_Call) Return(token string, jti string, err error) *JWTProvider_GerarAccessToken_Call {
+	_c.Call.Return(token, jti, err)
 	return _c
 }
 
-func (_c *JWTProvider_GerarAccessToken_Call) RunAndReturn(run func(string, auth.TipoUsuario, auth.PapelUsuario) (string, error)) *JWTProvider_GerarAccessToken_Call {
+func (_c *JWTProvider_GerarAccessToken_Call) RunAndReturn(run func(string, auth.TipoUsuario, auth.PapelUsuario) (string, string, error)) *JWTProvider_GerarAccessToken_Call {
 	_c.Call.Return(run)
 	return _c
 }

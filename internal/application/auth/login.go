@@ -60,7 +60,7 @@ func (uc *LoginUseCase) Executar(ctx context.Context, input LoginInput) (LoginOu
 // gerarTokens gera e persiste um novo par access+refresh token pro usuário.
 // Reusado pelo RefreshUseCase na rotação.
 func gerarTokens(ctx context.Context, refreshTokens domainauth.RefreshTokenRepository, jwtAuth domainauth.JWTProvider, tipo domainauth.TipoUsuario, papel domainauth.PapelUsuario, refreshTTL time.Duration, usuarioID string) (LoginOutput, error) {
-	accessToken, err := jwtAuth.GerarAccessToken(usuarioID, tipo, papel)
+	accessToken, jti, err := jwtAuth.GerarAccessToken(usuarioID, tipo, papel)
 	if err != nil {
 		return LoginOutput{}, shared.NewInternalError("erro ao gerar access token", err)
 	}
@@ -71,11 +71,12 @@ func gerarTokens(ctx context.Context, refreshTokens domainauth.RefreshTokenRepos
 	}
 
 	rt := &domainauth.RefreshToken{
-		UsuarioID: usuarioID,
-		Tipo:      tipo,
-		Papel:     papel,
-		TokenHash: infraauth.HashRefreshToken(refreshBruto),
-		ExpiraEm:  time.Now().Add(refreshTTL),
+		UsuarioID:      usuarioID,
+		Tipo:           tipo,
+		Papel:          papel,
+		TokenHash:      infraauth.HashRefreshToken(refreshBruto),
+		AccessTokenJti: jti,
+		ExpiraEm:       time.Now().Add(refreshTTL),
 	}
 	if err := refreshTokens.Salvar(ctx, rt); err != nil {
 		return LoginOutput{}, shared.NewInternalError("erro ao salvar refresh token", err)

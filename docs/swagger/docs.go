@@ -356,19 +356,16 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "details": {
-                    "description": "Details lista mensagens de validação campo a campo, quando aplicável",
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
                 },
                 "message": {
-                    "description": "Message é a mensagem legível pro cliente",
                     "type": "string",
                     "example": "corpo inválido"
                 },
                 "type": {
-                    "description": "Type é o shared.ErrorKind do erro (validation, unauthorized, forbidden, not_found, conflict, internal, unavailable)",
                     "type": "string",
                     "example": "validation"
                 }

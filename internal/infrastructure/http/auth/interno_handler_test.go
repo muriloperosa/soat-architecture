@@ -56,6 +56,14 @@ func (f *refreshTokensFakeHTTP) Revogar(ctx context.Context, id string) error {
 	}
 	return nil
 }
+func (f *refreshTokensFakeHTTP) AccessTokenRevogado(ctx context.Context, jti string) (bool, error) {
+	for _, rt := range f.salvos {
+		if rt.AccessTokenJti == jti && rt.RevogadoEm != nil {
+			return true, nil
+		}
+	}
+	return false, nil
+}
 
 func hashSenhaHTTP(t *testing.T, senha string) string {
 	t.Helper()

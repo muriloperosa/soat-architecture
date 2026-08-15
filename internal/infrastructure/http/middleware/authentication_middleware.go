@@ -12,8 +12,10 @@ import (
 const ClaimsContextKey = "auth.claims"
 
 // AuthenticationMiddleware valida assinatura e expiração do JWT recebido no
-// header Authorization (Bearer) e injeta os claims tipados no contexto.
-func AuthenticationMiddleware(jwtAuth domainauth.JWTProvider) gin.HandlerFunc {
+// header Authorization (Bearer), rejeita se o access token foi revogado em
+// par (logout ou rotação do refresh token correspondente) e injeta os claims tipados no
+// contexto.
+func AuthenticationMiddleware(jwtAuth domainauth.JWTProvider, refreshTokens domainauth.RefreshTokenRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		header := c.GetHeader("Authorization")
 		tokenBruto, ok := strings.CutPrefix(header, "Bearer ")
@@ -25,6 +27,13 @@ func AuthenticationMiddleware(jwtAuth domainauth.JWTProvider) gin.HandlerFunc {
 
 		claims, err := jwtAuth.ValidarAccessToken(tokenBruto)
 		if err != nil {
+			httperror.RespondUnauthorizedError(c, "Requisição não autorizada.")
+			c.Abort()
+			return
+		}
+
+		revogado, err := refreshTokens.AccessTokenRevogado(c.Request.Context(), claims.Jti)
+		if err != nil || revogado {
 			httperror.RespondUnauthorizedError(c, "Requisição não autorizada.")
 			c.Abort()
 			return

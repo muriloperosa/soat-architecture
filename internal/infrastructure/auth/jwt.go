@@ -28,21 +28,32 @@ func NewAuthenticatorJWT(secret string, accessTTL time.Duration) *AuthenticatorJ
 }
 
 // GerarAccessToken assina um novo access token JWT (HS256) pro par
-// usuário/papel, com expiração em now+accessTTL.
-func (a *AuthenticatorJWT) GerarAccessToken(subject string, tipo domainauth.TipoUsuario, papel domainauth.PapelUsuario) (string, error) {
+// usuário/papel, com expiração em now+accessTTL, e gera o jti que o
+// identifica (usado pra revogação em par com o refresh token).
+func (a *AuthenticatorJWT) GerarAccessToken(subject string, tipo domainauth.TipoUsuario, papel domainauth.PapelUsuario) (token string, jti string, err error) {
+	jti, err = a.GerarRefreshToken()
+	if err != nil {
+		return "", "", err
+	}
+
 	now := time.Now()
 	claims := domainauth.AppClaims{
 		Subject: subject,
 		Tipo:    tipo,
 		Papel:   papel,
+		Jti:     jti,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   subject,
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(a.accessTTL)),
 		},
 	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(a.secret)
+	tok := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token, err = tok.SignedString(a.secret)
+	if err != nil {
+		return "", "", err
+	}
+	return token, jti, nil
 }
 
 // GerarRefreshToken gera um valor aleatório de alta entropia (32 bytes)

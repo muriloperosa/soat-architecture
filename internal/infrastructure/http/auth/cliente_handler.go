@@ -59,7 +59,7 @@ func (h *AuthClienteHandler) Login(c *gin.Context) {
 func (h *AuthClienteHandler) Refresh(c *gin.Context) {
 	var req RefreshRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		httperror.RespondValidationError(c, "corpo inválido")
+		httperror.RespondValidationError(c, "Request body inválido.")
 		return
 	}
 
@@ -84,7 +84,7 @@ func (h *AuthClienteHandler) Refresh(c *gin.Context) {
 func (h *AuthClienteHandler) Logout(c *gin.Context) {
 	var req RefreshRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		httperror.RespondValidationError(c, "corpo inválido")
+		httperror.RespondValidationError(c, "Request body inválido.")
 		return
 	}
 

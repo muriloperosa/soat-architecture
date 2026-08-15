@@ -38,17 +38,13 @@ definitions:
   httperror.ErrorResponse:
     properties:
       details:
-        description: Details lista mensagens de validação campo a campo, quando aplicável
         items:
           type: string
         type: array
       message:
-        description: Message é a mensagem legível pro cliente
         example: corpo inválido
         type: string
       type:
-        description: Type é o shared.ErrorKind do erro (validation, unauthorized,
-          forbidden, not_found, conflict, internal, unavailable)
         example: validation
         type: string
     type: object

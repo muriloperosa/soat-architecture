@@ -23,6 +23,63 @@ func (_m *RefreshTokenRepository) EXPECT() *RefreshTokenRepository_Expecter {
 	return &RefreshTokenRepository_Expecter{mock: &_m.Mock}
 }
 
+// AccessTokenRevogado provides a mock function with given fields: ctx, jti
+func (_m *RefreshTokenRepository) AccessTokenRevogado(ctx context.Context, jti string) (bool, error) {
+	ret := _m.Called(ctx, jti)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AccessTokenRevogado")
+	}
+
+	var r0 bool
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (bool, error)); ok {
+		return rf(ctx, jti)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) bool); ok {
+		r0 = rf(ctx, jti)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, jti)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// RefreshTokenRepository_AccessTokenRevogado_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AccessTokenRevogado'
+type RefreshTokenRepository_AccessTokenRevogado_Call struct {
+	*mock.Call
+}
+
+// AccessTokenRevogado is a helper method to define mock.On call
+//   - ctx context.Context
+//   - jti string
+func (_e *RefreshTokenRepository_Expecter) AccessTokenRevogado(ctx interface{}, jti interface{}) *RefreshTokenRepository_AccessTokenRevogado_Call {
+	return &RefreshTokenRepository_AccessTokenRevogado_Call{Call: _e.mock.On("AccessTokenRevogado", ctx, jti)}
+}
+
+func (_c *RefreshTokenRepository_AccessTokenRevogado_Call) Run(run func(ctx context.Context, jti string)) *RefreshTokenRepository_AccessTokenRevogado_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *RefreshTokenRepository_AccessTokenRevogado_Call) Return(_a0 bool, _a1 error) *RefreshTokenRepository_AccessTokenRevogado_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *RefreshTokenRepository_AccessTokenRevogado_Call) RunAndReturn(run func(context.Context, string) (bool, error)) *RefreshTokenRepository_AccessTokenRevogado_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // BuscarPorHash provides a mock function with given fields: ctx, tokenHash
 func (_m *RefreshTokenRepository) BuscarPorHash(ctx context.Context, tokenHash string) (*auth.RefreshToken, error) {
 	ret := _m.Called(ctx, tokenHash)
