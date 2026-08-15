@@ -5,5 +5,5 @@ package auth
 type JWTProvider interface {
 	GerarAccessToken(subject string, tipo TipoUsuario, papel PapelUsuario) (string, error)
 	ValidarAccessToken(tokenBruto string) (*AppClaims, error)
-	GerarRefreshTokenBruto() (string, error)
+	GerarRefreshToken() (string, error)
 }

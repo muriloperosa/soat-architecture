@@ -119,7 +119,7 @@ func TestLoginUseCase_Executar_ErroAoGerarAccessToken_RetornaErroInterno(t *test
 	require.Contains(t, err.Error(), "erro ao gerar access token")
 }
 
-func TestLoginUseCase_Executar_ErroAoGerarRefreshTokenBruto_RetornaErroInterno(t *testing.T) {
+func TestLoginUseCase_Executar_ErroAoGerarRefreshToken_RetornaErroInterno(t *testing.T) {
 	credenciaisRepo := mocks.NewCredenciaisRepository(t)
 	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
 	jwtAuth := mocks.NewJWTProvider(t)
@@ -132,7 +132,7 @@ func TestLoginUseCase_Executar_ErroAoGerarRefreshTokenBruto_RetornaErroInterno(t
 		GerarAccessToken("user-1", domainauth.TipoCliente, domainauth.PapelCliente).
 		Return("access-token-valido", nil)
 	jwtAuth.EXPECT().
-		GerarRefreshTokenBruto().
+		GerarRefreshToken().
 		Return("", errors.New("entropia insuficiente"))
 
 	_, err := uc.Executar(context.Background(), appauth.LoginInput{Email: "a@a.com", Senha: "senha123"})

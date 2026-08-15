@@ -78,12 +78,12 @@ func (_c *JWTProvider_GerarAccessToken_Call) RunAndReturn(run func(string, auth.
 	return _c
 }
 
-// GerarRefreshTokenBruto provides a mock function with no fields
-func (_m *JWTProvider) GerarRefreshTokenBruto() (string, error) {
+// GerarRefreshToken provides a mock function with no fields
+func (_m *JWTProvider) GerarRefreshToken() (string, error) {
 	ret := _m.Called()
 
 	if len(ret) == 0 {
-		panic("no return value specified for GerarRefreshTokenBruto")
+		panic("no return value specified for GerarRefreshToken")
 	}
 
 	var r0 string
@@ -106,29 +106,29 @@ func (_m *JWTProvider) GerarRefreshTokenBruto() (string, error) {
 	return r0, r1
 }
 
-// JWTProvider_GerarRefreshTokenBruto_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GerarRefreshTokenBruto'
-type JWTProvider_GerarRefreshTokenBruto_Call struct {
+// JWTProvider_GerarRefreshToken_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GerarRefreshToken'
+type JWTProvider_GerarRefreshToken_Call struct {
 	*mock.Call
 }
 
-// GerarRefreshTokenBruto is a helper method to define mock.On call
-func (_e *JWTProvider_Expecter) GerarRefreshTokenBruto() *JWTProvider_GerarRefreshTokenBruto_Call {
-	return &JWTProvider_GerarRefreshTokenBruto_Call{Call: _e.mock.On("GerarRefreshTokenBruto")}
+// GerarRefreshToken is a helper method to define mock.On call
+func (_e *JWTProvider_Expecter) GerarRefreshToken() *JWTProvider_GerarRefreshToken_Call {
+	return &JWTProvider_GerarRefreshToken_Call{Call: _e.mock.On("GerarRefreshToken")}
 }
 
-func (_c *JWTProvider_GerarRefreshTokenBruto_Call) Run(run func()) *JWTProvider_GerarRefreshTokenBruto_Call {
+func (_c *JWTProvider_GerarRefreshToken_Call) Run(run func()) *JWTProvider_GerarRefreshToken_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run()
 	})
 	return _c
 }
 
-func (_c *JWTProvider_GerarRefreshTokenBruto_Call) Return(_a0 string, _a1 error) *JWTProvider_GerarRefreshTokenBruto_Call {
+func (_c *JWTProvider_GerarRefreshToken_Call) Return(_a0 string, _a1 error) *JWTProvider_GerarRefreshToken_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *JWTProvider_GerarRefreshTokenBruto_Call) RunAndReturn(run func() (string, error)) *JWTProvider_GerarRefreshTokenBruto_Call {
+func (_c *JWTProvider_GerarRefreshToken_Call) RunAndReturn(run func() (string, error)) *JWTProvider_GerarRefreshToken_Call {
 	_c.Call.Return(run)
 	return _c
 }

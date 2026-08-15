@@ -7,9 +7,9 @@ import (
 	"encoding/hex"
 )
 
-// GerarRefreshTokenBruto gera um valor aleatório de alta entropia (32 bytes)
+// GerarRefreshToken gera um valor aleatório de alta entropia (32 bytes)
 // codificado em base64, pra ser entregue ao cliente.
-func GerarRefreshTokenBruto() (string, error) {
+func GerarRefreshToken() (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
 		return "", err

@@ -16,7 +16,7 @@ import (
 
 func TestRefreshUseCase_Executar_TokenValido_RotacionaERetornaNovoPar(t *testing.T) {
 	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
-	bruto, _ := infraauth.GerarRefreshTokenBruto()
+	bruto, _ := infraauth.GerarRefreshToken()
 	rtAntigo := &domainauth.RefreshToken{
 		ID: "rt-1", UsuarioID: "user-1", Tipo: domainauth.TipoCliente,
 		TokenHash: infraauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
@@ -40,7 +40,7 @@ func TestRefreshUseCase_Executar_TokenValido_RotacionaERetornaNovoPar(t *testing
 
 func TestRefreshUseCase_Executar_ErroAoRevogar_RetornaErroInterno(t *testing.T) {
 	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
-	bruto, _ := infraauth.GerarRefreshTokenBruto()
+	bruto, _ := infraauth.GerarRefreshToken()
 	rt := &domainauth.RefreshToken{
 		ID: "rt-1", TokenHash: infraauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
 	}
@@ -57,7 +57,7 @@ func TestRefreshUseCase_Executar_ErroAoRevogar_RetornaErroInterno(t *testing.T) 
 
 func TestRefreshUseCase_Executar_ErroAoSalvarNovoPar_PropagaErro(t *testing.T) {
 	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
-	bruto, _ := infraauth.GerarRefreshTokenBruto()
+	bruto, _ := infraauth.GerarRefreshToken()
 	rt := &domainauth.RefreshToken{
 		ID: "rt-1", TokenHash: infraauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
 	}
@@ -77,7 +77,7 @@ func TestRefreshUseCase_Executar_ErroAoSalvarNovoPar_PropagaErro(t *testing.T) {
 
 func TestRefreshUseCase_Executar_TokenJaRevogado_Erro(t *testing.T) {
 	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
-	bruto, _ := infraauth.GerarRefreshTokenBruto()
+	bruto, _ := infraauth.GerarRefreshToken()
 	agora := time.Now()
 	rt := &domainauth.RefreshToken{
 		ID: "rt-1", TokenHash: infraauth.HashRefreshToken(bruto),

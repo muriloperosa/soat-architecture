@@ -7,12 +7,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGerarRefreshTokenBruto_GeraValorNaoVazioEUnico(t *testing.T) {
-	a, err := infraauth.GerarRefreshTokenBruto()
+func TestGerarRefreshToken_GeraValorNaoVazioEUnico(t *testing.T) {
+	a, err := infraauth.GerarRefreshToken()
 	require.NoError(t, err)
 	require.NotEmpty(t, a)
 
-	b, err := infraauth.GerarRefreshTokenBruto()
+	b, err := infraauth.GerarRefreshToken()
 	require.NoError(t, err)
 	require.NotEqual(t, a, b)
 }
