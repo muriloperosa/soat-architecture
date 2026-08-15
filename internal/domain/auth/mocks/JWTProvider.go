@@ -133,6 +133,64 @@ func (_c *JWTProvider_GerarRefreshTokenBruto_Call) RunAndReturn(run func() (stri
 	return _c
 }
 
+// ValidarAccessToken provides a mock function with given fields: tokenBruto
+func (_m *JWTProvider) ValidarAccessToken(tokenBruto string) (*auth.AppClaims, error) {
+	ret := _m.Called(tokenBruto)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ValidarAccessToken")
+	}
+
+	var r0 *auth.AppClaims
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string) (*auth.AppClaims, error)); ok {
+		return rf(tokenBruto)
+	}
+	if rf, ok := ret.Get(0).(func(string) *auth.AppClaims); ok {
+		r0 = rf(tokenBruto)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*auth.AppClaims)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(tokenBruto)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// JWTProvider_ValidarAccessToken_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ValidarAccessToken'
+type JWTProvider_ValidarAccessToken_Call struct {
+	*mock.Call
+}
+
+// ValidarAccessToken is a helper method to define mock.On call
+//   - tokenBruto string
+func (_e *JWTProvider_Expecter) ValidarAccessToken(tokenBruto interface{}) *JWTProvider_ValidarAccessToken_Call {
+	return &JWTProvider_ValidarAccessToken_Call{Call: _e.mock.On("ValidarAccessToken", tokenBruto)}
+}
+
+func (_c *JWTProvider_ValidarAccessToken_Call) Run(run func(tokenBruto string)) *JWTProvider_ValidarAccessToken_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *JWTProvider_ValidarAccessToken_Call) Return(_a0 *auth.AppClaims, _a1 error) *JWTProvider_ValidarAccessToken_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *JWTProvider_ValidarAccessToken_Call) RunAndReturn(run func(string) (*auth.AppClaims, error)) *JWTProvider_ValidarAccessToken_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewJWTProvider creates a new instance of JWTProvider. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewJWTProvider(t interface {

@@ -8,8 +8,6 @@ import (
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httperror"
 )
 
-const msgAcessoNaoPermitido = "acesso não permitido para este tipo de usuário"
-
 // AuthorizationMiddleware exige que o AppClaims injetado por
 // AuthenticationMiddleware tenha o TipoUsuario esperado pra essa rota.
 func AuthorizationMiddleware(tipoEsperado domainauth.TipoUsuario) gin.HandlerFunc {
@@ -17,7 +15,7 @@ func AuthorizationMiddleware(tipoEsperado domainauth.TipoUsuario) gin.HandlerFun
 		valor, existe := c.Get(ClaimsContextKey)
 		claims, ok := valor.(*domainauth.AppClaims)
 		if !existe || !ok || claims.Tipo != tipoEsperado {
-			httperror.RespondForbiddenError(c, msgAcessoNaoPermitido)
+			httperror.RespondForbiddenError(c, "acesso não permitido para este tipo de usuário")
 			c.AbortWithStatus(http.StatusForbidden)
 			return
 		}

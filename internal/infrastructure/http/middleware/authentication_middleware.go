@@ -4,31 +4,29 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
-	infraauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/auth"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httperror"
 )
 
 // ClaimsContextKey é a chave usada pra guardar *domainauth.AppClaims no gin.Context.
 const ClaimsContextKey = "auth.claims"
 
-const msgTokenInvalido = "token ausente, inválido ou expirado"
-
 // AuthenticationMiddleware valida assinatura e expiração do JWT recebido no
 // header Authorization (Bearer) e injeta os claims tipados no contexto.
-func AuthenticationMiddleware(jwtAuth *infraauth.AutenticadorJWT) gin.HandlerFunc {
+func AuthenticationMiddleware(jwtAuth domainauth.JWTProvider) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		header := c.GetHeader("Authorization")
 		tokenBruto, ok := strings.CutPrefix(header, "Bearer ")
 		if !ok || tokenBruto == "" {
-			httperror.RespondError(c, shared.NewUnauthorizedError(msgTokenInvalido))
+			httperror.RespondError(c, shared.NewUnauthorizedError("Requisição não autorizada."))
 			c.Abort()
 			return
 		}
 
 		claims, err := jwtAuth.ValidarAccessToken(tokenBruto)
 		if err != nil {
-			httperror.RespondError(c, shared.NewUnauthorizedError(msgTokenInvalido))
+			httperror.RespondError(c, shared.NewUnauthorizedError("Requisição não autorizada."))
 			c.Abort()
 			return
 		}
