@@ -187,12 +187,13 @@ if err != nil {
 | `forbidden`    | 403    | `RespondForbiddenError`        |
 | `unauthorized` | 401    | `RespondUnauthorizedError`     |
 | `internal`     | 500    | `RespondInternalError`         |
+| `unavailable`  | 503    | `RespondUnavailableError`      |
 
 Erro que não é `*shared.AppError` (ou `Kind` desconhecido) cai em 500 genérico mensagem interna nunca vaza pra resposta.
 
 `httperror` é um pacote-folha deliberado: fica fora da raiz de `internal/infrastructure/http/` justamente pra domínios (`auth/`, `health/`) poderem importá-lo sem criar ciclo com `router.go`, que por sua vez importa os pacotes de domínio pra registrar rotas (ver ADR 0005).
 
-`health/handler.go` é exceção: é probe de infra (ping no banco), não erro de domínio, então continua montando a resposta 503 direto.
+`health/handler.go` usa `RespondUnavailableError` (`Kind` `unavailable`, 503) quando o ping no banco falha, mesmo sistema de erro dos demais domínios, sem exceção.
 
 ## Middlewares de autenticação/autorização
 

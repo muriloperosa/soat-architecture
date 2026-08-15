@@ -11,7 +11,7 @@ import (
 // ErrorResponse é o corpo de erro emitido por RespondError e pelas validações
 // de binding dos handlers (Details vazio nesse segundo caso).
 type ErrorResponse struct {
-	// Type é o shared.ErrorKind do erro (validation, unauthorized, forbidden, not_found, conflict, internal)
+	// Type é o shared.ErrorKind do erro (validation, unauthorized, forbidden, not_found, conflict, internal, unavailable)
 	Type string `json:"type" example:"validation"`
 	// Message é a mensagem legível pro cliente
 	Message string `json:"message" example:"corpo inválido"`
@@ -26,6 +26,7 @@ var statusByKind = map[shared.ErrorKind]int{
 	shared.KindInternal:     http.StatusInternalServerError,
 	shared.KindForbidden:    http.StatusForbidden,
 	shared.KindUnauthorized: http.StatusUnauthorized,
+	shared.KindUnavailable:  http.StatusServiceUnavailable,
 }
 
 // RespondError traduz um erro de domínio/aplicação para resposta HTTP.
@@ -84,4 +85,10 @@ func RespondUnauthorizedError(c *gin.Context, message string) {
 // original (err) na resposta, só a mensagem genérica.
 func RespondInternalError(c *gin.Context, message string, err error) {
 	RespondError(c, shared.NewInternalError(message, err))
+}
+
+// RespondUnavailableError responde 503 (ErrorKind unavailable) — dependência
+// externa (banco, fila) fora do ar. err nunca vaza na resposta, só message.
+func RespondUnavailableError(c *gin.Context, message string, err error) {
+	RespondError(c, shared.NewUnavailableError(message, err))
 }

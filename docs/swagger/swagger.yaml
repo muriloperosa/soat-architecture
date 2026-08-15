@@ -35,6 +35,13 @@ definitions:
         example: 9f8c1e...b3a0
         type: string
     type: object
+  health.HealthCheckResponse:
+    properties:
+      status:
+        description: Status é sempre "ok" quando a API e o banco estão respondendo
+        example: ok
+        type: string
+    type: object
   httperror.ErrorResponse:
     properties:
       details:
@@ -48,7 +55,7 @@ definitions:
         type: string
       type:
         description: Type é o shared.ErrorKind do erro (validation, unauthorized,
-          forbidden, not_found, conflict, internal)
+          forbidden, not_found, conflict, internal, unavailable)
         example: validation
         type: string
     type: object
@@ -237,15 +244,11 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/health.HealthCheckResponse'
         "503":
           description: Service Unavailable
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/httperror.ErrorResponse'
       summary: Verifica saúde da API
       tags:
       - health

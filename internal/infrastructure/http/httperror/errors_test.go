@@ -91,6 +91,18 @@ func TestRespondError_Internal_Retorna500SemVazarDetalheInterno(t *testing.T) {
 	require.NotContains(t, body.Message, "connection refused")
 }
 
+func TestRespondError_Unavailable_Retorna503SemVazarDetalheInterno(t *testing.T) {
+	rec := serveRespondError(shared.NewUnavailableError("banco de dados indisponível", errors.New("connection refused")))
+
+	require.Equal(t, http.StatusServiceUnavailable, rec.Code)
+
+	var body errorBody
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Equal(t, "unavailable", body.Type)
+	require.Equal(t, "banco de dados indisponível", body.Message)
+	require.NotContains(t, body.Message, "connection refused")
+}
+
 func TestRespondError_ErroDesconhecido_Retorna500Generico(t *testing.T) {
 	rec := serveRespondError(errors.New("algo inesperado"))
 
@@ -186,6 +198,19 @@ func TestRespondInternalError_Retorna500SemVazarDetalheInterno(t *testing.T) {
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 	require.Equal(t, "internal", body.Type)
 	require.NotContains(t, body.Message, "connection refused")
+}
+
+func TestRespondUnavailableError_Retorna503(t *testing.T) {
+	rec := serveRespond(func(c *gin.Context) {
+		httperror.RespondUnavailableError(c, "banco de dados indisponível", errors.New("connection refused"))
+	})
+
+	require.Equal(t, http.StatusServiceUnavailable, rec.Code)
+
+	var body errorBody
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Equal(t, "unavailable", body.Type)
+	require.Equal(t, "banco de dados indisponível", body.Message)
 }
 
 func TestRespondError_ErroComKindInvalido_Retorna500Generico(t *testing.T) {

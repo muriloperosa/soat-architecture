@@ -287,19 +287,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/health.HealthCheckResponse"
                         }
                     },
                     "503": {
                         "description": "Service Unavailable",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/httperror.ErrorResponse"
                         }
                     }
                 }
@@ -354,6 +348,16 @@ const docTemplate = `{
                 }
             }
         },
+        "health.HealthCheckResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "description": "Status é sempre \"ok\" quando a API e o banco estão respondendo",
+                    "type": "string",
+                    "example": "ok"
+                }
+            }
+        },
         "httperror.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -370,7 +374,7 @@ const docTemplate = `{
                     "example": "corpo inválido"
                 },
                 "type": {
-                    "description": "Type é o shared.ErrorKind do erro (validation, unauthorized, forbidden, not_found, conflict, internal)",
+                    "description": "Type é o shared.ErrorKind do erro (validation, unauthorized, forbidden, not_found, conflict, internal, unavailable)",
                     "type": "string",
                     "example": "validation"
                 }

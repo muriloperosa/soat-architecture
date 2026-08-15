@@ -10,6 +10,7 @@ const (
 	KindInternal     ErrorKind = "internal"
 	KindForbidden    ErrorKind = "forbidden"
 	KindUnauthorized ErrorKind = "unauthorized"
+	KindUnavailable  ErrorKind = "unavailable"
 )
 
 // AppError é o erro tipado que domain/application retornam quando o erro
@@ -72,4 +73,11 @@ func NewForbiddenError(msg string) *AppError {
 // NewUnauthorizedError cria um AppError de Kind unauthorized (mapeado pra 401 no HTTP).
 func NewUnauthorizedError(msg string) *AppError {
 	return &AppError{Kind: KindUnauthorized, Message: msg}
+}
+
+// NewUnavailableError cria um AppError de Kind unavailable (mapeado pra 503
+// no HTTP), dependência externa (banco, fila) fora do ar, não é erro de
+// negócio, mas a resposta segue o mesmo formato de ErrorResponse.
+func NewUnavailableError(msg string, err error) *AppError {
+	return &AppError{Kind: KindUnavailable, Message: msg, Err: err}
 }

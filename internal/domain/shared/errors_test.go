@@ -53,6 +53,7 @@ func TestConstrutores_DefinemKindEDetails(t *testing.T) {
 		{"internal", NewInternalError("x", nil), KindInternal},
 		{"forbidden", NewForbiddenError("x"), KindForbidden},
 		{"unauthorized", NewUnauthorizedError("x"), KindUnauthorized},
+		{"unavailable", NewUnavailableError("x", nil), KindUnavailable},
 	}
 
 	for _, tc := range cases {
