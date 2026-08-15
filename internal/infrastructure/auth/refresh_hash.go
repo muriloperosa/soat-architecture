@@ -18,7 +18,7 @@ func GerarRefreshTokenBruto() (string, error) {
 }
 
 // HashRefreshToken calcula o hash (SHA-256) do token bruto pra persistência
-// e busca — nunca o valor bruto é armazenado.
+// e busca, nunca o valor bruto é armazenado.
 func HashRefreshToken(bruto string) string {
 	sum := sha256.Sum256([]byte(bruto))
 	return hex.EncodeToString(sum[:])

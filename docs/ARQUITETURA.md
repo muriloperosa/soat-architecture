@@ -135,7 +135,7 @@ Testes: cada pacote tem um `*_test.go` de exemplo, unitário, ao lado do código
 
 Composição de dependências (config, conexão de banco e, futuramente, repositórios e use cases por domínio) fica centralizada no `Container`, em `internal/infrastructure/wiring/container.go`. É o único lugar que monta o grafo de dependências da aplicação; `main.go` cria o `Container` e passa pra `httpinfra.NewRouter`.
 
-Rotas são registradas por domínio: cada domínio tem seu próprio pacote dentro de `internal/infrastructure/http/<dominio>/` (ex: `http/health/routes.go`), com uma função `Register<Dominio>Routes(rg *gin.RouterGroup, c *wiring.Container)`. `router.go` (raiz) só monta o `*gin.Engine`, aplica middlewares globais e chama cada `<dominio>.Register<Dominio>Routes` — não conhece detalhe de nenhum domínio, só importa o pacote de cada um.
+Rotas são registradas por domínio: cada domínio tem seu próprio pacote dentro de `internal/infrastructure/http/<dominio>/` (ex: `http/health/routes.go`), com uma função `Register<Dominio>Routes(rg *gin.RouterGroup, c *wiring.Container)`. `router.go` (raiz) só monta o `*gin.Engine`, aplica middlewares globais e chama cada `<dominio>.Register<Dominio>Routes`: não conhece detalhe de nenhum domínio, só importa o pacote de cada um.
 
 Ao implementar um novo domínio (ex: `cliente`):
 
@@ -143,5 +143,5 @@ Ao implementar um novo domínio (ex: `cliente`):
 2. Crie `internal/infrastructure/http/cliente/routes.go` com `RegisterClienteRoutes`.
 3. Registre a chamada em `router.go` (raiz), importando o pacote `cliente`.
 
-Cuidado com ciclo de import: o pacote de domínio nunca importa o pacote raiz `http` (é o inverso — raiz importa domínio). Se o handler precisar responder erro, importa `internal/infrastructure/http/httperror`, não a raiz. Ver ADR 0005.
+Cuidado com ciclo de import: o pacote de domínio nunca importa o pacote raiz `http` (é o inverso: raiz importa domínio). Se o handler precisar responder erro, importa `internal/infrastructure/http/httperror`, não a raiz. Ver ADR 0005.
 

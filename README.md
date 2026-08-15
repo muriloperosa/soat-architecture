@@ -166,9 +166,9 @@ shared.NewConflictError("ordem já finalizada")
 shared.NewInternalError("erro ao consultar banco", err) // encapsula erro de infra
 ```
 
-Regra pros use cases: erro de regra de negócio nasce como `*shared.AppError` na origem (domain ou application); erro de infra (repositório, driver) é encapsulado com `shared.NewInternalError("mensagem", err)` antes de subir. `fmt.Errorf("...: %w", err)` no meio do caminho não quebra nada — o mapper HTTP usa `errors.As` e enxerga através do wrap.
+Regra pros use cases: erro de regra de negócio nasce como `*shared.AppError` na origem (domain ou application); erro de infra (repositório, driver) é encapsulado com `shared.NewInternalError("mensagem", err)` antes de subir. `fmt.Errorf("...: %w", err)` no meio do caminho não quebra nada, o mapper HTTP usa `errors.As` e enxerga através do wrap.
 
-No handler, não monta `gin.H` na mão — delega pro pacote de erro HTTP:
+No handler, não monta `gin.H` na mão delega pro pacote de erro HTTP:
 
 ```go
 if err != nil {
@@ -177,7 +177,7 @@ if err != nil {
 }
 ```
 
-`RespondError` (`internal/infrastructure/http/httperror/errors.go`) traduz `Kind` pra status HTTP e devolve `{"type", "message", "details"}` (`httperror.ErrorResponse`). Há também um atalho por `Kind` — `RespondNotFoundError`, `RespondValidationError`, `RespondConflictError`, `RespondForbiddenError`, `RespondUnauthorizedError`, `RespondInternalError` — pra handlers que já sabem o `Kind` sem montar um `*shared.AppError` primeiro:
+`RespondError` (`internal/infrastructure/http/httperror/errors.go`) traduz `Kind` pra status HTTP e devolve `{"type", "message", "details"}` (`httperror.ErrorResponse`). Há também um atalho por `Kind`: `RespondNotFoundError`, `RespondValidationError`, `RespondConflictError`, `RespondForbiddenError`, `RespondUnauthorizedError`, `RespondInternalError` pra handlers que já sabem o `Kind` sem montar um `*shared.AppError` primeiro:
 
 | Kind           | Status | Atalho                       |
 |----------------|--------|-------------------------------|
@@ -188,7 +188,7 @@ if err != nil {
 | `unauthorized` | 401    | `RespondUnauthorizedError`     |
 | `internal`     | 500    | `RespondInternalError`         |
 
-Erro que não é `*shared.AppError` (ou `Kind` desconhecido) cai em 500 genérico — mensagem interna nunca vaza pra resposta.
+Erro que não é `*shared.AppError` (ou `Kind` desconhecido) cai em 500 genérico mensagem interna nunca vaza pra resposta.
 
 `httperror` é um pacote-folha deliberado: fica fora da raiz de `internal/infrastructure/http/` justamente pra domínios (`auth/`, `health/`) poderem importá-lo sem criar ciclo com `router.go`, que por sua vez importa os pacotes de domínio pra registrar rotas (ver ADR 0005).
 
@@ -198,7 +198,7 @@ Erro que não é `*shared.AppError` (ou `Kind` desconhecido) cai em 500 genéric
 
 `internal/infrastructure/http/middleware/` tem dois middlewares Gin, pensados pra empilhar em sequência numa rota protegida.
 
-### `AuthenticationMiddleware` — valida o JWT
+### `AuthenticationMiddleware` valida o JWT
 
 Lê o header `Authorization: Bearer <token>`, valida assinatura (HS256) e expiração via `AutenticadorJWT.ValidarAccessToken`, e injeta os claims (`*domainauth.AppClaims`) no `gin.Context` sob a chave `middleware.ClaimsContextKey`. Sem token, token malformado ou inválido → 401 (`httperror.RespondError` com `shared.NewUnauthorizedError`).
 
@@ -206,9 +206,9 @@ Lê o header `Authorization: Bearer <token>`, valida assinatura (HS256) e expira
 middleware.AuthenticationMiddleware(c.JWTAuth) // c é *wiring.Container
 ```
 
-Não decide quem pode acessar o quê — só garante "esse token é válido e é desse usuário". Isso é trabalho do próximo middleware.
+Não decide quem pode acessar o quê, só garante "esse token é válido e é desse usuário". Isso é trabalho do próximo middleware.
 
-### `AuthorizationMiddleware` — valida o tipo de usuário
+### `AuthorizationMiddleware` valida o tipo de usuário
 
 Lê o `*domainauth.AppClaims` que o `AuthenticationMiddleware` deixou no contexto e compara `claims.Tipo` com o `TipoUsuario` esperado pra rota. Tipo errado (ou claims ausente, ou `AuthenticationMiddleware` não rodou antes) → 403 (`httperror.RespondForbiddenError`).
 
@@ -216,7 +216,7 @@ Lê o `*domainauth.AppClaims` que o `AuthenticationMiddleware` deixou no context
 middleware.AuthorizationMiddleware(domainauth.TipoInterno) // ou domainauth.TipoCliente
 ```
 
-**Sempre nessa ordem** — `AuthorizationMiddleware` depende do que `AuthenticationMiddleware` põe no contexto:
+**Sempre nessa ordem**, `AuthorizationMiddleware` depende do que `AuthenticationMiddleware` põe no contexto:
 
 ```go
 rg.GET(
@@ -229,7 +229,7 @@ rg.GET(
 
 ### Adicionando numa rota nova
 
-Em `Register<Dominio>Routes(rg *gin.RouterGroup, c *wiring.Container)` (ex. `internal/infrastructure/http/ordemservico/routes.go`), encadeie os middlewares antes do handler final — Gin aceita quantos `gin.HandlerFunc` forem passados, executados em ordem:
+Em `Register<Dominio>Routes(rg *gin.RouterGroup, c *wiring.Container)` (ex. `internal/infrastructure/http/ordemservico/routes.go`), encadeie os middlewares antes do handler final, Gin aceita quantos `gin.HandlerFunc` forem passados, executados em ordem:
 
 ```go
 func RegisterOrdemServicoRoutes(rg *gin.RouterGroup, c *wiring.Container) {

@@ -54,7 +54,7 @@ func RespondError(c *gin.Context, err error) {
 	})
 }
 
-// RespondValidationError responde 400 (ErrorKind validation) — atalho pra
+// RespondValidationError responde 400 (ErrorKind validation), atalho pra
 // erros de binding/validação de corpo HTTP, antes de chegar num use case.
 func RespondValidationError(c *gin.Context, message string) {
 	RespondError(c, shared.NewValidationError(message))
@@ -81,7 +81,7 @@ func RespondUnauthorizedError(c *gin.Context, message string) {
 }
 
 // RespondInternalError responde 500 (ErrorKind internal), sem vazar o erro
-// original (err) na resposta — só a mensagem genérica.
+// original (err) na resposta, só a mensagem genérica.
 func RespondInternalError(c *gin.Context, message string, err error) {
 	RespondError(c, shared.NewInternalError(message, err))
 }
