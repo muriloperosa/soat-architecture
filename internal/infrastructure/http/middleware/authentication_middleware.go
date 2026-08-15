@@ -16,12 +16,11 @@ const msgTokenInvalido = "token ausente, inválido ou expirado"
 
 // AuthenticationMiddleware valida assinatura e expiração do JWT recebido no
 // header Authorization (Bearer) e injeta os claims tipados no contexto.
-// Não decide autorização por tipo — isso é AuthorizationMiddleware.
 func AuthenticationMiddleware(jwtAuth *infraauth.AutenticadorJWT) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		header := c.GetHeader("Authorization")
-		tokenBruto, achou := strings.CutPrefix(header, "Bearer ")
-		if !achou || tokenBruto == "" {
+		tokenBruto, ok := strings.CutPrefix(header, "Bearer ")
+		if !ok || tokenBruto == "" {
 			httphandler.RespondError(c, shared.NewUnauthorizedError(msgTokenInvalido))
 			c.Abort()
 			return
