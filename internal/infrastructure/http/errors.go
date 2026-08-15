@@ -9,10 +9,12 @@ import (
 )
 
 var statusByKind = map[shared.ErrorKind]int{
-	shared.KindNotFound:   http.StatusNotFound,
-	shared.KindValidation: http.StatusBadRequest,
-	shared.KindConflict:   http.StatusConflict,
-	shared.KindInternal:   http.StatusInternalServerError,
+	shared.KindNotFound:     http.StatusNotFound,
+	shared.KindValidation:   http.StatusBadRequest,
+	shared.KindConflict:     http.StatusConflict,
+	shared.KindInternal:     http.StatusInternalServerError,
+	shared.KindForbidden:    http.StatusForbidden,
+	shared.KindUnauthorized: http.StatusUnauthorized,
 }
 
 // RespondError traduz um erro de domínio/aplicação para resposta HTTP.

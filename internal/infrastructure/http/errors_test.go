@@ -60,6 +60,26 @@ func TestRespondError_Conflict_Retorna409(t *testing.T) {
 	require.Equal(t, http.StatusConflict, rec.Code)
 }
 
+func TestRespondError_Forbidden_Retorna403(t *testing.T) {
+	rec := serveRespondError(shared.NewForbiddenError("acesso não permitido para este tipo de usuário"))
+
+	require.Equal(t, http.StatusForbidden, rec.Code)
+
+	var body errorBody
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Equal(t, "forbidden", body.Type)
+}
+
+func TestRespondError_Unauthorized_Retorna401(t *testing.T) {
+	rec := serveRespondError(shared.NewUnauthorizedError("token inválido ou expirado"))
+
+	require.Equal(t, http.StatusUnauthorized, rec.Code)
+
+	var body errorBody
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Equal(t, "unauthorized", body.Type)
+}
+
 func TestRespondError_Internal_Retorna500SemVazarDetalheInterno(t *testing.T) {
 	rec := serveRespondError(shared.NewInternalError("erro ao consultar banco", errors.New("connection refused")))
 
