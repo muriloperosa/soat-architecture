@@ -2,43 +2,53 @@ package auth_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	appauth "github.com/muriloperosa/soat-architecture/internal/application/auth"
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
+	"github.com/muriloperosa/soat-architecture/internal/domain/auth/mocks"
 	infraauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/auth"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
 func TestRefreshUseCase_Executar_TokenValido_RotacionaERetornaNovoPar(t *testing.T) {
-	refreshTokens := &refreshTokensFake{}
+	refreshTokensRepo := mocks.NewRepositorioRefreshToken(t)
 	bruto, _ := infraauth.GerarRefreshTokenBruto()
-	refreshTokens.salvos = append(refreshTokens.salvos, &domainauth.RefreshToken{
+	rtAntigo := &domainauth.RefreshToken{
 		ID: "rt-1", UsuarioID: "user-1", Tipo: domainauth.TipoCliente,
 		TokenHash: infraauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
-	})
+	}
 	jwtAuth := infraauth.NewAuthenticatorJWT("segredo", 15*time.Minute)
-	uc := appauth.NewRefreshUseCase(refreshTokens, jwtAuth, time.Hour)
+	uc := appauth.NewRefreshUseCase(refreshTokensRepo, jwtAuth, time.Hour)
+
+	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, infraauth.HashRefreshToken(bruto)).Return(rtAntigo, nil)
+	refreshTokensRepo.EXPECT().Revogar(mock.Anything, "rt-1").Return(nil)
+	refreshTokensRepo.EXPECT().
+		Salvar(mock.Anything, mock.AnythingOfType("*auth.RefreshToken")).
+		Run(func(ctx context.Context, rt *domainauth.RefreshToken) { rt.ID = "rt-2" }).
+		Return(nil)
 
 	out, err := uc.Executar(context.Background(), appauth.RefreshInput{RefreshTokenBruto: bruto})
 
 	require.NoError(t, err)
 	require.NotEmpty(t, out.AccessToken)
 	require.NotEqual(t, bruto, out.RefreshToken)
-	require.NotNil(t, refreshTokens.salvos[0].RevogadoEm, "token antigo deve ser revogado")
-	require.Len(t, refreshTokens.salvos, 2, "novo par deve ser persistido")
 }
 
 func TestRefreshUseCase_Executar_TokenJaRevogado_Erro(t *testing.T) {
-	refreshTokens := &refreshTokensFake{}
+	refreshTokensRepo := mocks.NewRepositorioRefreshToken(t)
 	bruto, _ := infraauth.GerarRefreshTokenBruto()
 	agora := time.Now()
-	refreshTokens.salvos = append(refreshTokens.salvos, &domainauth.RefreshToken{
+	rt := &domainauth.RefreshToken{
 		ID: "rt-1", TokenHash: infraauth.HashRefreshToken(bruto),
 		ExpiraEm: time.Now().Add(time.Hour), RevogadoEm: &agora,
-	})
-	uc := appauth.NewRefreshUseCase(refreshTokens, infraauth.NewAuthenticatorJWT("s", time.Minute), time.Hour)
+	}
+	uc := appauth.NewRefreshUseCase(refreshTokensRepo, infraauth.NewAuthenticatorJWT("s", time.Minute), time.Hour)
+
+	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, infraauth.HashRefreshToken(bruto)).Return(rt, nil)
 
 	_, err := uc.Executar(context.Background(), appauth.RefreshInput{RefreshTokenBruto: bruto})
 
@@ -46,7 +56,10 @@ func TestRefreshUseCase_Executar_TokenJaRevogado_Erro(t *testing.T) {
 }
 
 func TestRefreshUseCase_Executar_TokenInexistente_Erro(t *testing.T) {
-	uc := appauth.NewRefreshUseCase(&refreshTokensFake{}, infraauth.NewAuthenticatorJWT("s", time.Minute), time.Hour)
+	refreshTokensRepo := mocks.NewRepositorioRefreshToken(t)
+	uc := appauth.NewRefreshUseCase(refreshTokensRepo, infraauth.NewAuthenticatorJWT("s", time.Minute), time.Hour)
+
+	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, infraauth.HashRefreshToken("inexistente")).Return(nil, errors.New("nao encontrado"))
 
 	_, err := uc.Executar(context.Background(), appauth.RefreshInput{RefreshTokenBruto: "inexistente"})
 
