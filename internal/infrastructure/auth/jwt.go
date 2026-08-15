@@ -15,6 +15,8 @@ type AutenticadorJWT struct {
 	accessTTL time.Duration
 }
 
+var _ domainauth.JWTProvider = (*AutenticadorJWT)(nil)
+
 func NewAuthenticatorJWT(secret string, accessTTL time.Duration) *AutenticadorJWT {
 	return &AutenticadorJWT{secret: []byte(secret), accessTTL: accessTTL}
 }

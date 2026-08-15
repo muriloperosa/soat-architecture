@@ -18,7 +18,7 @@ const msgCredenciaisInvalidas = "credenciais inválidas"
 type LoginUseCase struct {
 	credenciais   domainauth.RepositorioCredenciais
 	refreshTokens domainauth.RepositorioRefreshToken
-	jwtAuth       *infraauth.AutenticadorJWT
+	jwtAuth       domainauth.JWTProvider
 	tipo          domainauth.TipoUsuario
 	refreshTTL    time.Duration
 }
@@ -28,7 +28,7 @@ type LoginUseCase struct {
 func NewLoginUseCase(
 	credenciais domainauth.RepositorioCredenciais,
 	refreshTokens domainauth.RepositorioRefreshToken,
-	jwtAuth *infraauth.AutenticadorJWT,
+	jwtAuth domainauth.JWTProvider,
 	tipo domainauth.TipoUsuario,
 	refreshTTL time.Duration,
 ) *LoginUseCase {
@@ -59,7 +59,7 @@ func (uc *LoginUseCase) Executar(ctx context.Context, input LoginInput) (LoginOu
 
 // gerarTokens gera e persiste um novo par access+refresh token pro usuário.
 // Reusado pelo RefreshUseCase na rotação.
-func gerarTokens(ctx context.Context, refreshTokens domainauth.RepositorioRefreshToken, jwtAuth *infraauth.AutenticadorJWT, tipo domainauth.TipoUsuario, papel domainauth.PapelUsuario, refreshTTL time.Duration, usuarioID string) (LoginOutput, error) {
+func gerarTokens(ctx context.Context, refreshTokens domainauth.RepositorioRefreshToken, jwtAuth domainauth.JWTProvider, tipo domainauth.TipoUsuario, papel domainauth.PapelUsuario, refreshTTL time.Duration, usuarioID string) (LoginOutput, error) {
 	accessToken, err := jwtAuth.GerarAccessToken(usuarioID, tipo, papel)
 	if err != nil {
 		return LoginOutput{}, shared.NewInternalError("erro ao gerar access token", err)

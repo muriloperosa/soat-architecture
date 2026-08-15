@@ -15,14 +15,14 @@ const msgRefreshTokenInvalido = "refresh token inválido ou expirado"
 // revogando o antigo (rotação real).
 type RefreshUseCase struct {
 	refreshTokens domainauth.RepositorioRefreshToken
-	jwtAuth       *infraauth.AutenticadorJWT
+	jwtAuth       domainauth.JWTProvider
 	refreshTTL    time.Duration
 }
 
 // NewRefreshUseCase monta o use case com o repositório de refresh tokens e o
 // autenticador JWT, compartilhados entre interno e cliente (o token antigo já
 // carrega o TipoUsuario, propagado pro novo par).
-func NewRefreshUseCase(refreshTokens domainauth.RepositorioRefreshToken, jwtAuth *infraauth.AutenticadorJWT, refreshTTL time.Duration) *RefreshUseCase {
+func NewRefreshUseCase(refreshTokens domainauth.RepositorioRefreshToken, jwtAuth domainauth.JWTProvider, refreshTTL time.Duration) *RefreshUseCase {
 	return &RefreshUseCase{refreshTokens: refreshTokens, jwtAuth: jwtAuth, refreshTTL: refreshTTL}
 }
 
