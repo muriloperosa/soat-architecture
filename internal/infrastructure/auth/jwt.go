@@ -40,7 +40,7 @@ func (a *AuthenticatorJWT) GerarAccessToken(subject string, tipo domainauth.Tipo
 	return token.SignedString(a.secret)
 }
 
-// GerarRefreshToken delega pra função de mesmo nome em refresh_hash.go —
+// GerarRefreshToken delega pra função de mesmo nome em refresh_hash.go,
 // método existe só pra satisfazer domainauth.JWTProvider (mockável nos use cases).
 func (a *AuthenticatorJWT) GerarRefreshToken() (string, error) {
 	return GerarRefreshToken()

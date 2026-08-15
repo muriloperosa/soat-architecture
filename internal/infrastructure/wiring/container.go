@@ -19,7 +19,7 @@ type Container struct {
 
 	// TODO(Task 14): AuthInternoHandler *httphandler.AuthInternoHandler e
 	// AuthClienteHandler *httphandler.AuthClienteHandler ficam bloqueados até
-	// usuariointerno.Usuario e cliente.SenhaHash existirem — só então dá pra
+	// usuariointerno.Usuario e cliente.SenhaHash existirem, só então dá pra
 	// montar CredenciaisRepository dos dois tipos (mysqlusuariointerno,
 	// mysqlcliente) e os use cases de login/refresh/logout em cima deles.
 	// RefreshTokenRepository (Task 13) já está pronto em
