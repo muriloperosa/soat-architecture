@@ -22,11 +22,11 @@ Cada uma dona de uma camada:
 
 ## Handlers magros: DTO e mapper de transporte
 
-- `internal/infrastructure/http/` é namespaceado por agregado (ver [ADR 0005](adr/0005-convencao-de-nomes.md)): cada domínio ganha sua própria pasta/pacote (`http/ordemservico/`, `http/auth/`, `http/health/`...), com `dto.go` (structs de request/response com tags `json:`), `mapper.go` (converte HTTP DTO em DTO da aplicação, via `toInput()`/`toResponse()`) e o(s) handler(s). Dentro da pasta do domínio os nomes ficam sem prefixo — o pacote já desambigua.
+- `internal/infrastructure/http/` é namespaceado por agregado: cada domínio ganha sua própria pasta/pacote (`http/ordemservico/`, `http/auth/`, `http/health/`...), com `dto.go` (structs de request/response com tags `json:`), `mapper.go` (converte HTTP DTO em DTO da aplicação, via `toInput()`/`toResponse()`) e o(s) handler(s). Dentro da pasta do domínio os nomes ficam sem prefixo.
 - O handler fica magro: bind, `toInput()`, use case, `toResponse()`, resposta.
 - Dois DTOs, duas camadas, não confundir: `application/ordemservico/dto.go` são os DTOs da aplicação, contrato do use case, agnóstico de HTTP. `http/ordemservico/dto.go` são os DTOs de transporte, request/response HTTP. O mapper de transporte é a fronteira 1 entre eles.
 - O mapper de transporte é DTO para DTO: nunca importa entidade de domínio nem constrói Value Object, só passa primitivos. A validação (CPF/CNPJ, placa) fica no use case ou no VO. Mantê lo fino, quase uma cópia, é o preço de manter a aplicação agnóstica de transporte.
-- `internal/infrastructure/http/httperror/` é a exceção: fica fora de qualquer pasta de domínio, de propósito, pra evitar ciclo de import entre `router.go` (raiz, importa cada domínio pra registrar rotas) e os domínios (que precisam de `RespondError` pra responder erro). Ver ADR 0005.
+- `internal/infrastructure/http/httperror/` é a exceção: fica fora de qualquer pasta de domínio, de propósito, pra evitar ciclo de import entre `router.go` e os domínios (que precisam de `RespondError` pra responder erro).
 
 ## Regra de dependência
 
@@ -106,7 +106,7 @@ soat-architecture/
 │       ├── persistence/mysql/{connection.go, ordemservico/, cliente/, veiculo/, servico/, peca/, auth/}
 │       ├── http/
 │       │   ├── router.go            # monta o *gin.Engine, chama Register*Routes de cada domínio
-│       │   ├── httperror/           # ErrorResponse + RespondError, pacote-folha (ver ADR 0005)
+│       │   ├── httperror/           # ErrorResponse + RespondError
 │       │   ├── auth/{interno_handler,cliente_handler,dto,mapper}.go + _test
 │       │   ├── health/{handler,routes}.go
 │       │   ├── ordemservico/{handler,dto,mapper,routes}.go  # mesmo padrão, demais domínios
@@ -143,5 +143,5 @@ Ao implementar um novo domínio (ex: `cliente`):
 2. Crie `internal/infrastructure/http/cliente/routes.go` com `RegisterClienteRoutes`.
 3. Registre a chamada em `router.go` (raiz), importando o pacote `cliente`.
 
-Cuidado com ciclo de import: o pacote de domínio nunca importa o pacote raiz `http` (é o inverso: raiz importa domínio). Se o handler precisar responder erro, importa `internal/infrastructure/http/httperror`, não a raiz. Ver ADR 0005.
+Cuidado com ciclo de import: o pacote de domínio nunca importa o pacote raiz `http` (é o inverso: raiz importa domínio). Se o handler precisar responder erro, importa `internal/infrastructure/http/httperror`, não a raiz.
 
