@@ -31,6 +31,10 @@ help:
 	@echo "  $(GREEN)swagger$(RESET):  Generate Swagger docs into docs/swagger (swag)"
 	@echo "  $(GREEN)hooks-install$(RESET):   Install the pre-push Git hook (mocks, lint, test, swagger)"
 	@echo "  $(GREEN)hooks-uninstall$(RESET): Uninstall the pre-push Git hook"
+	@echo "  $(GREEN)migrate-up$(RESET):      Run database migrations up (migrate)"
+	@echo "  $(GREEN)migrate-down$(RESET):    Run database migrations down (migrate)"
+	@echo "  $(GREEN)migrate-version$(RESET): Run database migrations version (migrate)"
+	@echo "  $(GREEN)db-setup$(RESET):         Start MySQL and run migrations up"
 
 run:
 	go run ./cmd/api
@@ -56,10 +60,29 @@ down:
 	docker compose down
 
 db-up:
-	docker compose up -d mysql
+	docker compose up -d --wait mysql
 
 db-down:
 	docker compose stop mysql
+	
+migrate-up:
+	go run ./migrations up
+
+migrate-down:
+	go run ./migrations down
+
+migrate-version:
+	go run ./migrations version
+
+migrate-force:
+	go run ./migrations force $(VERSION)
+
+db-setup: db-up migrate-up
+
+db-reset:
+	docker compose down -v
+	docker compose up -d --wait mysql
+	$(MAKE) migrate-up
 
 tidy:
 	go mod tidy

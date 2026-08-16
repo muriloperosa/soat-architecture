@@ -11,6 +11,7 @@ type Config struct {
 	DBUser     string `env:"DB_USER,required"`
 	DBPassword string `env:"DB_PASSWORD,required"`
 	DBName     string `env:"DB_NAME,required"`
+	DBDriver   string `env:"DB_DRIVER" envDefault:"mysql"`
 
 	DBMaxOpenConns           int `env:"DB_MAX_OPEN_CONNS" envDefault:"25"`
 	DBMaxIdleConns           int `env:"DB_MAX_IDLE_CONNS" envDefault:"5"`
