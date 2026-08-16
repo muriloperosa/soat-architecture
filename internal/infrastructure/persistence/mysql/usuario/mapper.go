@@ -1,6 +1,7 @@
 package usuario
 
 import (
+	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	domainusuario "github.com/muriloperosa/soat-architecture/internal/domain/usuario"
 )
@@ -30,4 +31,16 @@ func toEntity(m *Model) (*domainusuario.Usuario, error) {
 	senha := shared.RestaurarSenhaHash(m.SenhaHash)
 	u := domainusuario.RestaurarUsuario(m.ID, m.Nome, email, senha, shared.PapelUsuario(m.Papel), m.RequerAlterarSenha, m.Ativo, m.DataCadastro, m.DataAtualizacao)
 	return u, nil
+}
+
+// toCredencial projeta a entidade na credencial mínima que o fluxo de login
+// (domain/auth) precisa.
+func toCredencial(u domainusuario.Usuario) *domainauth.Credencial {
+	return &domainauth.Credencial{
+		ID:                 u.ID(),
+		SenhaHash:          u.Senha().String(),
+		Papel:              u.Papel(),
+		Ativo:              u.Ativo(),
+		RequerAlterarSenha: u.RequerAlterarSenha(),
+	}
 }

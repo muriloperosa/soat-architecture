@@ -134,6 +134,21 @@ func TestUsuarioRepository_BuscarPorID_RetornaEntidade(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestUsuarioRepository_BuscarPorID_EmailInvalidoNoBanco_PropagaErro(t *testing.T) {
+	gdb, mock := test_helpers.SetupGormMock(t)
+	repo := mysqlusuario.NewUsuarioRepository(gdb)
+
+	agora := time.Now()
+	rows := sqlmock.NewRows([]string{"id", "papel", "nome", "email", "senha_hash", "requer_alterar_senha", "ativo", "data_cadastro", "data_atualizacao"}).
+		AddRow(1, "MECANICO", "Ana Souza", "email-corrompido-no-banco", "$2a$hash", true, true, agora, agora)
+	mock.ExpectQuery("SELECT \\* FROM `usuarios`").WillReturnRows(rows)
+
+	u, err := repo.BuscarPorID(context.Background(), 1)
+	require.ErrorIs(t, err, shared.ErrEmailInvalido)
+	require.Nil(t, u)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestUsuarioRepository_Atualizar_ExecutaUpdate(t *testing.T) {
 	gdb, mock := test_helpers.SetupGormMock(t)
 	repo := mysqlusuario.NewUsuarioRepository(gdb)
