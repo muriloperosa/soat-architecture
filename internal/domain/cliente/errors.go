@@ -1,12 +1,12 @@
 package cliente
 
-import "errors"
+import "github.com/muriloperosa/soat-architecture/internal/domain/shared"
 
 var (
-	ErrDocumentoObrigatorio = errors.New("documento é obrigatório")
-	ErrTipoPessoaInvalido   = errors.New("tipo de pessoa inválido")
-	ErrCPFInvalido          = errors.New("CPF inválido")
-	ErrCNPJInvalido         = errors.New("CNPJ inválido")
-	ErrTelefoneObrigatorio  = errors.New("telefone é obrigatório")
-	ErrTelefoneInvalido     = errors.New("telefone inválido")
+	ErrDocumentoObrigatorio = shared.NewValidationError("documento é obrigatório")
+	ErrTipoPessoaInvalido   = shared.NewValidationError("tipo de pessoa inválido")
+	ErrCPFInvalido          = shared.NewValidationError("CPF inválido")
+	ErrCNPJInvalido         = shared.NewValidationError("CNPJ inválido")
+	ErrTelefoneObrigatorio  = shared.NewValidationError("telefone é obrigatório")
+	ErrTelefoneInvalido     = shared.NewValidationError("telefone inválido")
 )
