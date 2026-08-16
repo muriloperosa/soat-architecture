@@ -91,6 +91,14 @@ make migrate-up
 
 `make db-setup` faz os dois passos de uma vez (`db-up` + `migrate-up`). Outros comandos: `make migrate-down` (desfaz a última), `make migrate-version` (mostra a versão atual) e `make migrate-force VERSION=N` (força a versão sem rodar SQL, só pra corrigir um estado `dirty`).
 
+Cria um usuário interno direto no banco (`cmd/create-user`), sem passar pelo HTTP/JWT; resolve o bootstrap do primeiro admin (que precisaria de um admin já existente pra bater em `POST /v1/usuarios`) e serve pra testar o domínio manualmente:
+
+```bash
+make create-user NOME="Admin Oficina" EMAIL=admin@oficina.com SENHA=senha123
+```
+
+`PAPEL` é opcional, default `ADMINISTRADOR` (outros valores válidos: `MECANICO`, `ATENDENTE`). A senha nasce provisória (`requer_alterar_senha=true`), igual a qualquer usuário criado por um admin — troca obrigatória no primeiro login.
+
 Roda a API com hot reload via `air`, que recompila e reinicia o processo a cada alteração em um arquivo `.go`:
 
 ```bash
