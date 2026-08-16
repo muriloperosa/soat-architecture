@@ -15,6 +15,9 @@ import (
 // @BasePath /
 // @Host http://localhost:8080
 // @Schemes http
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
