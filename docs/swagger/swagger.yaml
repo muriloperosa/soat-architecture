@@ -34,6 +34,9 @@ definitions:
       refresh_token_expires_in:
         example: 604800
         type: integer
+      requer_alterar_senha:
+        example: true
+        type: boolean
     type: object
   health.HealthCheckResponse:
     properties:
@@ -53,6 +56,87 @@ definitions:
       type:
         example: validation
         type: string
+    type: object
+  shared.PapelUsuario:
+    enum:
+    - ADMINISTRADOR
+    - MECANICO
+    - ATENDENTE
+    - CLIENTE
+    type: string
+    x-enum-varnames:
+    - PapelAdmin
+    - PapelMecanico
+    - PapelAtendente
+    - PapelCliente
+  usuario.AlterarSenhaRequest:
+    properties:
+      senha_nova:
+        example: novaSenha123
+        type: string
+    type: object
+  usuario.AtualizarUsuarioRequest:
+    properties:
+      email:
+        example: ana@oficina.com
+        type: string
+      nome:
+        example: Ana Souza
+        type: string
+      papel:
+        allOf:
+        - $ref: '#/definitions/shared.PapelUsuario'
+        example: ATENDENTE
+      senha_nova:
+        example: novaSenha123
+        type: string
+    required:
+    - email
+    - nome
+    - papel
+    type: object
+  usuario.CriarUsuarioRequest:
+    properties:
+      email:
+        example: ana@oficina.com
+        type: string
+      nome:
+        example: Ana Souza
+        type: string
+      papel:
+        allOf:
+        - $ref: '#/definitions/shared.PapelUsuario'
+        example: MECANICO
+      senha:
+        example: senha123
+        type: string
+    required:
+    - email
+    - nome
+    - papel
+    - senha
+    type: object
+  usuario.UsuarioResponse:
+    properties:
+      ativo:
+        example: true
+        type: boolean
+      email:
+        example: ana@oficina.com
+        type: string
+      id:
+        example: 1
+        type: integer
+      nome:
+        example: Ana Souza
+        type: string
+      papel:
+        allOf:
+        - $ref: '#/definitions/shared.PapelUsuario'
+        example: MECANICO
+      requer_alterar_senha:
+        example: true
+        type: boolean
     type: object
 host: http://localhost:8080
 info:
@@ -247,6 +331,223 @@ paths:
       summary: Verifica saúde da API
       tags:
       - Health
+  /v1/usuarios:
+    post:
+      consumes:
+      - application/json
+      description: Cria um usuário interno com senha inicial provisória (troca forçada
+        no primeiro acesso). Restrito a admin.
+      parameters:
+      - description: Dados do usuário
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/usuario.CriarUsuarioRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/usuario.UsuarioResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Cria usuário interno
+      tags:
+      - Usuarios
+  /v1/usuarios/{id}:
+    put:
+      consumes:
+      - application/json
+      description: 'Atualiza nome, email e papel de um usuário interno. senha_nova
+        é opcional: se informada, o admin redefine a senha (força troca no próximo
+        login). Restrito a admin.'
+      parameters:
+      - description: ID do usuário
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Dados atualizados
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/usuario.AtualizarUsuarioRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/usuario.UsuarioResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualiza usuário interno
+      tags:
+      - Usuarios
+  /v1/usuarios/{id}/ativar:
+    patch:
+      description: Reabilita um usuário interno pra login. Restrito a admin.
+      parameters:
+      - description: ID do usuário
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Sem conteúdo
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Ativa usuário interno
+      tags:
+      - Usuarios
+  /v1/usuarios/{id}/inativar:
+    patch:
+      description: Bloqueia um usuário interno de logar. Restrito a admin.
+      parameters:
+      - description: ID do usuário
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Sem conteúdo
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Inativa usuário interno
+      tags:
+      - Usuarios
+  /v1/usuarios/me:
+    get:
+      description: Retorna id/nome/email/papel/ativo do próprio usuário autenticado.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/usuario.UsuarioResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Dados do usuário logado
+      tags:
+      - Usuarios
+  /v1/usuarios/me/senha:
+    put:
+      consumes:
+      - application/json
+      description: Troca a senha do usuário logado (self-service). Usado também pra
+        destravar o primeiro acesso (senha provisória).
+      parameters:
+      - description: Nova senha
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/usuario.AlterarSenhaRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Sem conteúdo
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Troca a própria senha
+      tags:
+      - Usuarios
 schemes:
 - http
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"
