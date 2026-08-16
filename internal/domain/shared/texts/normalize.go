@@ -5,12 +5,12 @@ import (
 	"unicode"
 )
 
-// NormalizeName remove espaços desnecessários e padroniza
+// NormalizeUcFirst  remove espaços desnecessários e padroniza
 // cada palavra com a primeira letra maiúscula.
 //
 // Exemplo:
 // "  joÃO   da SILVA  " -> "João Da Silva"
-func NormalizeName(value string) string {
+func NormalizeUcFirst(value string) string {
 	value = strings.TrimSpace(value)
 	value = strings.ToLower(value)
 
@@ -22,11 +22,6 @@ func NormalizeName(value string) string {
 
 	for index, word := range words {
 		runes := []rune(word)
-
-		if len(runes) == 0 {
-			continue
-		}
-
 		runes[0] = unicode.ToUpper(runes[0])
 		words[index] = string(runes)
 	}

@@ -6,6 +6,11 @@ import (
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared/texts"
 )
 
+const (
+	PhoneNumberLength       = 10
+	MobilePhoneNumberLength = 11
+)
+
 type Telefone struct {
 	valor string
 }
@@ -30,30 +35,27 @@ func (t Telefone) String() string {
 
 func (t Telefone) Formatado() string {
 	switch len(t.valor) {
-	case 10:
+	case PhoneNumberLength:
 		return fmt.Sprintf("(%s) %s-%s", t.valor[0:2], t.valor[2:6], t.valor[6:10])
-	case 11:
+
+	case MobilePhoneNumberLength:
 		return fmt.Sprintf("(%s) %s-%s", t.valor[0:2], t.valor[2:7], t.valor[7:11])
+
 	default:
 		return t.valor
 	}
 }
 
-func (t Telefone) IsZero() bool {
-	return t.valor == ""
-}
-
 func validarTelefone(valor string) bool {
-	if len(valor) != 10 && len(valor) != 11 {
+	if len(valor) != PhoneNumberLength && len(valor) != MobilePhoneNumberLength {
 		return false
 	}
 
-	// DDD deve possuir dois dígitos e não pode iniciar com zero.
 	if valor[0] == '0' {
 		return false
 	}
 
-	if len(valor) == 11 {
+	if len(valor) == MobilePhoneNumberLength {
 		return validarCelular(valor)
 	}
 
@@ -61,15 +63,10 @@ func validarTelefone(valor string) bool {
 }
 
 func validarCelular(valor string) bool {
-	// Após o DDD, celulares brasileiros possuem 9 dígitos
-	// e começam com 9.
 	return valor[2] == '9'
 }
 
 func validarTelefoneFixo(valor string) bool {
-	// Telefones fixos possuem 8 dígitos após o DDD.
-	// Para o domínio do projeto restringimos o primeiro dígito
-	// do número às faixas usuais de telefonia fixa.
 	primeiroDigito := valor[2]
 
 	return primeiroDigito >= '2' && primeiroDigito <= '5'

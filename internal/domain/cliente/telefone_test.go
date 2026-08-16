@@ -28,50 +28,50 @@ func TestNewTelefoneFixoValido(t *testing.T) {
 }
 
 func TestNewTelefoneObrigatorio(t *testing.T) {
-	telefone, err := NewTelefone("")
+	_, err := NewTelefone("")
 
+	require.Error(t, err)
 	require.ErrorIs(t, err, ErrTelefoneObrigatorio)
-	require.True(t, telefone.IsZero())
 }
 
 func TestNewTelefoneApenasCaracteresInvalidos(t *testing.T) {
-	telefone, err := NewTelefone("abc() -")
+	_, err := NewTelefone("abc() -")
 
 	require.ErrorIs(t, err, ErrTelefoneObrigatorio)
-	require.True(t, telefone.IsZero())
 }
 
 func TestNewTelefoneComMenosDeDezDigitos(t *testing.T) {
-	telefone, err := NewTelefone("449999123")
+	_, err := NewTelefone("449999123")
 
 	require.ErrorIs(t, err, ErrTelefoneInvalido)
-	require.True(t, telefone.IsZero())
 }
 
 func TestNewTelefoneComMaisDeOnzeDigitos(t *testing.T) {
-	telefone, err := NewTelefone("449999912345")
+	_, err := NewTelefone("449999912345")
 
 	require.ErrorIs(t, err, ErrTelefoneInvalido)
-	require.True(t, telefone.IsZero())
 }
 
 func TestNewTelefoneComDDDIniciadoEmZero(t *testing.T) {
-	telefone, err := NewTelefone("(04) 99999-1234")
+	_, err := NewTelefone("(04) 99999-1234")
 
 	require.ErrorIs(t, err, ErrTelefoneInvalido)
-	require.True(t, telefone.IsZero())
 }
 
 func TestNewTelefoneCelularSemNonoDigito(t *testing.T) {
-	telefone, err := NewTelefone("(44) 89999-1234")
+	_, err := NewTelefone("(44) 89999-1234")
 
 	require.ErrorIs(t, err, ErrTelefoneInvalido)
-	require.True(t, telefone.IsZero())
 }
 
 func TestNewTelefoneFixoComPrefixoInvalido(t *testing.T) {
-	telefone, err := NewTelefone("(44) 9031-1234")
+	_, err := NewTelefone("(44) 9031-1234")
 
 	require.ErrorIs(t, err, ErrTelefoneInvalido)
-	require.True(t, telefone.IsZero())
+}
+
+func TestTelefoneFormatado_DeveRetornarValorOriginalQuandoTamanhoForInvalido(t *testing.T) {
+	telefone := Telefone{valor: "123"}
+	result := telefone.Formatado()
+	require.Equal(t, "123", result)
 }
