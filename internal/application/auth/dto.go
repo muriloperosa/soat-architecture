@@ -8,8 +8,10 @@ type LoginInput struct {
 
 // LoginOutput é o DTO de saída do LoginUseCase.
 type LoginOutput struct {
-	AccessToken  string
-	RefreshToken string
+	AccessToken           string
+	RefreshToken          string
+	AccessTokenExpiresIn  int64
+	RefreshTokenExpiresIn int64
 }
 
 // RefreshInput é o DTO de entrada do RefreshUseCase.
@@ -19,8 +21,10 @@ type RefreshInput struct {
 
 // RefreshOutput é o DTO de saída do RefreshUseCase.
 type RefreshOutput struct {
-	AccessToken  string
-	RefreshToken string
+	AccessToken           string
+	RefreshToken          string
+	AccessTokenExpiresIn  int64
+	RefreshTokenExpiresIn int64
 }
 
 // LogoutInput é o DTO de entrada do LogoutUseCase.

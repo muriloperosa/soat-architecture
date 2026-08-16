@@ -78,7 +78,7 @@ func credenciaisComUsuarioValido(t *testing.T) *credenciaisFakeHTTP {
 
 func TestAuthInternoHandler_Login_CredencialValida_Retorna200ComTokens(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	loginUC := appauth.NewLoginUseCase(credenciaisComUsuarioValido(t), &refreshTokensFakeHTTP{}, infraauth.NewAuthenticatorJWT("s", 15*time.Minute), domainauth.TipoInterno, time.Hour)
+	loginUC := appauth.NewLoginUseCase(credenciaisComUsuarioValido(t), &refreshTokensFakeHTTP{}, infraauth.NewAuthenticatorJWT("s", 15*time.Minute), domainauth.TipoInterno, time.Hour, time.Hour)
 	h := httpauth.NewAuthInternoHandler(loginUC, nil, nil)
 
 	engine := gin.New()
@@ -100,7 +100,7 @@ func TestAuthInternoHandler_Login_CredencialValida_Retorna200ComTokens(t *testin
 
 func TestAuthInternoHandler_Login_CredencialInvalida_Retorna401(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	loginUC := appauth.NewLoginUseCase(&credenciaisFakeHTTP{}, &refreshTokensFakeHTTP{}, infraauth.NewAuthenticatorJWT("s", 15*time.Minute), domainauth.TipoInterno, time.Hour)
+	loginUC := appauth.NewLoginUseCase(&credenciaisFakeHTTP{}, &refreshTokensFakeHTTP{}, infraauth.NewAuthenticatorJWT("s", 15*time.Minute), domainauth.TipoInterno, time.Hour, time.Hour)
 	h := httpauth.NewAuthInternoHandler(loginUC, nil, nil)
 
 	engine := gin.New()
@@ -119,8 +119,8 @@ func TestAuthInternoHandler_Refresh_TokenValido_Retorna200(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	jwtAuth := infraauth.NewAuthenticatorJWT("s", 15*time.Minute)
 	refreshTokens := &refreshTokensFakeHTTP{}
-	loginUC := appauth.NewLoginUseCase(credenciaisComUsuarioValido(t), refreshTokens, jwtAuth, domainauth.TipoInterno, time.Hour)
-	refreshUC := appauth.NewRefreshUseCase(refreshTokens, jwtAuth, time.Hour)
+	loginUC := appauth.NewLoginUseCase(credenciaisComUsuarioValido(t), refreshTokens, jwtAuth, domainauth.TipoInterno, time.Hour, time.Hour)
+	refreshUC := appauth.NewRefreshUseCase(refreshTokens, jwtAuth, time.Hour, time.Hour)
 	h := httpauth.NewAuthInternoHandler(loginUC, refreshUC, nil)
 
 	out, err := loginUC.Executar(context.Background(), appauth.LoginInput{Email: "func@oficina.com", Senha: "senha123"})
@@ -142,7 +142,7 @@ func TestAuthInternoHandler_Logout_TokenValido_Retorna204(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	jwtAuth := infraauth.NewAuthenticatorJWT("s", 15*time.Minute)
 	refreshTokens := &refreshTokensFakeHTTP{}
-	loginUC := appauth.NewLoginUseCase(credenciaisComUsuarioValido(t), refreshTokens, jwtAuth, domainauth.TipoInterno, time.Hour)
+	loginUC := appauth.NewLoginUseCase(credenciaisComUsuarioValido(t), refreshTokens, jwtAuth, domainauth.TipoInterno, time.Hour, time.Hour)
 	logoutUC := appauth.NewLogoutUseCase(refreshTokens)
 	h := httpauth.NewAuthInternoHandler(loginUC, nil, logoutUC)
 

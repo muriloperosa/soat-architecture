@@ -19,6 +19,11 @@ func toLogoutInput(req RefreshRequest) appauth.LogoutInput {
 }
 
 // toTokenResponse monta o DTO HTTP de resposta comum a login e refresh.
-func toTokenResponse(accessToken, refreshToken string) TokenResponse {
-	return TokenResponse{AccessToken: accessToken, RefreshToken: refreshToken}
+func toTokenResponse(accessToken, refreshToken string, expiresIn, refreshTokenExpiresIn int64) TokenResponse {
+	return TokenResponse{
+		AccessToken:           accessToken,
+		RefreshToken:          refreshToken,
+		ExpiresIn:             expiresIn,
+		RefreshTokenExpiresIn: refreshTokenExpiresIn,
+	}
 }

@@ -26,7 +26,7 @@ func TestLoginUseCase_Executar_CredencialValida_RetornaTokens(t *testing.T) {
 	credenciaisRepo := mocks.NewCredenciaisRepository(t)
 	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
 	jwtAuth := infraauth.NewAuthenticatorJWT("segredo-de-teste", 15*time.Minute)
-	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, jwtAuth, domainauth.TipoCliente, 168*time.Hour)
+	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, jwtAuth, domainauth.TipoCliente, 168*time.Hour, 168*time.Hour)
 
 	credenciaisRepo.EXPECT().
 		BuscarPorEmail(mock.Anything, "a@a.com").
@@ -62,7 +62,7 @@ func TestLoginUseCase_Executar_UsuarioInterno_PropagaPapel(t *testing.T) {
 	credenciaisRepo := mocks.NewCredenciaisRepository(t)
 	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
 	jwtAuth := infraauth.NewAuthenticatorJWT("segredo-de-teste", 15*time.Minute)
-	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, jwtAuth, domainauth.TipoInterno, 168*time.Hour)
+	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, jwtAuth, domainauth.TipoInterno, 168*time.Hour, 168*time.Hour)
 
 	credenciaisRepo.EXPECT().
 		BuscarPorEmail(mock.Anything, "m@a.com").
@@ -91,7 +91,7 @@ func TestLoginUseCase_Executar_UsuarioInterno_PropagaPapel(t *testing.T) {
 func TestLoginUseCase_Executar_SenhaErrada_ErroGenerico(t *testing.T) {
 	credenciaisRepo := mocks.NewCredenciaisRepository(t)
 	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
-	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, infraauth.NewAuthenticatorJWT("s", time.Minute), domainauth.TipoCliente, time.Hour)
+	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, infraauth.NewAuthenticatorJWT("s", time.Minute), domainauth.TipoCliente, time.Hour, time.Hour)
 
 	credenciaisRepo.EXPECT().
 		BuscarPorEmail(mock.Anything, "a@a.com").
@@ -107,7 +107,7 @@ func TestLoginUseCase_Executar_ErroAoGerarAccessToken_RetornaErroInterno(t *test
 	credenciaisRepo := mocks.NewCredenciaisRepository(t)
 	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
 	jwtAuth := mocks.NewJWTProvider(t)
-	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, jwtAuth, domainauth.TipoCliente, time.Hour)
+	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, jwtAuth, domainauth.TipoCliente, time.Hour, time.Hour)
 
 	credenciaisRepo.EXPECT().
 		BuscarPorEmail(mock.Anything, "a@a.com").
@@ -126,7 +126,7 @@ func TestLoginUseCase_Executar_ErroAoGerarRefreshToken_RetornaErroInterno(t *tes
 	credenciaisRepo := mocks.NewCredenciaisRepository(t)
 	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
 	jwtAuth := mocks.NewJWTProvider(t)
-	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, jwtAuth, domainauth.TipoCliente, time.Hour)
+	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, jwtAuth, domainauth.TipoCliente, time.Hour, time.Hour)
 
 	credenciaisRepo.EXPECT().
 		BuscarPorEmail(mock.Anything, "a@a.com").
@@ -147,7 +147,7 @@ func TestLoginUseCase_Executar_ErroAoGerarRefreshToken_RetornaErroInterno(t *tes
 func TestLoginUseCase_Executar_ErroAoSalvarRefreshToken_RetornaErroInterno(t *testing.T) {
 	credenciaisRepo := mocks.NewCredenciaisRepository(t)
 	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
-	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, infraauth.NewAuthenticatorJWT("s", time.Minute), domainauth.TipoCliente, time.Hour)
+	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, infraauth.NewAuthenticatorJWT("s", time.Minute), domainauth.TipoCliente, time.Hour, time.Hour)
 
 	credenciaisRepo.EXPECT().
 		BuscarPorEmail(mock.Anything, "a@a.com").
@@ -165,7 +165,7 @@ func TestLoginUseCase_Executar_ErroAoSalvarRefreshToken_RetornaErroInterno(t *te
 func TestLoginUseCase_Executar_EmailNaoEncontrado_MesmoErroGenerico(t *testing.T) {
 	credenciaisRepo := mocks.NewCredenciaisRepository(t)
 	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
-	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, infraauth.NewAuthenticatorJWT("s", time.Minute), domainauth.TipoCliente, time.Hour)
+	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, infraauth.NewAuthenticatorJWT("s", time.Minute), domainauth.TipoCliente, time.Hour, time.Hour)
 
 	credenciaisRepo.EXPECT().
 		BuscarPorEmail(mock.Anything, "naoexiste@a.com").

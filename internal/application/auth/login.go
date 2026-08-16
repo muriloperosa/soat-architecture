@@ -21,6 +21,7 @@ type LoginUseCase struct {
 	refreshTokens domainauth.RefreshTokenRepository
 	jwtAuth       domainauth.JWTProvider
 	tipo          domainauth.TipoUsuario
+	accessTTL     time.Duration
 	refreshTTL    time.Duration
 }
 
@@ -31,6 +32,7 @@ func NewLoginUseCase(
 	refreshTokens domainauth.RefreshTokenRepository,
 	jwtAuth domainauth.JWTProvider,
 	tipo domainauth.TipoUsuario,
+	accessTTL time.Duration,
 	refreshTTL time.Duration,
 ) *LoginUseCase {
 	return &LoginUseCase{
@@ -38,6 +40,7 @@ func NewLoginUseCase(
 		refreshTokens: refreshTokens,
 		jwtAuth:       jwtAuth,
 		tipo:          tipo,
+		accessTTL:     accessTTL,
 		refreshTTL:    refreshTTL,
 	}
 }
@@ -55,12 +58,12 @@ func (uc *LoginUseCase) Executar(ctx context.Context, input LoginInput) (LoginOu
 		return LoginOutput{}, shared.NewUnauthorizedError(msgCredenciaisInvalidas)
 	}
 
-	return gerarTokens(ctx, uc.refreshTokens, uc.jwtAuth, uc.tipo, cred.Papel, uc.refreshTTL, cred.ID)
+	return gerarTokens(ctx, uc.refreshTokens, uc.jwtAuth, uc.tipo, cred.Papel, uc.accessTTL, uc.refreshTTL, cred.ID)
 }
 
 // gerarTokens gera e persiste um novo par access+refresh token pro usuário.
 // Reusado pelo RefreshUseCase na rotação.
-func gerarTokens(ctx context.Context, refreshTokens domainauth.RefreshTokenRepository, jwtAuth domainauth.JWTProvider, tipo domainauth.TipoUsuario, papel domainauth.PapelUsuario, refreshTTL time.Duration, usuarioID uint64) (LoginOutput, error) {
+func gerarTokens(ctx context.Context, refreshTokens domainauth.RefreshTokenRepository, jwtAuth domainauth.JWTProvider, tipo domainauth.TipoUsuario, papel domainauth.PapelUsuario, accessTTL time.Duration, refreshTTL time.Duration, usuarioID uint64) (LoginOutput, error) {
 
 	accessToken, jti, err := jwtAuth.GerarAccessToken(strconv.FormatUint(usuarioID, 10), tipo, papel)
 	if err != nil {
@@ -84,5 +87,10 @@ func gerarTokens(ctx context.Context, refreshTokens domainauth.RefreshTokenRepos
 		return LoginOutput{}, shared.NewInternalError("erro ao salvar refresh token", err)
 	}
 
-	return LoginOutput{AccessToken: accessToken, RefreshToken: refreshBruto}, nil
+	return LoginOutput{
+		AccessToken:           accessToken,
+		RefreshToken:          refreshBruto,
+		AccessTokenExpiresIn:  int64(accessTTL.Seconds()),
+		RefreshTokenExpiresIn: int64(refreshTTL.Seconds()),
+	}, nil
 }

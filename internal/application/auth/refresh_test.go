@@ -29,7 +29,7 @@ func TestRefreshUseCase_Executar_TokenValido_RotacionaERetornaNovoPar(t *testing
 		ID: 1, UsuarioID: 1, Tipo: domainauth.TipoCliente, Papel: domainauth.PapelCliente,
 		TokenHash: infraauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
 	}
-	uc := appauth.NewRefreshUseCase(refreshTokensRepo, jwtAuth, time.Hour)
+	uc := appauth.NewRefreshUseCase(refreshTokensRepo, jwtAuth, time.Hour, time.Hour)
 
 	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, infraauth.HashRefreshToken(bruto)).Return(rtAntigo, nil)
 	refreshTokensRepo.EXPECT().Revogar(mock.Anything, uint64(1)).Return(nil)
@@ -54,7 +54,7 @@ func TestRefreshUseCase_Executar_ErroAoRevogar_RetornaErroInterno(t *testing.T) 
 	rt := &domainauth.RefreshToken{
 		ID: 1, TokenHash: infraauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
 	}
-	uc := appauth.NewRefreshUseCase(refreshTokensRepo, jwtAuth, time.Hour)
+	uc := appauth.NewRefreshUseCase(refreshTokensRepo, jwtAuth, time.Hour, time.Hour)
 
 	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, infraauth.HashRefreshToken(bruto)).Return(rt, nil)
 	refreshTokensRepo.EXPECT().Revogar(mock.Anything, uint64(1)).Return(errors.New("conexao recusada"))
@@ -73,7 +73,7 @@ func TestRefreshUseCase_Executar_ErroAoSalvarNovoPar_PropagaErro(t *testing.T) {
 		ID: 1, UsuarioID: 1, Tipo: domainauth.TipoCliente, Papel: domainauth.PapelCliente,
 		TokenHash: infraauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
 	}
-	uc := appauth.NewRefreshUseCase(refreshTokensRepo, jwtAuth, time.Hour)
+	uc := appauth.NewRefreshUseCase(refreshTokensRepo, jwtAuth, time.Hour, time.Hour)
 
 	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, infraauth.HashRefreshToken(bruto)).Return(rt, nil)
 	refreshTokensRepo.EXPECT().Revogar(mock.Anything, uint64(1)).Return(nil)
@@ -98,7 +98,7 @@ func TestRefreshUseCase_Executar_TokenJaRevogado_Erro(t *testing.T) {
 		ID: 1, TokenHash: infraauth.HashRefreshToken(bruto),
 		ExpiraEm: time.Now().Add(time.Hour), RevogadoEm: &agora,
 	}
-	uc := appauth.NewRefreshUseCase(refreshTokensRepo, jwtAuth, time.Hour)
+	uc := appauth.NewRefreshUseCase(refreshTokensRepo, jwtAuth, time.Hour, time.Hour)
 
 	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, infraauth.HashRefreshToken(bruto)).Return(rt, nil)
 
@@ -110,7 +110,7 @@ func TestRefreshUseCase_Executar_TokenJaRevogado_Erro(t *testing.T) {
 func TestRefreshUseCase_Executar_TokenInexistente_Erro(t *testing.T) {
 	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
 	jwtAuth := mocks.NewJWTProvider(t)
-	uc := appauth.NewRefreshUseCase(refreshTokensRepo, jwtAuth, time.Hour)
+	uc := appauth.NewRefreshUseCase(refreshTokensRepo, jwtAuth, time.Hour, time.Hour)
 
 	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, infraauth.HashRefreshToken("inexistente")).Return(nil, errors.New("nao encontrado"))
 

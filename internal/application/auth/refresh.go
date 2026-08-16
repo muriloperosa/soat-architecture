@@ -16,14 +16,15 @@ const msgRefreshTokenInvalido = "refresh token inválido ou expirado"
 type RefreshUseCase struct {
 	refreshTokens domainauth.RefreshTokenRepository
 	jwtAuth       domainauth.JWTProvider
+	accessTTL     time.Duration
 	refreshTTL    time.Duration
 }
 
 // NewRefreshUseCase monta o use case com o repositório de refresh tokens e o
 // autenticador JWT, compartilhados entre interno e cliente (o token antigo já
 // carrega o TipoUsuario, propagado pro novo par).
-func NewRefreshUseCase(refreshTokens domainauth.RefreshTokenRepository, jwtAuth domainauth.JWTProvider, refreshTTL time.Duration) *RefreshUseCase {
-	return &RefreshUseCase{refreshTokens: refreshTokens, jwtAuth: jwtAuth, refreshTTL: refreshTTL}
+func NewRefreshUseCase(refreshTokens domainauth.RefreshTokenRepository, jwtAuth domainauth.JWTProvider, accessTTL time.Duration, refreshTTL time.Duration) *RefreshUseCase {
+	return &RefreshUseCase{refreshTokens: refreshTokens, jwtAuth: jwtAuth, accessTTL: accessTTL, refreshTTL: refreshTTL}
 }
 
 // Executar valida o refresh token bruto (existe, não expirado, não revogado),
@@ -41,10 +42,15 @@ func (uc *RefreshUseCase) Executar(ctx context.Context, input RefreshInput) (Ref
 		return RefreshOutput{}, shared.NewInternalError("erro ao revogar refresh token", err)
 	}
 
-	novoPar, err := gerarTokens(ctx, uc.refreshTokens, uc.jwtAuth, rt.Tipo, rt.Papel, uc.refreshTTL, rt.UsuarioID)
+	novoPar, err := gerarTokens(ctx, uc.refreshTokens, uc.jwtAuth, rt.Tipo, rt.Papel, uc.accessTTL, uc.refreshTTL, rt.UsuarioID)
 	if err != nil {
 		return RefreshOutput{}, err
 	}
 
-	return RefreshOutput{AccessToken: novoPar.AccessToken, RefreshToken: novoPar.RefreshToken}, nil
+	return RefreshOutput{
+		AccessToken:           novoPar.AccessToken,
+		RefreshToken:          novoPar.RefreshToken,
+		AccessTokenExpiresIn:  novoPar.AccessTokenExpiresIn,
+		RefreshTokenExpiresIn: novoPar.RefreshTokenExpiresIn,
+	}, nil
 }

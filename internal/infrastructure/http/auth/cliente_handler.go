@@ -43,7 +43,7 @@ func (h *AuthClienteHandler) Login(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, toTokenResponse(out.AccessToken, out.RefreshToken))
+	c.JSON(http.StatusOK, toTokenResponse(out.AccessToken, out.RefreshToken, out.AccessTokenExpiresIn, out.RefreshTokenExpiresIn))
 }
 
 // @Summary Refresh de token de cliente
@@ -69,7 +69,7 @@ func (h *AuthClienteHandler) Refresh(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, toTokenResponse(out.AccessToken, out.RefreshToken))
+	c.JSON(http.StatusOK, toTokenResponse(out.AccessToken, out.RefreshToken, out.AccessTokenExpiresIn, out.RefreshTokenExpiresIn))
 }
 
 // @Summary Logout de cliente

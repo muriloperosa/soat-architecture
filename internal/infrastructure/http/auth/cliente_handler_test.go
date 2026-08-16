@@ -20,7 +20,7 @@ import (
 func TestAuthClienteHandler_Login_CredencialValida_Retorna200ComTokens(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	credenciais := &credenciaisFakeHTTP{credencial: &domainauth.Credencial{ID: 1, SenhaHash: hashSenhaHTTP(t, "senha123"), Papel: domainauth.PapelCliente}}
-	loginUC := appauth.NewLoginUseCase(credenciais, &refreshTokensFakeHTTP{}, infraauth.NewAuthenticatorJWT("s", 15*time.Minute), domainauth.TipoCliente, time.Hour)
+	loginUC := appauth.NewLoginUseCase(credenciais, &refreshTokensFakeHTTP{}, infraauth.NewAuthenticatorJWT("s", 15*time.Minute), domainauth.TipoCliente, time.Hour, time.Hour)
 	h := httpauth.NewAuthClienteHandler(loginUC, nil, nil)
 
 	engine := gin.New()
@@ -42,7 +42,7 @@ func TestAuthClienteHandler_Login_CredencialValida_Retorna200ComTokens(t *testin
 
 func TestAuthClienteHandler_Login_CredencialInvalida_Retorna401(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	loginUC := appauth.NewLoginUseCase(&credenciaisFakeHTTP{}, &refreshTokensFakeHTTP{}, infraauth.NewAuthenticatorJWT("s", 15*time.Minute), domainauth.TipoCliente, time.Hour)
+	loginUC := appauth.NewLoginUseCase(&credenciaisFakeHTTP{}, &refreshTokensFakeHTTP{}, infraauth.NewAuthenticatorJWT("s", 15*time.Minute), domainauth.TipoCliente, time.Hour, time.Hour)
 	h := httpauth.NewAuthClienteHandler(loginUC, nil, nil)
 
 	engine := gin.New()
@@ -62,7 +62,7 @@ func TestAuthClienteHandler_Logout_TokenValido_Retorna204(t *testing.T) {
 	jwtAuth := infraauth.NewAuthenticatorJWT("s", 15*time.Minute)
 	refreshTokens := &refreshTokensFakeHTTP{}
 	credenciais := &credenciaisFakeHTTP{credencial: &domainauth.Credencial{ID: 1, SenhaHash: hashSenhaHTTP(t, "senha123"), Papel: domainauth.PapelCliente}}
-	loginUC := appauth.NewLoginUseCase(credenciais, refreshTokens, jwtAuth, domainauth.TipoCliente, time.Hour)
+	loginUC := appauth.NewLoginUseCase(credenciais, refreshTokens, jwtAuth, domainauth.TipoCliente, time.Hour, time.Hour)
 	logoutUC := appauth.NewLogoutUseCase(refreshTokens)
 	h := httpauth.NewAuthClienteHandler(loginUC, nil, logoutUC)
 

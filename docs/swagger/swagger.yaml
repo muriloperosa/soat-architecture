@@ -25,9 +25,15 @@ definitions:
       access_token:
         example: eyJhbGciOiJIUzI1NiIs...
         type: string
+      access_token_expires_in:
+        example: 900
+        type: integer
       refresh_token:
         example: 9f8c1e...b3a0
         type: string
+      refresh_token_expires_in:
+        example: 604800
+        type: integer
     type: object
   health.HealthCheckResponse:
     properties:

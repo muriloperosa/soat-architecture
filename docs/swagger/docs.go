@@ -337,9 +337,17 @@ const docTemplate = `{
                     "type": "string",
                     "example": "eyJhbGciOiJIUzI1NiIs..."
                 },
+                "access_token_expires_in": {
+                    "type": "integer",
+                    "example": 900
+                },
                 "refresh_token": {
                     "type": "string",
                     "example": "9f8c1e...b3a0"
+                },
+                "refresh_token_expires_in": {
+                    "type": "integer",
+                    "example": 604800
                 }
             }
         },
