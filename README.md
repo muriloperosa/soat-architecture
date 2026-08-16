@@ -83,6 +83,14 @@ Sobe só o MySQL:
 make db-up
 ```
 
+Aplica as migrations (schema versionado em `migrations/mysql/`, runner em `migrations/main.go`):
+
+```bash
+make migrate-up
+```
+
+`make db-setup` faz os dois passos de uma vez (`db-up` + `migrate-up`). Outros comandos: `make migrate-down` (desfaz a última), `make migrate-version` (mostra a versão atual) e `make migrate-force VERSION=N` (força a versão sem rodar SQL, só pra corrigir um estado `dirty`).
+
 Roda a API com hot reload via `air`, que recompila e reinicia o processo a cada alteração em um arquivo `.go`:
 
 ```bash

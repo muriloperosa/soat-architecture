@@ -113,7 +113,9 @@ soat-architecture/
 │       │   └── middleware/{authentication,authorization}_middleware.go
 │       ├── auth/jwt.go              # geração/validação de JWT, hash de refresh token
 │       └── config/config.go
-├── migrations/            # schema MySQL versionado (.sql com up/down)
+├── migrations/
+│   ├── main.go            # runner (go run ./migrations up|down|version|force N)
+│   └── mysql/             # schema versionado, numerado (NNNNNN_nome.up/down.sql)
 ├── test/integration/      # testcontainers (MySQL real)
 ├── docs/
 │   ├── ARQUITETURA.md     # este documento
