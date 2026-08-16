@@ -9,6 +9,7 @@ import (
 	appauth "github.com/muriloperosa/soat-architecture/internal/application/auth"
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 	"github.com/muriloperosa/soat-architecture/internal/domain/auth/mocks"
+	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	infraauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/auth"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -26,14 +27,14 @@ func TestRefreshUseCase_Executar_TokenValido_RotacionaERetornaNovoPar(t *testing
 	jwtAuth := mocks.NewJWTProvider(t)
 	bruto := gerarBrutoDeTeste(t)
 	rtAntigo := &domainauth.RefreshToken{
-		ID: 1, UsuarioID: 1, Tipo: domainauth.TipoCliente, Papel: domainauth.PapelCliente,
+		ID: 1, UsuarioID: 1, Tipo: domainauth.TipoCliente, Papel: shared.PapelCliente,
 		TokenHash: infraauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
 	}
 	uc := appauth.NewRefreshUseCase(refreshTokensRepo, jwtAuth, time.Hour, time.Hour)
 
 	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, infraauth.HashRefreshToken(bruto)).Return(rtAntigo, nil)
 	refreshTokensRepo.EXPECT().Revogar(mock.Anything, uint64(1)).Return(nil)
-	jwtAuth.EXPECT().GerarAccessToken("1", domainauth.TipoCliente, domainauth.PapelCliente).Return("novo-access-token", "jti-novo", nil)
+	jwtAuth.EXPECT().GerarAccessToken("1", domainauth.TipoCliente, shared.PapelCliente).Return("novo-access-token", "jti-novo", nil)
 	jwtAuth.EXPECT().GerarRefreshToken().Return("novo-refresh-bruto", nil)
 	refreshTokensRepo.EXPECT().
 		Salvar(mock.Anything, mock.AnythingOfType("*auth.RefreshToken")).
@@ -70,14 +71,14 @@ func TestRefreshUseCase_Executar_ErroAoSalvarNovoPar_PropagaErro(t *testing.T) {
 	jwtAuth := mocks.NewJWTProvider(t)
 	bruto := gerarBrutoDeTeste(t)
 	rt := &domainauth.RefreshToken{
-		ID: 1, UsuarioID: 1, Tipo: domainauth.TipoCliente, Papel: domainauth.PapelCliente,
+		ID: 1, UsuarioID: 1, Tipo: domainauth.TipoCliente, Papel: shared.PapelCliente,
 		TokenHash: infraauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
 	}
 	uc := appauth.NewRefreshUseCase(refreshTokensRepo, jwtAuth, time.Hour, time.Hour)
 
 	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, infraauth.HashRefreshToken(bruto)).Return(rt, nil)
 	refreshTokensRepo.EXPECT().Revogar(mock.Anything, uint64(1)).Return(nil)
-	jwtAuth.EXPECT().GerarAccessToken("1", domainauth.TipoCliente, domainauth.PapelCliente).Return("novo-access-token", "jti-novo", nil)
+	jwtAuth.EXPECT().GerarAccessToken("1", domainauth.TipoCliente, shared.PapelCliente).Return("novo-access-token", "jti-novo", nil)
 	jwtAuth.EXPECT().GerarRefreshToken().Return("novo-refresh-bruto", nil)
 	refreshTokensRepo.EXPECT().
 		Salvar(mock.Anything, mock.AnythingOfType("*auth.RefreshToken")).
