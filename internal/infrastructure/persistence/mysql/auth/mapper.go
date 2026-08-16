@@ -2,6 +2,7 @@ package auth
 
 import (
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
+	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 )
 
 // toModel converte a entidade de domínio pro model GORM. rt.ID zero (novo
@@ -26,7 +27,7 @@ func toEntity(m *Model) *domainauth.RefreshToken {
 		ID:             m.ID,
 		UsuarioID:      m.UsuarioID,
 		Tipo:           domainauth.TipoUsuario(m.Tipo),
-		Papel:          domainauth.PapelUsuario(m.Papel),
+		Papel:          shared.PapelUsuario(m.Papel),
 		TokenHash:      m.TokenHash,
 		AccessTokenJti: m.AccessTokenJti,
 		ExpiraEm:       m.ExpiraEm,
