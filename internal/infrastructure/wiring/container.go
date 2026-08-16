@@ -24,6 +24,7 @@ type Container struct {
 	JWTAuth           *infraauth.AuthenticatorJWT
 	RefreshTokensRepo domainauth.RefreshTokenRepository
 	UsuarioRepo       domainusuario.UsuarioRepository
+	UsuarioStatusRepo domainauth.UsuarioStatusRepository
 
 	LoginInternoUC *appauth.LoginUseCase
 	RefreshUC      *appauth.RefreshUseCase
@@ -51,6 +52,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.JWTAuth = infraauth.NewAuthenticatorJWT(cfg.JWTSecret, accessTTL)
 
 	credenciaisInterno := mysqlusuario.NewCredenciaisAdapter(c.UsuarioRepo)
+	c.UsuarioStatusRepo = credenciaisInterno
 	c.LoginInternoUC = appauth.NewLoginUseCase(credenciaisInterno, c.RefreshTokensRepo, c.JWTAuth, domainauth.TipoInterno, accessTTL, refreshTTL)
 	c.RefreshUC = appauth.NewRefreshUseCase(c.RefreshTokensRepo, c.JWTAuth, accessTTL, refreshTTL)
 	c.LogoutUC = appauth.NewLogoutUseCase(c.RefreshTokensRepo)
