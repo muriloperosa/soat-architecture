@@ -12,6 +12,7 @@ type LoginOutput struct {
 	RefreshToken          string
 	AccessTokenExpiresIn  int64
 	RefreshTokenExpiresIn int64
+	RequerAlterarSenha    bool
 }
 
 // RefreshInput é o DTO de entrada do RefreshUseCase.
