@@ -14,10 +14,14 @@ type CriarUsuarioInput struct {
 }
 
 // AtualizarUsuarioInput é o DTO de entrada do AtualizarUsuarioUseCase.
+// SenhaNova é opcional: vazio significa "não trocar senha"; quando
+// informado, é o admin redefinindo a senha (força troca no próximo login).
 type AtualizarUsuarioInput struct {
-	ID    uint64
-	Nome  string
-	Papel shared.PapelUsuario
+	ID        uint64
+	Nome      string
+	Email     string
+	SenhaNova string
+	Papel     shared.PapelUsuario
 }
 
 // AlterarSenhaInput é o DTO de entrada do AlterarSenhaUseCase.
