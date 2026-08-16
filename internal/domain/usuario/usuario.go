@@ -82,16 +82,35 @@ func (u *Usuario) AlterarSenha(senhaNova string) error {
 	return nil
 }
 
-// Atualizar troca nome e papel.
-func (u *Usuario) Atualizar(nome string, papel shared.PapelUsuario) error {
+// Atualizar troca nome, email e papel.
+func (u *Usuario) Atualizar(nome, email string, papel shared.PapelUsuario) error {
 	if nome == "" {
 		return ErrNomeObrigatorio
 	}
 	if !papel.Valido() {
 		return ErrPapelInvalido
 	}
+	emailVO, err := shared.NewEmail(email)
+	if err != nil {
+		return err
+	}
 	u.nome = nome
+	u.email = emailVO
 	u.papel = papel
+	u.dataAtualizacao = time.Now()
+	return nil
+}
+
+// RedefinirSenha troca a senha em nome do usuário (ação do administrador) e
+// força o estado provisório; ao contrário de AlterarSenha (self-service),
+// a próxima autenticação exige troca, igual à senha inicial de NewUsuario.
+func (u *Usuario) RedefinirSenha(senhaNova string) error {
+	senhaVO, err := shared.NewSenhaHash(senhaNova)
+	if err != nil {
+		return err
+	}
+	u.senha = senhaVO
+	u.requerAlterarSenha = true
 	u.dataAtualizacao = time.Now()
 	return nil
 }

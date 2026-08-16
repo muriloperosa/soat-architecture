@@ -61,13 +61,14 @@ func TestUsuario_AlterarSenha_SenhaFraca_RetornaErroENaoAlteraSenhaAtual(t *test
 	require.True(t, u.Senha().Confere("senha123"))
 }
 
-func TestUsuario_Atualizar_TrocaNomeEPapel(t *testing.T) {
+func TestUsuario_Atualizar_TrocaNomeEmailEPapel(t *testing.T) {
 	u, err := usuario.NewUsuario("Ana Souza", "ana@oficina.com", "senha123", shared.PapelMecanico)
 	require.NoError(t, err)
 
-	err = u.Atualizar("Ana S. Costa", shared.PapelAtendente)
+	err = u.Atualizar("Ana S. Costa", "ana.costa@oficina.com", shared.PapelAtendente)
 	require.NoError(t, err)
 	require.Equal(t, "Ana S. Costa", u.Nome())
+	require.Equal(t, "ana.costa@oficina.com", u.Email().String())
 	require.Equal(t, shared.PapelAtendente, u.Papel())
 }
 
@@ -75,7 +76,7 @@ func TestUsuario_Atualizar_NomeVazio_RetornaErroENaoAltera(t *testing.T) {
 	u, err := usuario.NewUsuario("Ana Souza", "ana@oficina.com", "senha123", shared.PapelMecanico)
 	require.NoError(t, err)
 
-	err = u.Atualizar("", shared.PapelAtendente)
+	err = u.Atualizar("", "ana@oficina.com", shared.PapelAtendente)
 	require.ErrorIs(t, err, usuario.ErrNomeObrigatorio)
 	require.Equal(t, "Ana Souza", u.Nome())
 	require.Equal(t, shared.PapelMecanico, u.Papel())
@@ -85,10 +86,45 @@ func TestUsuario_Atualizar_PapelInvalido_RetornaErroENaoAltera(t *testing.T) {
 	u, err := usuario.NewUsuario("Ana Souza", "ana@oficina.com", "senha123", shared.PapelMecanico)
 	require.NoError(t, err)
 
-	err = u.Atualizar("Ana S. Costa", shared.PapelUsuario("gerente"))
+	err = u.Atualizar("Ana S. Costa", "ana@oficina.com", shared.PapelUsuario("gerente"))
 	require.ErrorIs(t, err, usuario.ErrPapelInvalido)
 	require.Equal(t, "Ana Souza", u.Nome())
 	require.Equal(t, shared.PapelMecanico, u.Papel())
+}
+
+func TestUsuario_Atualizar_EmailInvalido_RetornaErroENaoAltera(t *testing.T) {
+	u, err := usuario.NewUsuario("Ana Souza", "ana@oficina.com", "senha123", shared.PapelMecanico)
+	require.NoError(t, err)
+
+	err = u.Atualizar("Ana S. Costa", "nao-e-email", shared.PapelAtendente)
+	require.ErrorIs(t, err, shared.ErrEmailInvalido)
+	require.Equal(t, "Ana Souza", u.Nome())
+	require.Equal(t, "ana@oficina.com", u.Email().String())
+	require.Equal(t, shared.PapelMecanico, u.Papel())
+}
+
+func TestUsuario_RedefinirSenha_ForcaRequerAlterarSenha(t *testing.T) {
+	u, err := usuario.NewUsuario("Ana Souza", "ana@oficina.com", "senha123", shared.PapelMecanico)
+	require.NoError(t, err)
+	require.NoError(t, u.AlterarSenha("senhaAntiga123"))
+	require.False(t, u.RequerAlterarSenha())
+
+	err = u.RedefinirSenha("senhaDoAdmin123")
+	require.NoError(t, err)
+	require.True(t, u.RequerAlterarSenha())
+	require.True(t, u.Senha().Confere("senhaDoAdmin123"))
+	require.False(t, u.Senha().Confere("senhaAntiga123"))
+}
+
+func TestUsuario_RedefinirSenha_SenhaFraca_RetornaErroENaoAlteraSenhaAtual(t *testing.T) {
+	u, err := usuario.NewUsuario("Ana Souza", "ana@oficina.com", "senha123", shared.PapelMecanico)
+	require.NoError(t, err)
+	require.NoError(t, u.AlterarSenha("senhaAntiga123"))
+
+	err = u.RedefinirSenha("curta")
+	require.ErrorIs(t, err, shared.ErrSenhaFraca)
+	require.False(t, u.RequerAlterarSenha())
+	require.True(t, u.Senha().Confere("senhaAntiga123"))
 }
 
 func TestUsuario_AtivarInativar(t *testing.T) {
@@ -127,7 +163,7 @@ func TestUsuario_Atualizar_AtualizaDataAtualizacaoSemMudarDataCadastro(t *testin
 	require.NoError(t, err)
 	cadastroOriginal := u.DataCadastro()
 
-	require.NoError(t, u.Atualizar("Ana S. Costa", shared.PapelAtendente))
+	require.NoError(t, u.Atualizar("Ana S. Costa", "ana@oficina.com", shared.PapelAtendente))
 
 	require.Equal(t, cadastroOriginal, u.DataCadastro())
 	require.False(t, u.DataAtualizacao().Before(cadastroOriginal))
