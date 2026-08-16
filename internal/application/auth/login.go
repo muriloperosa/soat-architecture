@@ -54,16 +54,25 @@ func (uc *LoginUseCase) Executar(ctx context.Context, input LoginInput) (LoginOu
 		return LoginOutput{}, shared.NewUnauthorizedError(msgCredenciaisInvalidas)
 	}
 
+	if !cred.Ativo {
+		return LoginOutput{}, shared.NewUnauthorizedError(msgCredenciaisInvalidas)
+	}
+
 	if err := bcrypt.CompareHashAndPassword([]byte(cred.SenhaHash), []byte(input.Senha)); err != nil {
 		return LoginOutput{}, shared.NewUnauthorizedError(msgCredenciaisInvalidas)
 	}
 
-	return gerarTokens(ctx, uc.refreshTokens, uc.jwtAuth, uc.tipo, cred.Papel, uc.accessTTL, uc.refreshTTL, cred.ID)
+	out, err := gerarTokens(ctx, uc.refreshTokens, uc.jwtAuth, uc.tipo, cred.Papel, uc.accessTTL, uc.refreshTTL, cred.ID)
+	if err != nil {
+		return LoginOutput{}, err
+	}
+	out.RequerAlterarSenha = cred.RequerAlterarSenha
+	return out, nil
 }
 
 // gerarTokens gera e persiste um novo par access+refresh token pro usuário.
 // Reusado pelo RefreshUseCase na rotação.
-func gerarTokens(ctx context.Context, refreshTokens domainauth.RefreshTokenRepository, jwtAuth domainauth.JWTProvider, tipo domainauth.TipoUsuario, papel domainauth.PapelUsuario, accessTTL time.Duration, refreshTTL time.Duration, usuarioID uint64) (LoginOutput, error) {
+func gerarTokens(ctx context.Context, refreshTokens domainauth.RefreshTokenRepository, jwtAuth domainauth.JWTProvider, tipo domainauth.TipoUsuario, papel shared.PapelUsuario, accessTTL time.Duration, refreshTTL time.Duration, usuarioID uint64) (LoginOutput, error) {
 
 	accessToken, jti, err := jwtAuth.GerarAccessToken(strconv.FormatUint(usuarioID, 10), tipo, papel)
 	if err != nil {

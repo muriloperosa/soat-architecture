@@ -9,6 +9,7 @@ import (
 	appauth "github.com/muriloperosa/soat-architecture/internal/application/auth"
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 	"github.com/muriloperosa/soat-architecture/internal/domain/auth/mocks"
+	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	infraauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/auth"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -30,7 +31,7 @@ func TestLoginUseCase_Executar_CredencialValida_RetornaTokens(t *testing.T) {
 
 	credenciaisRepo.EXPECT().
 		BuscarPorEmail(mock.Anything, "a@a.com").
-		Return(&domainauth.Credencial{ID: 1, SenhaHash: hashSenha(t, "senha123"), Papel: domainauth.PapelCliente}, nil)
+		Return(&domainauth.Credencial{ID: 1, SenhaHash: hashSenha(t, "senha123"), Papel: shared.PapelCliente, Ativo: true}, nil)
 
 	var rtSalvo *domainauth.RefreshToken
 	refreshTokensRepo.EXPECT().
@@ -49,12 +50,12 @@ func TestLoginUseCase_Executar_CredencialValida_RetornaTokens(t *testing.T) {
 	require.NotNil(t, rtSalvo)
 	require.Equal(t, uint64(1), rtSalvo.UsuarioID)
 	require.Equal(t, domainauth.TipoCliente, rtSalvo.Tipo)
-	require.Equal(t, domainauth.PapelCliente, rtSalvo.Papel)
+	require.Equal(t, shared.PapelCliente, rtSalvo.Papel)
 	require.NotEmpty(t, rtSalvo.AccessTokenJti)
 
 	claims, err := jwtAuth.ValidarAccessToken(out.AccessToken)
 	require.NoError(t, err)
-	require.Equal(t, domainauth.PapelCliente, claims.Papel)
+	require.Equal(t, shared.PapelCliente, claims.Papel)
 	require.Equal(t, rtSalvo.AccessTokenJti, claims.Jti)
 }
 
@@ -66,7 +67,7 @@ func TestLoginUseCase_Executar_UsuarioInterno_PropagaPapel(t *testing.T) {
 
 	credenciaisRepo.EXPECT().
 		BuscarPorEmail(mock.Anything, "m@a.com").
-		Return(&domainauth.Credencial{ID: 2, SenhaHash: hashSenha(t, "senha123"), Papel: domainauth.PapelMecanico}, nil)
+		Return(&domainauth.Credencial{ID: 2, SenhaHash: hashSenha(t, "senha123"), Papel: shared.PapelMecanico, Ativo: true}, nil)
 
 	var rtSalvo *domainauth.RefreshToken
 	refreshTokensRepo.EXPECT().
@@ -82,9 +83,9 @@ func TestLoginUseCase_Executar_UsuarioInterno_PropagaPapel(t *testing.T) {
 	require.NoError(t, err)
 	claims, err := jwtAuth.ValidarAccessToken(out.AccessToken)
 	require.NoError(t, err)
-	require.Equal(t, domainauth.PapelMecanico, claims.Papel)
+	require.Equal(t, shared.PapelMecanico, claims.Papel)
 	require.NotNil(t, rtSalvo)
-	require.Equal(t, domainauth.PapelMecanico, rtSalvo.Papel)
+	require.Equal(t, shared.PapelMecanico, rtSalvo.Papel)
 	require.Equal(t, rtSalvo.AccessTokenJti, claims.Jti)
 }
 
@@ -95,9 +96,24 @@ func TestLoginUseCase_Executar_SenhaErrada_ErroGenerico(t *testing.T) {
 
 	credenciaisRepo.EXPECT().
 		BuscarPorEmail(mock.Anything, "a@a.com").
-		Return(&domainauth.Credencial{ID: 1, SenhaHash: hashSenha(t, "senha123")}, nil)
+		Return(&domainauth.Credencial{ID: 1, SenhaHash: hashSenha(t, "senha123"), Ativo: true}, nil)
 
 	_, err := uc.Executar(context.Background(), appauth.LoginInput{Email: "a@a.com", Senha: "errada"})
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "credenciais inválidas")
+}
+
+func TestLoginUseCase_Executar_UsuarioInativo_ErroGenerico(t *testing.T) {
+	credenciaisRepo := mocks.NewCredenciaisRepository(t)
+	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
+	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, infraauth.NewAuthenticatorJWT("s", time.Minute), domainauth.TipoCliente, time.Hour, time.Hour)
+
+	credenciaisRepo.EXPECT().
+		BuscarPorEmail(mock.Anything, "a@a.com").
+		Return(&domainauth.Credencial{ID: 1, SenhaHash: hashSenha(t, "senha123"), Ativo: false}, nil)
+
+	_, err := uc.Executar(context.Background(), appauth.LoginInput{Email: "a@a.com", Senha: "senha123"})
 
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "credenciais inválidas")
@@ -111,9 +127,9 @@ func TestLoginUseCase_Executar_ErroAoGerarAccessToken_RetornaErroInterno(t *test
 
 	credenciaisRepo.EXPECT().
 		BuscarPorEmail(mock.Anything, "a@a.com").
-		Return(&domainauth.Credencial{ID: 1, SenhaHash: hashSenha(t, "senha123"), Papel: domainauth.PapelCliente}, nil)
+		Return(&domainauth.Credencial{ID: 1, SenhaHash: hashSenha(t, "senha123"), Papel: shared.PapelCliente, Ativo: true}, nil)
 	jwtAuth.EXPECT().
-		GerarAccessToken("1", domainauth.TipoCliente, domainauth.PapelCliente).
+		GerarAccessToken("1", domainauth.TipoCliente, shared.PapelCliente).
 		Return("", "", errors.New("chave de assinatura invalida"))
 
 	_, err := uc.Executar(context.Background(), appauth.LoginInput{Email: "a@a.com", Senha: "senha123"})
@@ -130,9 +146,9 @@ func TestLoginUseCase_Executar_ErroAoGerarRefreshToken_RetornaErroInterno(t *tes
 
 	credenciaisRepo.EXPECT().
 		BuscarPorEmail(mock.Anything, "a@a.com").
-		Return(&domainauth.Credencial{ID: 1, SenhaHash: hashSenha(t, "senha123"), Papel: domainauth.PapelCliente}, nil)
+		Return(&domainauth.Credencial{ID: 1, SenhaHash: hashSenha(t, "senha123"), Papel: shared.PapelCliente, Ativo: true}, nil)
 	jwtAuth.EXPECT().
-		GerarAccessToken("1", domainauth.TipoCliente, domainauth.PapelCliente).
+		GerarAccessToken("1", domainauth.TipoCliente, shared.PapelCliente).
 		Return("access-token-valido", "jti-1", nil)
 	jwtAuth.EXPECT().
 		GerarRefreshToken().
@@ -151,7 +167,7 @@ func TestLoginUseCase_Executar_ErroAoSalvarRefreshToken_RetornaErroInterno(t *te
 
 	credenciaisRepo.EXPECT().
 		BuscarPorEmail(mock.Anything, "a@a.com").
-		Return(&domainauth.Credencial{ID: 1, SenhaHash: hashSenha(t, "senha123"), Papel: domainauth.PapelCliente}, nil)
+		Return(&domainauth.Credencial{ID: 1, SenhaHash: hashSenha(t, "senha123"), Papel: shared.PapelCliente, Ativo: true}, nil)
 	refreshTokensRepo.EXPECT().
 		Salvar(mock.Anything, mock.AnythingOfType("*auth.RefreshToken")).
 		Return(errors.New("conexao recusada"))
