@@ -38,12 +38,23 @@ Cada uma dona de uma camada:
 
 - `Documento` (CPF/CNPJ), `Placa`, `Dinheiro`. Nascem válidos ou não nascem. Validação de dados sensíveis mora aqui.
 - `Status`, com máquina de estados, é VO exclusivo da Ordem de Serviço. Vive em `ordemservico/status.go`, não em `shared/`, já que uma Peça não tem "Em diagnóstico".
+- `Email` e `SenhaHash` (`domain/shared/{email,senha_hash}.go`) são VOs de identidade/autenticação, reusados por qualquer agregado com login por senha. `PapelUsuario` também mora em `shared` pelo mesmo motivo: é atributo do usuário, não do contexto de autenticação, e tanto `domain/auth` quanto `domain/usuario` precisam dele sem um depender do outro. Regra geral: um VO só desce pra dentro do agregado (`ordemservico/status.go`) quando é exclusivo dele; se dois agregados vão precisar do mesmo VO, ele nasce em `shared/` desde o início.
 
 ## Segurança e qualidade
 
-- JWT (`golang-jwt/v5`) nas APIs administrativas.
+- JWT (`golang-jwt/v5`) nas APIs administrativas. `AuthenticationMiddleware` reavalida se o usuário ainda está ativo a cada request (via `UsuarioStatusRepository`), não só no login; um usuário inativado derruba sessões em curso, o access token não continua válido até expirar por conta própria.
+- `AuthorizationMiddleware` é variádico: sempre checa `TipoUsuario` (interno/cliente); opcionalmente, uma lista de `PapelUsuario` permitidos, pra rotas restritas a um papel específico (ex.: gestão de usuário exige admin).
 - Testes de integração com `testcontainers` (MySQL real) e `testify`. Meta de cobertura: 80% ou mais nos domínios críticos.
 - Swagger via `swaggo`, migrations via `golang-migrate`.
+
+## Credenciais e status de usuário: adapter por fonte de identidade
+
+`domain/auth` define duas interfaces que ele mesmo consome mas não implementa, porque implementá-las exigiria depender de um domínio de negócio (`usuario`, `cliente`), o que quebraria a regra de dependência (`domain` não importa nada do projeto):
+
+- `CredenciaisRepository.BuscarPorEmail` — usado pelo `LoginUseCase`.
+- `UsuarioStatusRepository.EstaAtivo` — usado pelo `AuthenticationMiddleware` a cada request.
+
+Cada fonte de identidade (usuário interno, cliente) implementa as duas via um adapter em infraestrutura. O wiring decide, por endpoint, qual adapter injetar (`LoginUseCase` de `/v1/auth/login` recebe o adapter de `usuario`; o de `/v1/auth/cliente/login` receberia o de `cliente`, quando existir).
 
 ## Convenção de nomes
 
@@ -93,25 +104,33 @@ Um agregado (`ordemservico`) é mostrado como referência. Os demais (`cliente`,
 
 ```
 soat-architecture/
-├── cmd/api/main.go
+├── cmd/
+│   ├── api/main.go
+│   └── create-user/main.go    # cria usuario interno direto no banco (bootstrap do primeiro admin)
 ├── internal/
 │   ├── domain/
 │   │   ├── ordemservico/{ordem_servico,status,repository,errors}.go + _test
+│   │   ├── usuario/{usuario,repository,errors}.go + _test  # usuário interno
 │   │   ├── cliente/ veiculo/ servico/ peca/  (mesmo padrão)
-│   │   └── shared/{documento,placa,dinheiro}.go + _test
+│   │   └── shared/{documento,placa,dinheiro,email,senha_hash,papel_usuario,errors}.go + _test
 │   ├── application/
 │   │   ├── ordemservico/{dto,abrir_ordem_servico}.go + _test
+│   │   ├── usuario/{dto,criar_usuario,atualizar_usuario,alterar_senha,ativar_usuario,inativar_usuario,buscar_usuario_logado}.go + _test
 │   │   └── cliente/ veiculo/ servico/ peca/  (mesmo padrão)
 │   └── infrastructure/
-│       ├── persistence/mysql/{connection.go, ordemservico/, cliente/, veiculo/, servico/, peca/, auth/}
+│       ├── persistence/mysql/{connection.go, ordemservico/, usuario/, cliente/, veiculo/, servico/, peca/, auth/}
+│       │   └── usuario/{model,mapper,repository,credenciais_adapter}.go + _test  # CredenciaisAdapter implementa auth.CredenciaisRepository/UsuarioStatusRepository
 │       ├── http/
 │       │   ├── router.go            # monta o *gin.Engine, chama Register*Routes de cada domínio
 │       │   ├── httperror/           # ErrorResponse + RespondError
-│       │   ├── auth/{interno_handler,cliente_handler,dto,mapper}.go + _test
+│       │   ├── httprequest/         # helpers de request HTTP reusados entre domínios (ex.: ParseUintParam)
+│       │   ├── auth/{interno_handler,cliente_handler,dto,mapper,routes}.go + _test
 │       │   ├── health/{handler,routes}.go
+│       │   ├── usuario/{handler,dto,mapper,routes}.go + _test    # gestão de usuário interno, restrito a admin + self-service
 │       │   ├── ordemservico/{handler,dto,mapper,routes}.go  # mesmo padrão, demais domínios
-│       │   └── middleware/{authentication,authorization}_middleware.go
+│       │   └── middleware/{authentication_middleware,authorization_middleware,subject}.go + _test
 │       ├── auth/jwt.go              # geração/validação de JWT, hash de refresh token
+│       ├── wiring/container.go      # composition root: monta repositórios, adapters e use cases
 │       └── config/config.go
 ├── migrations/
 │   ├── main.go            # runner (go run ./migrations up|down|version|force N)
