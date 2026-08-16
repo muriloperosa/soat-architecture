@@ -14,7 +14,7 @@ import (
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/wiring"
 )
 
-// create-user cria um usuario interno direto no banco, sem passar pelo
+// create-user cria um usuário interno direto no banco, sem passar pelo
 // HTTP/JWT. Resolve o bootstrap do primeiro admin (que precisaria de um
 // admin ja existente pra bater em POST /v1/usuarios) e serve pra testar o
 // dominio manualmente.
