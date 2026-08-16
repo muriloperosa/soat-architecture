@@ -140,7 +140,7 @@ func (_c *RefreshTokenRepository_BuscarPorHash_Call) RunAndReturn(run func(conte
 }
 
 // Revogar provides a mock function with given fields: ctx, id
-func (_m *RefreshTokenRepository) Revogar(ctx context.Context, id string) error {
+func (_m *RefreshTokenRepository) Revogar(ctx context.Context, id uint64) error {
 	ret := _m.Called(ctx, id)
 
 	if len(ret) == 0 {
@@ -148,7 +148,7 @@ func (_m *RefreshTokenRepository) Revogar(ctx context.Context, id string) error 
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uint64) error); ok {
 		r0 = rf(ctx, id)
 	} else {
 		r0 = ret.Error(0)
@@ -164,14 +164,14 @@ type RefreshTokenRepository_Revogar_Call struct {
 
 // Revogar is a helper method to define mock.On call
 //   - ctx context.Context
-//   - id string
+//   - id uint64
 func (_e *RefreshTokenRepository_Expecter) Revogar(ctx interface{}, id interface{}) *RefreshTokenRepository_Revogar_Call {
 	return &RefreshTokenRepository_Revogar_Call{Call: _e.mock.On("Revogar", ctx, id)}
 }
 
-func (_c *RefreshTokenRepository_Revogar_Call) Run(run func(ctx context.Context, id string)) *RefreshTokenRepository_Revogar_Call {
+func (_c *RefreshTokenRepository_Revogar_Call) Run(run func(ctx context.Context, id uint64)) *RefreshTokenRepository_Revogar_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string))
+		run(args[0].(context.Context), args[1].(uint64))
 	})
 	return _c
 }
@@ -181,7 +181,7 @@ func (_c *RefreshTokenRepository_Revogar_Call) Return(_a0 error) *RefreshTokenRe
 	return _c
 }
 
-func (_c *RefreshTokenRepository_Revogar_Call) RunAndReturn(run func(context.Context, string) error) *RefreshTokenRepository_Revogar_Call {
+func (_c *RefreshTokenRepository_Revogar_Call) RunAndReturn(run func(context.Context, uint64) error) *RefreshTokenRepository_Revogar_Call {
 	_c.Call.Return(run)
 	return _c
 }

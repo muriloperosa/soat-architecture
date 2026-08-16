@@ -3,10 +3,10 @@ package auth
 import "time"
 
 // RefreshToken é o registro persistido de um refresh token emitido.
-// TokenHash nunca guarda o token bruto, só o hash (ver infrastructure/auth/refresh_hash.go).
+// TokenHash nunca guarda o token bruto, só o hash (ver infrastructure/auth/jwt.go).
 type RefreshToken struct {
-	ID             string
-	UsuarioID      string
+	ID             uint64
+	UsuarioID      uint64
 	Tipo           TipoUsuario
 	Papel          PapelUsuario
 	TokenHash      string

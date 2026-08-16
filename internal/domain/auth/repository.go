@@ -7,7 +7,7 @@ import "context"
 type RefreshTokenRepository interface {
 	Salvar(ctx context.Context, rt *RefreshToken) error
 	BuscarPorHash(ctx context.Context, tokenHash string) (*RefreshToken, error)
-	Revogar(ctx context.Context, id string) error
+	Revogar(ctx context.Context, id uint64) error
 	AccessTokenRevogado(ctx context.Context, jti string) (bool, error)
 }
 
@@ -20,7 +20,7 @@ type CredenciaisRepository interface {
 
 // Credencial é a projeção mínima necessária pro fluxo de login.
 type Credencial struct {
-	ID        string
+	ID        uint64
 	SenhaHash string
 	Papel     PapelUsuario
 }

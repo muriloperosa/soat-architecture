@@ -19,7 +19,7 @@ import (
 
 func TestAuthClienteHandler_Login_CredencialValida_Retorna200ComTokens(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	credenciais := &credenciaisFakeHTTP{credencial: &domainauth.Credencial{ID: "cliente-1", SenhaHash: hashSenhaHTTP(t, "senha123"), Papel: domainauth.PapelCliente}}
+	credenciais := &credenciaisFakeHTTP{credencial: &domainauth.Credencial{ID: 1, SenhaHash: hashSenhaHTTP(t, "senha123"), Papel: domainauth.PapelCliente}}
 	loginUC := appauth.NewLoginUseCase(credenciais, &refreshTokensFakeHTTP{}, infraauth.NewAuthenticatorJWT("s", 15*time.Minute), domainauth.TipoCliente, time.Hour)
 	h := httpauth.NewAuthClienteHandler(loginUC, nil, nil)
 
@@ -61,7 +61,7 @@ func TestAuthClienteHandler_Logout_TokenValido_Retorna204(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	jwtAuth := infraauth.NewAuthenticatorJWT("s", 15*time.Minute)
 	refreshTokens := &refreshTokensFakeHTTP{}
-	credenciais := &credenciaisFakeHTTP{credencial: &domainauth.Credencial{ID: "cliente-1", SenhaHash: hashSenhaHTTP(t, "senha123"), Papel: domainauth.PapelCliente}}
+	credenciais := &credenciaisFakeHTTP{credencial: &domainauth.Credencial{ID: 1, SenhaHash: hashSenhaHTTP(t, "senha123"), Papel: domainauth.PapelCliente}}
 	loginUC := appauth.NewLoginUseCase(credenciais, refreshTokens, jwtAuth, domainauth.TipoCliente, time.Hour)
 	logoutUC := appauth.NewLogoutUseCase(refreshTokens)
 	h := httpauth.NewAuthClienteHandler(loginUC, nil, logoutUC)

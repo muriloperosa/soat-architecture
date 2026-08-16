@@ -35,7 +35,7 @@ type refreshTokensFakeHTTP struct {
 }
 
 func (f *refreshTokensFakeHTTP) Salvar(ctx context.Context, rt *domainauth.RefreshToken) error {
-	rt.ID = "rt-1"
+	rt.ID = uint64(len(f.salvos) + 1)
 	f.salvos = append(f.salvos, rt)
 	return nil
 }
@@ -47,7 +47,7 @@ func (f *refreshTokensFakeHTTP) BuscarPorHash(ctx context.Context, hash string) 
 	}
 	return nil, errors.New("nao encontrado")
 }
-func (f *refreshTokensFakeHTTP) Revogar(ctx context.Context, id string) error {
+func (f *refreshTokensFakeHTTP) Revogar(ctx context.Context, id uint64) error {
 	for _, rt := range f.salvos {
 		if rt.ID == id {
 			now := time.Now()
@@ -73,7 +73,7 @@ func hashSenhaHTTP(t *testing.T, senha string) string {
 }
 
 func credenciaisComUsuarioValido(t *testing.T) *credenciaisFakeHTTP {
-	return &credenciaisFakeHTTP{credencial: &domainauth.Credencial{ID: "user-1", SenhaHash: hashSenhaHTTP(t, "senha123"), Papel: domainauth.PapelAdmin}}
+	return &credenciaisFakeHTTP{credencial: &domainauth.Credencial{ID: 1, SenhaHash: hashSenhaHTTP(t, "senha123"), Papel: domainauth.PapelAdmin}}
 }
 
 func TestAuthInternoHandler_Login_CredencialValida_Retorna200ComTokens(t *testing.T) {

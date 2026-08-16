@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"errors"
-	"strconv"
 
 	"gorm.io/gorm"
 
@@ -27,7 +26,7 @@ func (r *Repository) Salvar(ctx context.Context, rt *domainauth.RefreshToken) er
 	if err := r.db.WithContext(ctx).Create(m).Error; err != nil {
 		return err
 	}
-	rt.ID = strconv.FormatUint(m.ID, 10)
+	rt.ID = m.ID
 	return nil
 }
 
@@ -46,7 +45,7 @@ func (r *Repository) BuscarPorHash(ctx context.Context, tokenHash string) (*doma
 }
 
 // Revogar marca o refresh token de id como revogado (revogado_em = agora).
-func (r *Repository) Revogar(ctx context.Context, id string) error {
+func (r *Repository) Revogar(ctx context.Context, id uint64) error {
 	now := gorm.Expr("NOW()")
 	return r.db.WithContext(ctx).Model(&Model{}).Where("id = ?", id).Update("revogado_em", now).Error
 }

@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
@@ -59,8 +60,9 @@ func (uc *LoginUseCase) Executar(ctx context.Context, input LoginInput) (LoginOu
 
 // gerarTokens gera e persiste um novo par access+refresh token pro usuário.
 // Reusado pelo RefreshUseCase na rotação.
-func gerarTokens(ctx context.Context, refreshTokens domainauth.RefreshTokenRepository, jwtAuth domainauth.JWTProvider, tipo domainauth.TipoUsuario, papel domainauth.PapelUsuario, refreshTTL time.Duration, usuarioID string) (LoginOutput, error) {
-	accessToken, jti, err := jwtAuth.GerarAccessToken(usuarioID, tipo, papel)
+func gerarTokens(ctx context.Context, refreshTokens domainauth.RefreshTokenRepository, jwtAuth domainauth.JWTProvider, tipo domainauth.TipoUsuario, papel domainauth.PapelUsuario, refreshTTL time.Duration, usuarioID uint64) (LoginOutput, error) {
+
+	accessToken, jti, err := jwtAuth.GerarAccessToken(strconv.FormatUint(usuarioID, 10), tipo, papel)
 	if err != nil {
 		return LoginOutput{}, shared.NewInternalError("erro ao gerar access token", err)
 	}

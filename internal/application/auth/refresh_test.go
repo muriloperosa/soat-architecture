@@ -26,18 +26,18 @@ func TestRefreshUseCase_Executar_TokenValido_RotacionaERetornaNovoPar(t *testing
 	jwtAuth := mocks.NewJWTProvider(t)
 	bruto := gerarBrutoDeTeste(t)
 	rtAntigo := &domainauth.RefreshToken{
-		ID: "rt-1", UsuarioID: "user-1", Tipo: domainauth.TipoCliente, Papel: domainauth.PapelCliente,
+		ID: 1, UsuarioID: 1, Tipo: domainauth.TipoCliente, Papel: domainauth.PapelCliente,
 		TokenHash: infraauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
 	}
 	uc := appauth.NewRefreshUseCase(refreshTokensRepo, jwtAuth, time.Hour)
 
 	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, infraauth.HashRefreshToken(bruto)).Return(rtAntigo, nil)
-	refreshTokensRepo.EXPECT().Revogar(mock.Anything, "rt-1").Return(nil)
-	jwtAuth.EXPECT().GerarAccessToken("user-1", domainauth.TipoCliente, domainauth.PapelCliente).Return("novo-access-token", "jti-novo", nil)
+	refreshTokensRepo.EXPECT().Revogar(mock.Anything, uint64(1)).Return(nil)
+	jwtAuth.EXPECT().GerarAccessToken("1", domainauth.TipoCliente, domainauth.PapelCliente).Return("novo-access-token", "jti-novo", nil)
 	jwtAuth.EXPECT().GerarRefreshToken().Return("novo-refresh-bruto", nil)
 	refreshTokensRepo.EXPECT().
 		Salvar(mock.Anything, mock.AnythingOfType("*auth.RefreshToken")).
-		Run(func(ctx context.Context, rt *domainauth.RefreshToken) { rt.ID = "rt-2" }).
+		Run(func(ctx context.Context, rt *domainauth.RefreshToken) { rt.ID = 2 }).
 		Return(nil)
 
 	out, err := uc.Executar(context.Background(), appauth.RefreshInput{RefreshTokenBruto: bruto})
@@ -52,12 +52,12 @@ func TestRefreshUseCase_Executar_ErroAoRevogar_RetornaErroInterno(t *testing.T) 
 	jwtAuth := mocks.NewJWTProvider(t)
 	bruto := gerarBrutoDeTeste(t)
 	rt := &domainauth.RefreshToken{
-		ID: "rt-1", TokenHash: infraauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
+		ID: 1, TokenHash: infraauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
 	}
 	uc := appauth.NewRefreshUseCase(refreshTokensRepo, jwtAuth, time.Hour)
 
 	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, infraauth.HashRefreshToken(bruto)).Return(rt, nil)
-	refreshTokensRepo.EXPECT().Revogar(mock.Anything, "rt-1").Return(errors.New("conexao recusada"))
+	refreshTokensRepo.EXPECT().Revogar(mock.Anything, uint64(1)).Return(errors.New("conexao recusada"))
 
 	_, err := uc.Executar(context.Background(), appauth.RefreshInput{RefreshTokenBruto: bruto})
 
@@ -70,14 +70,14 @@ func TestRefreshUseCase_Executar_ErroAoSalvarNovoPar_PropagaErro(t *testing.T) {
 	jwtAuth := mocks.NewJWTProvider(t)
 	bruto := gerarBrutoDeTeste(t)
 	rt := &domainauth.RefreshToken{
-		ID: "rt-1", UsuarioID: "user-1", Tipo: domainauth.TipoCliente, Papel: domainauth.PapelCliente,
+		ID: 1, UsuarioID: 1, Tipo: domainauth.TipoCliente, Papel: domainauth.PapelCliente,
 		TokenHash: infraauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
 	}
 	uc := appauth.NewRefreshUseCase(refreshTokensRepo, jwtAuth, time.Hour)
 
 	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, infraauth.HashRefreshToken(bruto)).Return(rt, nil)
-	refreshTokensRepo.EXPECT().Revogar(mock.Anything, "rt-1").Return(nil)
-	jwtAuth.EXPECT().GerarAccessToken("user-1", domainauth.TipoCliente, domainauth.PapelCliente).Return("novo-access-token", "jti-novo", nil)
+	refreshTokensRepo.EXPECT().Revogar(mock.Anything, uint64(1)).Return(nil)
+	jwtAuth.EXPECT().GerarAccessToken("1", domainauth.TipoCliente, domainauth.PapelCliente).Return("novo-access-token", "jti-novo", nil)
 	jwtAuth.EXPECT().GerarRefreshToken().Return("novo-refresh-bruto", nil)
 	refreshTokensRepo.EXPECT().
 		Salvar(mock.Anything, mock.AnythingOfType("*auth.RefreshToken")).
@@ -95,7 +95,7 @@ func TestRefreshUseCase_Executar_TokenJaRevogado_Erro(t *testing.T) {
 	bruto := gerarBrutoDeTeste(t)
 	agora := time.Now()
 	rt := &domainauth.RefreshToken{
-		ID: "rt-1", TokenHash: infraauth.HashRefreshToken(bruto),
+		ID: 1, TokenHash: infraauth.HashRefreshToken(bruto),
 		ExpiraEm: time.Now().Add(time.Hour), RevogadoEm: &agora,
 	}
 	uc := appauth.NewRefreshUseCase(refreshTokensRepo, jwtAuth, time.Hour)

@@ -23,13 +23,13 @@ func TestRefreshTokenRepository_Salvar_ExecutaInsert(t *testing.T) {
 	mock.ExpectCommit()
 
 	rt := &domainauth.RefreshToken{
-		UsuarioID: "1", Tipo: domainauth.TipoCliente, Papel: domainauth.PapelCliente,
+		UsuarioID: 1, Tipo: domainauth.TipoCliente, Papel: domainauth.PapelCliente,
 		TokenHash: "hash-1", AccessTokenJti: "jti-1", ExpiraEm: time.Now().Add(time.Hour),
 	}
 	err := repo.Salvar(context.Background(), rt)
 
 	require.NoError(t, err)
-	require.Equal(t, "1", rt.ID, "Salvar deve preencher o ID gerado (autoincrement)")
+	require.Equal(t, uint64(1), rt.ID, "Salvar deve preencher o ID gerado (autoincrement)")
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -42,7 +42,7 @@ func TestRefreshTokenRepository_Salvar_ErroDoBanco_PropagaErro(t *testing.T) {
 	mock.ExpectRollback()
 
 	rt := &domainauth.RefreshToken{
-		UsuarioID: "1", Tipo: domainauth.TipoCliente, Papel: domainauth.PapelCliente,
+		UsuarioID: 1, Tipo: domainauth.TipoCliente, Papel: domainauth.PapelCliente,
 		TokenHash: "hash-1", AccessTokenJti: "jti-1", ExpiraEm: time.Now().Add(time.Hour),
 	}
 	err := repo.Salvar(context.Background(), rt)
@@ -60,13 +60,13 @@ func TestRefreshTokenRepository_Salvar_AtualizaRegistroExistente(t *testing.T) {
 	mock.ExpectCommit()
 
 	rt := &domainauth.RefreshToken{
-		ID: "7", UsuarioID: "1", Tipo: domainauth.TipoCliente, Papel: domainauth.PapelCliente,
+		ID: 7, UsuarioID: 1, Tipo: domainauth.TipoCliente, Papel: domainauth.PapelCliente,
 		TokenHash: "hash-1", AccessTokenJti: "jti-1", ExpiraEm: time.Now().Add(time.Hour),
 	}
 	err := repo.Salvar(context.Background(), rt)
 
 	require.NoError(t, err)
-	require.Equal(t, "7", rt.ID)
+	require.Equal(t, uint64(7), rt.ID)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -102,13 +102,13 @@ func TestRefreshTokenRepository_BuscarPorHash_RetornaEntidade(t *testing.T) {
 
 	expiraEm := time.Now().Add(time.Hour)
 	rows := sqlmock.NewRows([]string{"id", "usuario_id", "tipo", "papel", "token_hash", "access_token_jti", "expira_em", "revogado_em"}).
-		AddRow(1, "1", "cliente", "cliente", "hash-1", "jti-1", expiraEm, nil)
+		AddRow(1, 1, "cliente", "cliente", "hash-1", "jti-1", expiraEm, nil)
 	mock.ExpectQuery("SELECT \\* FROM `refresh_tokens`").WillReturnRows(rows)
 
 	rt, err := repo.BuscarPorHash(context.Background(), "hash-1")
 
 	require.NoError(t, err)
-	require.Equal(t, "1", rt.ID)
+	require.Equal(t, uint64(1), rt.ID)
 	require.Equal(t, domainauth.PapelCliente, rt.Papel)
 	require.Equal(t, "jti-1", rt.AccessTokenJti)
 	require.NoError(t, mock.ExpectationsWereMet())
@@ -122,7 +122,7 @@ func TestRefreshTokenRepository_Revogar_ExecutaUpdate(t *testing.T) {
 	mock.ExpectExec("UPDATE `refresh_tokens`").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
-	err := repo.Revogar(context.Background(), "1")
+	err := repo.Revogar(context.Background(), 1)
 
 	require.NoError(t, err)
 	require.NoError(t, mock.ExpectationsWereMet())
@@ -136,7 +136,7 @@ func TestRefreshTokenRepository_Revogar_ErroDoBanco_PropagaErro(t *testing.T) {
 	mock.ExpectExec("UPDATE `refresh_tokens`").WillReturnError(errors.New("conexao recusada"))
 	mock.ExpectRollback()
 
-	err := repo.Revogar(context.Background(), "1")
+	err := repo.Revogar(context.Background(), 1)
 
 	require.Error(t, err)
 	require.NoError(t, mock.ExpectationsWereMet())

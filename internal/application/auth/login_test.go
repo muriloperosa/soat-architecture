@@ -30,13 +30,13 @@ func TestLoginUseCase_Executar_CredencialValida_RetornaTokens(t *testing.T) {
 
 	credenciaisRepo.EXPECT().
 		BuscarPorEmail(mock.Anything, "a@a.com").
-		Return(&domainauth.Credencial{ID: "user-1", SenhaHash: hashSenha(t, "senha123"), Papel: domainauth.PapelCliente}, nil)
+		Return(&domainauth.Credencial{ID: 1, SenhaHash: hashSenha(t, "senha123"), Papel: domainauth.PapelCliente}, nil)
 
 	var rtSalvo *domainauth.RefreshToken
 	refreshTokensRepo.EXPECT().
 		Salvar(mock.Anything, mock.AnythingOfType("*auth.RefreshToken")).
 		Run(func(ctx context.Context, rt *domainauth.RefreshToken) {
-			rt.ID = "rt-1"
+			rt.ID = 101
 			rtSalvo = rt
 		}).
 		Return(nil)
@@ -47,7 +47,7 @@ func TestLoginUseCase_Executar_CredencialValida_RetornaTokens(t *testing.T) {
 	require.NotEmpty(t, out.AccessToken)
 	require.NotEmpty(t, out.RefreshToken)
 	require.NotNil(t, rtSalvo)
-	require.Equal(t, "user-1", rtSalvo.UsuarioID)
+	require.Equal(t, uint64(1), rtSalvo.UsuarioID)
 	require.Equal(t, domainauth.TipoCliente, rtSalvo.Tipo)
 	require.Equal(t, domainauth.PapelCliente, rtSalvo.Papel)
 	require.NotEmpty(t, rtSalvo.AccessTokenJti)
@@ -66,13 +66,13 @@ func TestLoginUseCase_Executar_UsuarioInterno_PropagaPapel(t *testing.T) {
 
 	credenciaisRepo.EXPECT().
 		BuscarPorEmail(mock.Anything, "m@a.com").
-		Return(&domainauth.Credencial{ID: "user-2", SenhaHash: hashSenha(t, "senha123"), Papel: domainauth.PapelMecanico}, nil)
+		Return(&domainauth.Credencial{ID: 2, SenhaHash: hashSenha(t, "senha123"), Papel: domainauth.PapelMecanico}, nil)
 
 	var rtSalvo *domainauth.RefreshToken
 	refreshTokensRepo.EXPECT().
 		Salvar(mock.Anything, mock.AnythingOfType("*auth.RefreshToken")).
 		Run(func(ctx context.Context, rt *domainauth.RefreshToken) {
-			rt.ID = "rt-2"
+			rt.ID = 102
 			rtSalvo = rt
 		}).
 		Return(nil)
@@ -95,7 +95,7 @@ func TestLoginUseCase_Executar_SenhaErrada_ErroGenerico(t *testing.T) {
 
 	credenciaisRepo.EXPECT().
 		BuscarPorEmail(mock.Anything, "a@a.com").
-		Return(&domainauth.Credencial{ID: "user-1", SenhaHash: hashSenha(t, "senha123")}, nil)
+		Return(&domainauth.Credencial{ID: 1, SenhaHash: hashSenha(t, "senha123")}, nil)
 
 	_, err := uc.Executar(context.Background(), appauth.LoginInput{Email: "a@a.com", Senha: "errada"})
 
@@ -111,9 +111,9 @@ func TestLoginUseCase_Executar_ErroAoGerarAccessToken_RetornaErroInterno(t *test
 
 	credenciaisRepo.EXPECT().
 		BuscarPorEmail(mock.Anything, "a@a.com").
-		Return(&domainauth.Credencial{ID: "user-1", SenhaHash: hashSenha(t, "senha123"), Papel: domainauth.PapelCliente}, nil)
+		Return(&domainauth.Credencial{ID: 1, SenhaHash: hashSenha(t, "senha123"), Papel: domainauth.PapelCliente}, nil)
 	jwtAuth.EXPECT().
-		GerarAccessToken("user-1", domainauth.TipoCliente, domainauth.PapelCliente).
+		GerarAccessToken("1", domainauth.TipoCliente, domainauth.PapelCliente).
 		Return("", "", errors.New("chave de assinatura invalida"))
 
 	_, err := uc.Executar(context.Background(), appauth.LoginInput{Email: "a@a.com", Senha: "senha123"})
@@ -130,9 +130,9 @@ func TestLoginUseCase_Executar_ErroAoGerarRefreshToken_RetornaErroInterno(t *tes
 
 	credenciaisRepo.EXPECT().
 		BuscarPorEmail(mock.Anything, "a@a.com").
-		Return(&domainauth.Credencial{ID: "user-1", SenhaHash: hashSenha(t, "senha123"), Papel: domainauth.PapelCliente}, nil)
+		Return(&domainauth.Credencial{ID: 1, SenhaHash: hashSenha(t, "senha123"), Papel: domainauth.PapelCliente}, nil)
 	jwtAuth.EXPECT().
-		GerarAccessToken("user-1", domainauth.TipoCliente, domainauth.PapelCliente).
+		GerarAccessToken("1", domainauth.TipoCliente, domainauth.PapelCliente).
 		Return("access-token-valido", "jti-1", nil)
 	jwtAuth.EXPECT().
 		GerarRefreshToken().
@@ -151,7 +151,7 @@ func TestLoginUseCase_Executar_ErroAoSalvarRefreshToken_RetornaErroInterno(t *te
 
 	credenciaisRepo.EXPECT().
 		BuscarPorEmail(mock.Anything, "a@a.com").
-		Return(&domainauth.Credencial{ID: "user-1", SenhaHash: hashSenha(t, "senha123"), Papel: domainauth.PapelCliente}, nil)
+		Return(&domainauth.Credencial{ID: 1, SenhaHash: hashSenha(t, "senha123"), Papel: domainauth.PapelCliente}, nil)
 	refreshTokensRepo.EXPECT().
 		Salvar(mock.Anything, mock.AnythingOfType("*auth.RefreshToken")).
 		Return(errors.New("conexao recusada"))

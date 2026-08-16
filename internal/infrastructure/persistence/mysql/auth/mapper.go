@@ -1,16 +1,14 @@
 package auth
 
 import (
-	"strconv"
-
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 )
 
-// toModel converte a entidade de domínio pro model GORM. rt.ID vazio (novo
-// registro) deixa m.ID zerado pro banco gerar via autoincrement; rt.ID
-// preenchido (atualização) faz o parse de volta pra uint64.
+// toModel converte a entidade de domínio pro model GORM. rt.ID zero (novo
+// registro) deixa m.ID zerado pro banco gerar via autoincrement.
 func toModel(rt *domainauth.RefreshToken) *Model {
-	m := &Model{
+	return &Model{
+		ID:             rt.ID,
 		UsuarioID:      rt.UsuarioID,
 		Tipo:           string(rt.Tipo),
 		Papel:          string(rt.Papel),
@@ -19,19 +17,13 @@ func toModel(rt *domainauth.RefreshToken) *Model {
 		ExpiraEm:       rt.ExpiraEm,
 		RevogadoEm:     rt.RevogadoEm,
 	}
-	if rt.ID != "" {
-		if id, err := strconv.ParseUint(rt.ID, 10, 64); err == nil {
-			m.ID = id
-		}
-	}
-	return m
 }
 
 // toEntity reidrata a entidade de domínio a partir do model (reconstituição,
 // não gera novo ID).
 func toEntity(m *Model) *domainauth.RefreshToken {
 	return &domainauth.RefreshToken{
-		ID:             strconv.FormatUint(m.ID, 10),
+		ID:             m.ID,
 		UsuarioID:      m.UsuarioID,
 		Tipo:           domainauth.TipoUsuario(m.Tipo),
 		Papel:          domainauth.PapelUsuario(m.Papel),
