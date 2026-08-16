@@ -8,7 +8,8 @@ import (
 	domainusuario "github.com/muriloperosa/soat-architecture/internal/domain/usuario"
 )
 
-// AtualizarUsuarioUseCase troca nome e papel de um usuário existente.
+// AtualizarUsuarioUseCase troca nome, email e papel de um usuário existente,
+// e opcionalmente redefine a senha (admin).
 type AtualizarUsuarioUseCase struct {
 	repo domainusuario.UsuarioRepository
 }
@@ -26,8 +27,24 @@ func (uc *AtualizarUsuarioUseCase) Executar(ctx context.Context, input Atualizar
 		return UsuarioOutput{}, shared.NewInternalError("erro ao buscar usuário", err)
 	}
 
-	if err := u.Atualizar(input.Nome, input.Papel); err != nil {
+	if input.Email != u.Email().String() {
+		outro, err := uc.repo.BuscarPorEmail(ctx, input.Email)
+		if err == nil && outro.ID() != u.ID() {
+			return UsuarioOutput{}, shared.NewConflictError("já existe um usuário com esse email")
+		}
+		if err != nil && !errors.Is(err, domainusuario.ErrUsuarioNaoEncontrado) {
+			return UsuarioOutput{}, shared.NewInternalError("erro ao verificar email", err)
+		}
+	}
+
+	if err := u.Atualizar(input.Nome, input.Email, input.Papel); err != nil {
 		return UsuarioOutput{}, err
+	}
+
+	if input.SenhaNova != "" {
+		if err := u.RedefinirSenha(input.SenhaNova); err != nil {
+			return UsuarioOutput{}, err
+		}
 	}
 
 	if err := uc.repo.Atualizar(ctx, u); err != nil {
