@@ -23,7 +23,7 @@ func toTokenResponse(accessToken, refreshToken string, expiresIn, refreshTokenEx
 	return TokenResponse{
 		AccessToken:           accessToken,
 		RefreshToken:          refreshToken,
-		ExpiresIn:             expiresIn,
+		AccessTokenExpiresIn:  expiresIn,
 		RefreshTokenExpiresIn: refreshTokenExpiresIn,
 	}
 }
