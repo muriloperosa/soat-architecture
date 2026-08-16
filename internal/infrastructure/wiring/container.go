@@ -5,8 +5,10 @@ import (
 
 	"gorm.io/gorm"
 
+	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 	infraauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/auth"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/config"
+	mysqlauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/auth"
 )
 
 // Container compõe as dependências compartilhadas da aplicação
@@ -15,21 +17,14 @@ type Container struct {
 	Config *config.Config
 	DB     *gorm.DB
 
-	JWTAuth *infraauth.AuthenticatorJWT
-
-	// TODO(Task 14): AuthInternoHandler *httphandler.AuthInternoHandler e
-	// AuthClienteHandler *httphandler.AuthClienteHandler ficam bloqueados até
-	// usuariointerno.Usuario e cliente.SenhaHash existirem, só então dá pra
-	// montar CredenciaisRepository dos dois tipos (mysqlusuariointerno,
-	// mysqlcliente) e os use cases de login/refresh/logout em cima deles.
-	// RefreshTokenRepository (Task 13) já está pronto em
-	// internal/infrastructure/persistence/mysql/auth, só falta plugar aqui
-	// junto com os handlers.
+	JWTAuth           *infraauth.AuthenticatorJWT
+	RefreshTokensRepo domainauth.RefreshTokenRepository
 }
 
 // NewContainer monta o grafo de dependências da aplicação.
 func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c := &Container{Config: cfg, DB: db}
+	c.RefreshTokensRepo = mysqlauth.NewRefreshTokenRepository(db)
 	if cfg == nil {
 		return c
 	}
