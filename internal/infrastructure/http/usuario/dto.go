@@ -5,7 +5,7 @@ import "github.com/muriloperosa/soat-architecture/internal/domain/shared"
 // CriarUsuarioRequest é o corpo HTTP de POST /v1/usuarios.
 type CriarUsuarioRequest struct {
 	Nome  string              `json:"nome" binding:"required" example:"Ana Souza"`
-	Email string              `json:"email" binding:"required,email" example:"ana@oficina.com"`
+	Email string              `json:"email" binding:"required" example:"ana@oficina.com"`
 	Senha string              `json:"senha" binding:"required" example:"senha123"`
 	Papel shared.PapelUsuario `json:"papel" binding:"required" example:"MECANICO"`
 }
@@ -15,7 +15,7 @@ type CriarUsuarioRequest struct {
 // usuário (força troca no próximo login).
 type AtualizarUsuarioRequest struct {
 	Nome      string              `json:"nome" binding:"required" example:"Ana Souza"`
-	Email     string              `json:"email" binding:"required,email" example:"ana@oficina.com"`
+	Email     string              `json:"email" binding:"required" example:"ana@oficina.com"`
 	SenhaNova string              `json:"senha_nova,omitempty" example:"novaSenha123"`
 	Papel     shared.PapelUsuario `json:"papel" binding:"required" example:"ATENDENTE"`
 }

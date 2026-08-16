@@ -2,7 +2,7 @@ package auth
 
 // LoginRequest é o corpo HTTP de POST /v1/auth/login e /v1/auth/cliente/login.
 type LoginRequest struct {
-	Email string `json:"email" binding:"required,email" example:"usuario@oficina.com"`
+	Email string `json:"email" binding:"required" example:"usuario@oficina.com"`
 	Senha string `json:"senha" binding:"required" example:"senha123"`
 }
 
