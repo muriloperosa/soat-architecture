@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/config"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -13,25 +14,25 @@ import (
 // NewMigrationConnection cria uma conexão com o banco de dados MySQL para ser usada em migrações.
 func NewMigrationConnection(cfg *config.Config) (*gorm.DB, error) {
 	if cfg == nil {
-		return nil, fmt.Errorf("configuração é obrigatória")
+		return nil, ErrConfigNotFound
 	}
 
 	dsn := buildMigrationDSN(cfg)
 
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to MySQL: %w", err)
+		return nil, shared.NewInternalError("failed to connect to MySQL", err)
 	}
 
 	sqlDB, err := db.DB()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get underlying sql.DB: %w", err)
+		return nil, shared.NewInternalError("failed to get underlying sql.DB", err)
 	}
 
 	configureMigrationPool(sqlDB)
 
 	if err := sqlDB.Ping(); err != nil {
-		return nil, fmt.Errorf("failed to ping MySQL: %w", err)
+		return nil, shared.NewInternalError("failed to ping MySQL", err)
 	}
 
 	return db, nil

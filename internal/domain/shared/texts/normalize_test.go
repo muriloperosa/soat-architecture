@@ -6,13 +6,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNormalizeName(t *testing.T) {
-	result := NormalizeName("  joÃO   da SILVA  ")
+func TestNormalizeUcFirst(t *testing.T) {
+	result := NormalizeUcFirst("  joÃO   da SILVA  ")
 	require.Equal(t, "João Da Silva", result)
 }
 
-func TestNormalizeNameEmpty(t *testing.T) {
-	result := NormalizeName("   ")
+func TestNormalizeUcFirstEmpty(t *testing.T) {
+	result := NormalizeUcFirst("   ")
 	require.Empty(t, result)
 }
 

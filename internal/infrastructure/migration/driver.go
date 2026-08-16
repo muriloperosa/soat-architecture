@@ -7,6 +7,7 @@ import (
 	"github.com/golang-migrate/migrate/v4/database"
 	migratemysql "github.com/golang-migrate/migrate/v4/database/mysql"
 
+	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	db "github.com/muriloperosa/soat-architecture/internal/infrastructure/database"
 )
 
@@ -23,7 +24,7 @@ func NewDriver(driverType db.DriverType, sqlDB *sql.DB, databaseName string) (da
 
 		driver, err := migratemysql.WithInstance(sqlDB, &migratemysql.Config{DatabaseName: databaseName})
 		if err != nil {
-			return nil, fmt.Errorf("erro ao criar driver MySQL: %w", err)
+			return nil, shared.NewInternalError("erro ao criar driver MySQL", err)
 		}
 
 		return driver, nil

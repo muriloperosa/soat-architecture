@@ -81,3 +81,9 @@ func NewUnauthorizedError(msg string) *AppError {
 func NewUnavailableError(msg string, err error) *AppError {
 	return &AppError{Kind: KindUnavailable, Message: msg, Err: err}
 }
+
+// NewInternalErrorCustom cria um AppError de Kind internal com mensagem própria,
+// usado por erros estáticos definidos como var (ex. sentinel errors de infra).
+func NewInternalErrorCustom(msg string) *AppError {
+	return &AppError{Kind: KindInternal, Message: msg}
+}
