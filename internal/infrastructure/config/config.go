@@ -4,17 +4,16 @@ import "github.com/caarlos0/env/v9"
 
 // Config carrega as variáveis de ambiente da aplicação.
 type Config struct {
-	AppPort string `env:"APP_PORT" envDefault:"8080"`
-
-	DBHost     string `env:"DB_HOST,required"`
-	DBPort     string `env:"DB_PORT,required"`
-	DBUser     string `env:"DB_USER,required"`
-	DBPassword string `env:"DB_PASSWORD,required"`
-	DBName     string `env:"DB_NAME,required"`
-
-	DBMaxOpenConns           int `env:"DB_MAX_OPEN_CONNS" envDefault:"25"`
-	DBMaxIdleConns           int `env:"DB_MAX_IDLE_CONNS" envDefault:"5"`
-	DBConnMaxLifetimeMinutes int `env:"DB_CONN_MAX_LIFETIME_MINUTES" envDefault:"5"`
+	AppPort                  string `env:"APP_PORT" envDefault:"8080"`
+	DBHost                   string `env:"DB_HOST,required"`
+	DBPort                   string `env:"DB_PORT,required"`
+	DBUser                   string `env:"DB_USER,required"`
+	DBPassword               string `env:"DB_PASSWORD,required"`
+	DBName                   string `env:"DB_NAME,required"`
+	DBMaxOpenConns           int    `env:"DB_MAX_OPEN_CONNS" envDefault:"25"`
+	DBMaxIdleConns           int    `env:"DB_MAX_IDLE_CONNS" envDefault:"5"`
+	DBConnMaxLifetimeMinutes int    `env:"DB_CONN_MAX_LIFETIME_MINUTES" envDefault:"5"`
+	DBDriver                 string `env:"DB_DRIVER" envDefault:"mysql"`
 }
 
 // Load lê as variáveis de ambiente do processo e retorna um Config validado.
