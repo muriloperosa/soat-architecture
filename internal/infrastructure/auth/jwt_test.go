@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
+	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	infraauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/auth"
 	"github.com/stretchr/testify/require"
 )
@@ -13,7 +14,7 @@ import (
 func TestGerarEValidarAccessToken_TokenValido(t *testing.T) {
 	autenticador := infraauth.NewAuthenticatorJWT("segredo-de-teste", 15*time.Minute)
 
-	token, jti, err := autenticador.GerarAccessToken("user-123", domainauth.TipoCliente, domainauth.PapelCliente)
+	token, jti, err := autenticador.GerarAccessToken("user-123", domainauth.TipoCliente, shared.PapelCliente)
 	require.NoError(t, err)
 	require.NotEmpty(t, token)
 	require.NotEmpty(t, jti)
@@ -22,17 +23,17 @@ func TestGerarEValidarAccessToken_TokenValido(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "user-123", claims.Subject)
 	require.Equal(t, domainauth.TipoCliente, claims.Tipo)
-	require.Equal(t, domainauth.PapelCliente, claims.Papel)
+	require.Equal(t, shared.PapelCliente, claims.Papel)
 	require.Equal(t, jti, claims.Jti)
 }
 
 func TestGerarAccessToken_GeraJtiDiferenteACadaChamada(t *testing.T) {
 	autenticador := infraauth.NewAuthenticatorJWT("segredo-de-teste", 15*time.Minute)
 
-	_, jtiA, err := autenticador.GerarAccessToken("user-123", domainauth.TipoCliente, domainauth.PapelCliente)
+	_, jtiA, err := autenticador.GerarAccessToken("user-123", domainauth.TipoCliente, shared.PapelCliente)
 	require.NoError(t, err)
 
-	_, jtiB, err := autenticador.GerarAccessToken("user-123", domainauth.TipoCliente, domainauth.PapelCliente)
+	_, jtiB, err := autenticador.GerarAccessToken("user-123", domainauth.TipoCliente, shared.PapelCliente)
 	require.NoError(t, err)
 
 	require.NotEqual(t, jtiA, jtiB)
@@ -41,7 +42,7 @@ func TestGerarAccessToken_GeraJtiDiferenteACadaChamada(t *testing.T) {
 func TestValidarAccessToken_TokenExpirado(t *testing.T) {
 	autenticador := infraauth.NewAuthenticatorJWT("segredo-de-teste", -1*time.Minute)
 
-	token, _, err := autenticador.GerarAccessToken("user-123", domainauth.TipoInterno, domainauth.PapelAdmin)
+	token, _, err := autenticador.GerarAccessToken("user-123", domainauth.TipoInterno, shared.PapelAdmin)
 	require.NoError(t, err)
 
 	_, err = autenticador.ValidarAccessToken(token)
@@ -52,7 +53,7 @@ func TestValidarAccessToken_AssinaturaInvalida(t *testing.T) {
 	gerador := infraauth.NewAuthenticatorJWT("segredo-a", 15*time.Minute)
 	validador := infraauth.NewAuthenticatorJWT("segredo-b", 15*time.Minute)
 
-	token, _, err := gerador.GerarAccessToken("user-123", domainauth.TipoInterno, domainauth.PapelAdmin)
+	token, _, err := gerador.GerarAccessToken("user-123", domainauth.TipoInterno, shared.PapelAdmin)
 	require.NoError(t, err)
 
 	_, err = validador.ValidarAccessToken(token)
@@ -81,7 +82,7 @@ func TestValidarAccessToken_MetodoDeAssinaturaNaoHMAC_Rejeitado(t *testing.T) {
 	claims := domainauth.AppClaims{
 		Subject: "user-123",
 		Tipo:    domainauth.TipoInterno,
-		Papel:   domainauth.PapelAdmin,
+		Papel:   shared.PapelAdmin,
 		Jti:     "jti-forjado",
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   "user-123",

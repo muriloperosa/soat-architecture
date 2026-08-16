@@ -11,6 +11,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
+	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 )
 
 // AuthenticatorJWT gera e valida access tokens HS256, e gera o valor bruto
@@ -30,7 +31,7 @@ func NewAuthenticatorJWT(secret string, accessTTL time.Duration) *AuthenticatorJ
 // GerarAccessToken assina um novo access token JWT (HS256) pro par
 // usuário/papel, com expiração em now+accessTTL, e gera o jti que o
 // identifica (usado pra revogação em par com o refresh token).
-func (a *AuthenticatorJWT) GerarAccessToken(subject string, tipo domainauth.TipoUsuario, papel domainauth.PapelUsuario) (token string, jti string, err error) {
+func (a *AuthenticatorJWT) GerarAccessToken(subject string, tipo domainauth.TipoUsuario, papel shared.PapelUsuario) (token string, jti string, err error) {
 	jti, err = a.GerarRefreshToken()
 	if err != nil {
 		return "", "", err
