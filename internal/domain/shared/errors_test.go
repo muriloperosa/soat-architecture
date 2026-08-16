@@ -54,6 +54,7 @@ func TestConstrutores_DefinemKindEDetails(t *testing.T) {
 		{"forbidden", NewForbiddenError("x"), KindForbidden},
 		{"unauthorized", NewUnauthorizedError("x"), KindUnauthorized},
 		{"unavailable", NewUnavailableError("x", nil), KindUnavailable},
+		{"internal custom", NewInternalErrorCustom("x"), KindInternal},
 	}
 
 	for _, tc := range cases {
@@ -73,6 +74,23 @@ func TestNewValidationErrorWithDetails_DefineDetails(t *testing.T) {
 	}
 	if len(err.Details) != 2 || err.Details[0] != "nome é obrigatório" {
 		t.Fatalf("got Details %v, want detalhes preservados", err.Details)
+	}
+}
+
+func TestNewInternalErrorCustom_NaoEncapsulaCausa(t *testing.T) {
+	err := NewInternalErrorCustom("falha estatica de infra")
+
+	if err.Kind != KindInternal {
+		t.Fatalf("got Kind %q, want %q", err.Kind, KindInternal)
+	}
+	if err.Message != "falha estatica de infra" {
+		t.Fatalf("got Message %q, want a mensagem original", err.Message)
+	}
+	if err.Err != nil {
+		t.Fatalf("got Err %v, want nil (sem causa encapsulada)", err.Err)
+	}
+	if err.Error() != "falha estatica de infra" {
+		t.Fatalf("got Error() %q, want só a mensagem (sem sufixo de causa)", err.Error())
 	}
 }
 
