@@ -8,6 +8,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
+	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	mysqlauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/auth"
 	test_helpers "github.com/muriloperosa/soat-architecture/test/helpers"
 	"github.com/stretchr/testify/require"
@@ -23,7 +24,7 @@ func TestRefreshTokenRepository_Salvar_ExecutaInsert(t *testing.T) {
 	mock.ExpectCommit()
 
 	rt := &domainauth.RefreshToken{
-		UsuarioID: 1, Tipo: domainauth.TipoCliente, Papel: domainauth.PapelCliente,
+		UsuarioID: 1, Tipo: domainauth.TipoCliente, Papel: shared.PapelCliente,
 		TokenHash: "hash-1", AccessTokenJti: "jti-1", ExpiraEm: time.Now().Add(time.Hour),
 	}
 	err := repo.Salvar(context.Background(), rt)
@@ -42,7 +43,7 @@ func TestRefreshTokenRepository_Salvar_ErroDoBanco_PropagaErro(t *testing.T) {
 	mock.ExpectRollback()
 
 	rt := &domainauth.RefreshToken{
-		UsuarioID: 1, Tipo: domainauth.TipoCliente, Papel: domainauth.PapelCliente,
+		UsuarioID: 1, Tipo: domainauth.TipoCliente, Papel: shared.PapelCliente,
 		TokenHash: "hash-1", AccessTokenJti: "jti-1", ExpiraEm: time.Now().Add(time.Hour),
 	}
 	err := repo.Salvar(context.Background(), rt)
@@ -60,7 +61,7 @@ func TestRefreshTokenRepository_Salvar_AtualizaRegistroExistente(t *testing.T) {
 	mock.ExpectCommit()
 
 	rt := &domainauth.RefreshToken{
-		ID: 7, UsuarioID: 1, Tipo: domainauth.TipoCliente, Papel: domainauth.PapelCliente,
+		ID: 7, UsuarioID: 1, Tipo: domainauth.TipoCliente, Papel: shared.PapelCliente,
 		TokenHash: "hash-1", AccessTokenJti: "jti-1", ExpiraEm: time.Now().Add(time.Hour),
 	}
 	err := repo.Salvar(context.Background(), rt)
@@ -102,14 +103,14 @@ func TestRefreshTokenRepository_BuscarPorHash_RetornaEntidade(t *testing.T) {
 
 	expiraEm := time.Now().Add(time.Hour)
 	rows := sqlmock.NewRows([]string{"id", "usuario_id", "tipo", "papel", "token_hash", "access_token_jti", "expira_em", "revogado_em"}).
-		AddRow(1, 1, "cliente", "cliente", "hash-1", "jti-1", expiraEm, nil)
+		AddRow(1, 1, "cliente", "CLIENTE", "hash-1", "jti-1", expiraEm, nil)
 	mock.ExpectQuery("SELECT \\* FROM `refresh_tokens`").WillReturnRows(rows)
 
 	rt, err := repo.BuscarPorHash(context.Background(), "hash-1")
 
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), rt.ID)
-	require.Equal(t, domainauth.PapelCliente, rt.Papel)
+	require.Equal(t, shared.PapelCliente, rt.Papel)
 	require.Equal(t, "jti-1", rt.AccessTokenJti)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
