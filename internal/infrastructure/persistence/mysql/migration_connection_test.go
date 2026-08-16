@@ -41,7 +41,7 @@ func TestNewMigrationConnectionComConfigNil(t *testing.T) {
 
 	require.Nil(t, db)
 	require.Error(t, err)
-	require.Equal(t, "configuração é obrigatória", err.Error())
+	require.Equal(t, ErrConfigNotFound, err)
 }
 
 func TestNewMigrationConnectionComBancoIndisponivel(t *testing.T) {

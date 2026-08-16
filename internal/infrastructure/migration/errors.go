@@ -1,9 +1,11 @@
 package migration
 
-import "errors"
+import (
+	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
+)
 
 var (
-	ErrDriverInvalido     = errors.New("driver de banco de dados inválido")
-	ErrDriverNaoSuportado = errors.New("driver de banco de dados ainda não suportado para migrations")
-	ErrConexaoObrigatoria = errors.New("conexão com banco de dados é obrigatória")
+	ErrDriverInvalido     = shared.NewInternalErrorCustom("driver de banco de dados inválido")
+	ErrConexaoObrigatoria = shared.NewInternalErrorCustom("conexão com banco de dados é obrigatória")
+	ErrDriverNaoSuportado = shared.NewInternalErrorCustom("driver de banco de dados ainda não suportado para migrations")
 )

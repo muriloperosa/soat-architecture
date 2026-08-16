@@ -3,7 +3,7 @@ CREATE TABLE historicos_status (
 
     ordem_servico_id BIGINT UNSIGNED NOT NULL,
 
-    status_novo ENUM(
+    status ENUM(
         'RECEBIDA',
         'EM_DIAGNOSTICO',
         'AGUARDANDO_APROVACAO',
