@@ -1,0 +1,293 @@
+{
+  "info": {
+    "name": "SOAT Architecture — Oficina Mecânica",
+    "description": "Auth JWT (interno/cliente) + gestão de usuário interno. Login/Refresh/Criar usuário salvam token/id automaticamente nas variáveis da collection (veja as abas Tests de cada request).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8080" },
+    { "key": "access_token", "value": "" },
+    { "key": "refresh_token", "value": "" },
+    { "key": "cliente_access_token", "value": "" },
+    { "key": "cliente_refresh_token", "value": "" },
+    { "key": "usuario_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/v1/health", "host": ["{{base_url}}"], "path": ["v1", "health"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth Interno",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', body.access_token);",
+                  "    pm.collectionVariables.set('refresh_token', body.refresh_token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@oficina.com\",\n  \"senha\": \"senha123\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/v1/auth/login", "host": ["{{base_url}}"], "path": ["v1", "auth", "login"] }
+          }
+        },
+        {
+          "name": "Refresh",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', body.access_token);",
+                  "    pm.collectionVariables.set('refresh_token', body.refresh_token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/v1/auth/refresh", "host": ["{{base_url}}"], "path": ["v1", "auth", "refresh"] }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/v1/auth/logout", "host": ["{{base_url}}"], "path": ["v1", "auth", "logout"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth Cliente",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('cliente_access_token', body.access_token);",
+                  "    pm.collectionVariables.set('cliente_refresh_token', body.refresh_token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"cliente@exemplo.com\",\n  \"senha\": \"senha123\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/v1/auth/cliente/login", "host": ["{{base_url}}"], "path": ["v1", "auth", "cliente", "login"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('cliente_access_token', body.access_token);",
+                  "    pm.collectionVariables.set('cliente_refresh_token', body.refresh_token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{cliente_refresh_token}}\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/v1/auth/cliente/refresh", "host": ["{{base_url}}"], "path": ["v1", "auth", "cliente", "refresh"] }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{cliente_refresh_token}}\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/v1/auth/cliente/logout", "host": ["{{base_url}}"], "path": ["v1", "auth", "cliente", "logout"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Usuarios (admin)",
+      "item": [
+        {
+          "name": "Criar usuário",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('usuario_id', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Ana Souza\",\n  \"email\": \"ana@oficina.com\",\n  \"senha\": \"senha123\",\n  \"papel\": \"MECANICO\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/v1/usuarios", "host": ["{{base_url}}"], "path": ["v1", "usuarios"] }
+          }
+        },
+        {
+          "name": "Atualizar usuário",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Ana S. Costa\",\n  \"email\": \"ana@oficina.com\",\n  \"papel\": \"ATENDENTE\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/usuarios/{{usuario_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "usuarios", "{{usuario_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Atualizar usuário (redefinir senha do admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Ana S. Costa\",\n  \"email\": \"ana@oficina.com\",\n  \"senha_nova\": \"novaSenhaTemporaria123\",\n  \"papel\": \"ATENDENTE\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/usuarios/{{usuario_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "usuarios", "{{usuario_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Inativar usuário",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/v1/usuarios/{{usuario_id}}/inativar",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "usuarios", "{{usuario_id}}", "inativar"]
+            }
+          }
+        },
+        {
+          "name": "Ativar usuário",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/v1/usuarios/{{usuario_id}}/ativar",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "usuarios", "{{usuario_id}}", "ativar"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Usuarios (self-service)",
+      "item": [
+        {
+          "name": "Dados do usuário logado",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/v1/usuarios/me", "host": ["{{base_url}}"], "path": ["v1", "usuarios", "me"] }
+          }
+        },
+        {
+          "name": "Trocar a própria senha",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"senha_nova\": \"novaSenha123\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/v1/usuarios/me/senha", "host": ["{{base_url}}"], "path": ["v1", "usuarios", "me", "senha"] }
+          }
+        }
+      ]
+    }
+  ]
+}
