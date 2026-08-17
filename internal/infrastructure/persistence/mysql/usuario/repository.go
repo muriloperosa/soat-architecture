@@ -60,5 +60,5 @@ func (r *Repository) BuscarPorEmail(ctx context.Context, email string) (*domainu
 // requer_alterar_senha, ativo, data_atualizacao).
 func (r *Repository) Atualizar(ctx context.Context, u *domainusuario.Usuario) error {
 	m := toModel(u)
-	return r.db.WithContext(ctx).Model(&Model{}).Where("id = ?", m.ID).Updates(m).Error
+	return r.db.WithContext(ctx).Model(&Model{}).Where("id = ?", m.ID).Select("*").Updates(m).Error
 }
