@@ -1,0 +1,105 @@
+package auth
+
+import (
+	"context"
+	"strconv"
+	"time"
+
+	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
+	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
+	infraauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/auth"
+	"golang.org/x/crypto/bcrypt"
+)
+
+const msgCredenciaisInvalidas = "credenciais inválidas"
+
+// LoginUseCase autentica por email+senha e emite o par access+refresh token.
+// A fonte de credenciais (interno ou cliente) e o TipoUsuario já vêm decididos
+// no wiring, não em runtime.
+type LoginUseCase struct {
+	credenciais   domainauth.CredenciaisRepository
+	refreshTokens domainauth.RefreshTokenRepository
+	jwtAuth       domainauth.JWTProvider
+	tipo          domainauth.TipoUsuario
+	accessTTL     time.Duration
+	refreshTTL    time.Duration
+}
+
+// NewLoginUseCase monta o use case com a fonte de credenciais e o TipoUsuario
+// já decididos (injetados pelo wiring, um por endpoint de login).
+func NewLoginUseCase(
+	credenciais domainauth.CredenciaisRepository,
+	refreshTokens domainauth.RefreshTokenRepository,
+	jwtAuth domainauth.JWTProvider,
+	tipo domainauth.TipoUsuario,
+	accessTTL time.Duration,
+	refreshTTL time.Duration,
+) *LoginUseCase {
+	return &LoginUseCase{
+		credenciais:   credenciais,
+		refreshTokens: refreshTokens,
+		jwtAuth:       jwtAuth,
+		tipo:          tipo,
+		accessTTL:     accessTTL,
+		refreshTTL:    refreshTTL,
+	}
+}
+
+// Executar valida email+senha contra a credencial cadastrada e, se válida,
+// emite um novo par access+refresh token. Credencial inexistente e senha
+// errada retornam o mesmo erro genérico.
+func (uc *LoginUseCase) Executar(ctx context.Context, input LoginInput) (LoginOutput, error) {
+	cred, err := uc.credenciais.BuscarPorEmail(ctx, input.Email)
+	if err != nil {
+		return LoginOutput{}, shared.NewUnauthorizedError(msgCredenciaisInvalidas)
+	}
+
+	if !cred.Ativo {
+		return LoginOutput{}, shared.NewUnauthorizedError(msgCredenciaisInvalidas)
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(cred.SenhaHash), []byte(input.Senha)); err != nil {
+		return LoginOutput{}, shared.NewUnauthorizedError(msgCredenciaisInvalidas)
+	}
+
+	out, err := gerarTokens(ctx, uc.refreshTokens, uc.jwtAuth, uc.tipo, cred.Papel, uc.accessTTL, uc.refreshTTL, cred.ID)
+	if err != nil {
+		return LoginOutput{}, err
+	}
+	out.RequerAlterarSenha = cred.RequerAlterarSenha
+	return out, nil
+}
+
+// gerarTokens gera e persiste um novo par access+refresh token pro usuário.
+// Reusado pelo RefreshUseCase na rotação.
+func gerarTokens(ctx context.Context, refreshTokens domainauth.RefreshTokenRepository, jwtAuth domainauth.JWTProvider, tipo domainauth.TipoUsuario, papel shared.PapelUsuario, accessTTL time.Duration, refreshTTL time.Duration, usuarioID uint64) (LoginOutput, error) {
+
+	accessToken, jti, err := jwtAuth.GerarAccessToken(strconv.FormatUint(usuarioID, 10), tipo, papel)
+	if err != nil {
+		return LoginOutput{}, shared.NewInternalError("erro ao gerar access token", err)
+	}
+
+	refreshBruto, err := jwtAuth.GerarRefreshToken()
+	if err != nil {
+		return LoginOutput{}, shared.NewInternalError("erro ao gerar refresh token", err)
+	}
+
+	rt := &domainauth.RefreshToken{
+		UsuarioID:      usuarioID,
+		Tipo:           tipo,
+		Papel:          papel,
+		TokenHash:      infraauth.HashRefreshToken(refreshBruto),
+		AccessTokenJti: jti,
+		ExpiraEm:       time.Now().Add(refreshTTL),
+	}
+	if err := refreshTokens.Salvar(ctx, rt); err != nil {
+		return LoginOutput{}, shared.NewInternalError("erro ao salvar refresh token", err)
+	}
+
+	return LoginOutput{
+		AccessToken:           accessToken,
+		RefreshToken:          refreshBruto,
+		AccessTokenExpiresIn:  int64(accessTTL.Seconds()),
+		RefreshTokenExpiresIn: int64(refreshTTL.Seconds()),
+	}, nil
+}

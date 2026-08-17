@@ -83,6 +83,22 @@ Sobe só o MySQL:
 make db-up
 ```
 
+Aplica as migrations (schema versionado em `migrations/mysql/`, runner em `migrations/main.go`):
+
+```bash
+make migrate-up
+```
+
+`make db-setup` faz os dois passos de uma vez (`db-up` + `migrate-up`). Outros comandos: `make migrate-down` (desfaz a última), `make migrate-version` (mostra a versão atual) e `make migrate-force VERSION=N` (força a versão sem rodar SQL, só pra corrigir um estado `dirty`).
+
+Cria um usuário interno direto no banco (`cmd/create-user`), sem passar pelo HTTP/JWT; resolve o bootstrap do primeiro admin (que precisaria de um admin já existente pra bater em `POST /v1/usuarios`) e serve pra testar o domínio manualmente:
+
+```bash
+make create-user NOME="Admin Oficina" EMAIL=admin@oficina.com SENHA=senha123
+```
+
+`PAPEL` é opcional, default `ADMINISTRADOR` (outros valores válidos: `MECANICO`, `ATENDENTE`). A senha nasce provisória (`requer_alterar_senha=true`), igual a qualquer usuário criado por um admin — troca obrigatória no primeiro login.
+
 Roda a API com hot reload via `air`, que recompila e reinicia o processo a cada alteração em um arquivo `.go`:
 
 ```bash
@@ -119,7 +135,21 @@ Isso abre o prompt interativo do delve (`break`, `continue`, `print`, etc.) cont
 make test
 ```
 
-Roda os testes unitários de todos os pacotes com cobertura. Testes de integração, MySQL real via `testcontainers`, ficam em `test/integration/`.
+Roda os testes unitários de todos os pacotes com cobertura.
+
+### Testes de integração
+
+```bash
+make test-integration
+```
+
+Sobem um MySQL real via `testcontainers` (precisa do Docker rodando), aplicam as migrations de produção e montam o `wiring.Container`/router reais; nada de mock, é o router completo batendo num banco de verdade. Ficam em `test/integration/`, atrás da build tag `integration` (por isso não entram em `make test`; container leva alguns segundos pra subir, não faz sentido no loop rápido do dia a dia).
+
+Organização de `test/integration/`:
+- `setup_test.go`: `TestMain`, sobe o container e monta a aplicação uma vez por execução do pacote.
+- `fixtures_test.go`: dados de teste (`resetDB`, `seedUsuario`).
+- `client_test.go`: helpers de request HTTP (`doRequest`, `doLogin`).
+- Um arquivo por cenário de negócio (ciclo de auth completo, inativação em sessão ativa, senha provisória, autorização por papel, etc.).
 
 ### Cobertura
 
@@ -166,29 +196,86 @@ shared.NewConflictError("ordem já finalizada")
 shared.NewInternalError("erro ao consultar banco", err) // encapsula erro de infra
 ```
 
-Regra pros use cases: erro de regra de negócio nasce como `*shared.AppError` na origem (domain ou application); erro de infra (repositório, driver) é encapsulado com `shared.NewInternalError("mensagem", err)` antes de subir. `fmt.Errorf("...: %w", err)` no meio do caminho não quebra nada — o mapper HTTP usa `errors.As` e enxerga através do wrap.
+Regra pros use cases: erro de regra de negócio nasce como `*shared.AppError` na origem (domain ou application); erro de infra (repositório, driver) é encapsulado com `shared.NewInternalError("mensagem", err)` antes de subir. `fmt.Errorf("...: %w", err)` no meio do caminho não quebra nada, o mapper HTTP usa `errors.As` e enxerga através do wrap.
 
-No handler, não monta `gin.H` na mão — delega pro mapper:
+No handler, não monta `gin.H` na mão delega pro pacote de erro HTTP:
 
 ```go
 if err != nil {
-    http.RespondError(c, err)
+    httperror.RespondError(c, err)
     return
 }
 ```
 
-`RespondError` (`internal/infrastructure/http/errors.go`) traduz `Kind` pra status HTTP e devolve `{"type", "message", "details"}`:
+`RespondError` (`internal/infrastructure/http/httperror/errors.go`) traduz `Kind` pra status HTTP e devolve `{"type", "message", "details"}` (`httperror.ErrorResponse`). Há também um atalho por `Kind`: `RespondNotFoundError`, `RespondValidationError`, `RespondConflictError`, `RespondForbiddenError`, `RespondUnauthorizedError`, `RespondInternalError` pra handlers que já sabem o `Kind` sem montar um `*shared.AppError` primeiro:
 
-| Kind         | Status |
-|--------------|--------|
-| `not_found`  | 404    |
-| `validation` | 400    |
-| `conflict`   | 409    |
-| `internal`   | 500    |
+| Kind           | Status | Atalho                       |
+|----------------|--------|-------------------------------|
+| `not_found`    | 404    | `RespondNotFoundError`         |
+| `validation`   | 400    | `RespondValidationError`       |
+| `conflict`     | 409    | `RespondConflictError`         |
+| `forbidden`    | 403    | `RespondForbiddenError`        |
+| `unauthorized` | 401    | `RespondUnauthorizedError`     |
+| `internal`     | 500    | `RespondInternalError`         |
+| `unavailable`  | 503    | `RespondUnavailableError`      |
 
-Erro que não é `*shared.AppError` (ou `Kind` desconhecido) cai em 500 genérico — mensagem interna nunca vaza pra resposta.
+Erro que não é `*shared.AppError` (ou `Kind` desconhecido) cai em 500 genérico mensagem interna nunca vaza pra resposta.
 
-`health_handler.go` é exceção: é probe de infra (ping no banco), não erro de domínio, então continua montando a resposta 503 direto.
+`httperror` é um pacote-folha deliberado: fica fora da raiz de `internal/infrastructure/http/` justamente pra domínios (`auth/`, `health/`) poderem importá-lo sem criar ciclo com `router.go`, que por sua vez importa os pacotes de domínio pra registrar rotas (ver ADR 0005).
+
+`health/handler.go` usa `RespondUnavailableError` (`Kind` `unavailable`, 503) quando o ping no banco falha, mesmo sistema de erro dos demais domínios, sem exceção.
+
+## Middlewares de autenticação/autorização
+
+`internal/infrastructure/http/middleware/` tem dois middlewares Gin, pensados pra empilhar em sequência numa rota protegida.
+
+### `AuthenticationMiddleware` valida o JWT
+
+Lê o header `Authorization: Bearer <token>`, valida assinatura (HS256) e expiração via `AutenticadorJWT.ValidarAccessToken`, e injeta os claims (`*domainauth.AppClaims`) no `gin.Context` sob a chave `middleware.ClaimsContextKey`. Sem token, token malformado ou inválido → 401 (`httperror.RespondError` com `shared.NewUnauthorizedError`).
+
+```go
+middleware.AuthenticationMiddleware(c.JWTAuth) // c é *wiring.Container
+```
+
+Não decide quem pode acessar o quê, só garante "esse token é válido e é desse usuário". Isso é trabalho do próximo middleware.
+
+### `AuthorizationMiddleware` valida o tipo de usuário
+
+Lê o `*domainauth.AppClaims` que o `AuthenticationMiddleware` deixou no contexto e compara `claims.Tipo` com o `TipoUsuario` esperado pra rota. Tipo errado (ou claims ausente, ou `AuthenticationMiddleware` não rodou antes) → 403 (`httperror.RespondForbiddenError`).
+
+```go
+middleware.AuthorizationMiddleware(domainauth.TipoInterno) // ou domainauth.TipoCliente
+```
+
+**Sempre nessa ordem**, `AuthorizationMiddleware` depende do que `AuthenticationMiddleware` põe no contexto:
+
+```go
+rg.GET(
+    "/ordens-servico",
+    middleware.AuthenticationMiddleware(c.JWTAuth),
+    middleware.AuthorizationMiddleware(domainauth.TipoInterno),
+    handler.Listar,
+)
+```
+
+### Adicionando numa rota nova
+
+Em `Register<Dominio>Routes(rg *gin.RouterGroup, c *wiring.Container)` (ex. `internal/infrastructure/http/ordemservico/routes.go`), encadeie os middlewares antes do handler final, Gin aceita quantos `gin.HandlerFunc` forem passados, executados em ordem:
+
+```go
+func RegisterOrdemServicoRoutes(rg *gin.RouterGroup, c *wiring.Container) {
+	os := rg.Group("/ordens-servico")
+	os.Use(middleware.AuthenticationMiddleware(c.JWTAuth))
+
+	os.GET("", c.OrdemServicoHandler.Listar) // qualquer tipo autenticado
+	os.POST("",
+		middleware.AuthorizationMiddleware(domainauth.TipoInterno), // só interno
+		c.OrdemServicoHandler.Criar,
+	)
+}
+```
+
+`rg.Use(...)` aplica o middleware a todas as rotas daquele grupo; middleware passado direto no verbo HTTP (`os.POST("", middleware..., handler)`) vale só pra aquela rota. Rota sem nenhum dos dois fica pública (ex. `/v1/health`, `/v1/auth/login`).
 
 ## Mocks
 

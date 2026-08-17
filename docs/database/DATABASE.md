@@ -60,7 +60,7 @@ status ENUM(
 ```
 
 Os mesmos valores de status são usados em
-`historicos_status.status_novo`.
+`historicos_status.status`.
 
 O domínio Go também deve possuir seus próprios tipos/enums, mantendo as
 regras protegidas na aplicação e no banco.
