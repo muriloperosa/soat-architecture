@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func NovoClienteValido(t *testing.T) Cliente {
+func novoClienteValido(t *testing.T) Cliente {
 	t.Helper()
 
 	cliente, err := NewCliente(
@@ -129,7 +129,7 @@ func TestNewClienteTelefoneInvalido(t *testing.T) {
 }
 
 func TestClienteAtualizar(t *testing.T) {
-	cliente := NovoClienteValido(t)
+	cliente := novoClienteValido(t)
 
 	dataAtualizacaoAnterior := cliente.DataAtualizacao()
 
@@ -145,7 +145,7 @@ func TestClienteAtualizar(t *testing.T) {
 }
 
 func TestClienteAtualizarNomeObrigatorio(t *testing.T) {
-	cliente := NovoClienteValido(t)
+	cliente := novoClienteValido(t)
 
 	nomeAnterior := cliente.Nome()
 	emailAnterior := cliente.Email()
@@ -163,7 +163,7 @@ func TestClienteAtualizarNomeObrigatorio(t *testing.T) {
 }
 
 func TestClienteAtualizarEmailObrigatorio(t *testing.T) {
-	cliente := NovoClienteValido(t)
+	cliente := novoClienteValido(t)
 
 	nomeAnterior := cliente.Nome()
 	emailAnterior := cliente.Email()
@@ -181,7 +181,7 @@ func TestClienteAtualizarEmailObrigatorio(t *testing.T) {
 }
 
 func TestClienteAtualizarTelefoneInvalido(t *testing.T) {
-	cliente := NovoClienteValido(t)
+	cliente := novoClienteValido(t)
 
 	nomeAnterior := cliente.Nome()
 	emailAnterior := cliente.Email()
@@ -199,7 +199,7 @@ func TestClienteAtualizarTelefoneInvalido(t *testing.T) {
 }
 
 func TestClienteAlterarSenha(t *testing.T) {
-	cliente := NovoClienteValido(t)
+	cliente := novoClienteValido(t)
 
 	dataAnterior := cliente.DataAtualizacao()
 
@@ -213,7 +213,7 @@ func TestClienteAlterarSenha(t *testing.T) {
 }
 
 func TestClienteAlterarSenhaObrigatoria(t *testing.T) {
-	cliente := NovoClienteValido(t)
+	cliente := novoClienteValido(t)
 
 	senhaAnterior := cliente.Senha()
 	dataAnterior := cliente.DataAtualizacao()
@@ -226,7 +226,7 @@ func TestClienteAlterarSenhaObrigatoria(t *testing.T) {
 }
 
 func TestClienteInativar(t *testing.T) {
-	cliente := NovoClienteValido(t)
+	cliente := novoClienteValido(t)
 
 	dataAnterior := cliente.DataAtualizacao()
 
@@ -239,7 +239,7 @@ func TestClienteInativar(t *testing.T) {
 }
 
 func TestClienteInativarQuandoJaEstiverInativo(t *testing.T) {
-	cliente := NovoClienteValido(t)
+	cliente := novoClienteValido(t)
 
 	cliente.Inativar()
 	dataAnterior := cliente.DataAtualizacao()
@@ -251,7 +251,7 @@ func TestClienteInativarQuandoJaEstiverInativo(t *testing.T) {
 }
 
 func TestClienteAtivar(t *testing.T) {
-	cliente := NovoClienteValido(t)
+	cliente := novoClienteValido(t)
 
 	cliente.Inativar()
 	dataAnterior := cliente.DataAtualizacao()
@@ -265,7 +265,7 @@ func TestClienteAtivar(t *testing.T) {
 }
 
 func TestClienteAtivarQuandoJaEstiverAtivo(t *testing.T) {
-	cliente := NovoClienteValido(t)
+	cliente := novoClienteValido(t)
 
 	dataAnterior := cliente.DataAtualizacao()
 
