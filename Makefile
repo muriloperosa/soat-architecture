@@ -1,4 +1,4 @@
-.PHONY: help run build test coverage lint up down db-up db-down tidy vendor setup dev debug mocks swagger hooks-install hooks-uninstall create-user
+.PHONY: help run build test test-integration coverage lint up down db-up db-down tidy vendor setup dev debug mocks swagger hooks-install hooks-uninstall create-user
 
 GREEN := $(shell tput setaf 2)
 RESET := $(shell tput sgr0)
@@ -16,6 +16,7 @@ help:
 	@echo "  $(GREEN)run$(RESET):      Run the API locally (go run)"
 	@echo "  $(GREEN)build$(RESET):    Build the API binary into bin/api"
 	@echo "  $(GREEN)test$(RESET):     Run all tests with coverage"
+	@echo "  $(GREEN)test-integration$(RESET): Run HTTP integration tests against a real MySQL (testcontainers, needs Docker)"
 	@echo "  $(GREEN)coverage$(RESET): Run tests and print total coverage + open HTML report"
 	@echo "  $(GREEN)lint$(RESET):     Run go vet"
 	@echo "  $(GREEN)up$(RESET):       Start API + MySQL via docker compose"
@@ -45,6 +46,9 @@ build:
 
 test:
 	go test ./... -v -cover
+
+test-integration:
+	go test -tags integration ./test/integration/... -v
 
 coverage:
 	go test ./... -coverprofile=coverage.out
