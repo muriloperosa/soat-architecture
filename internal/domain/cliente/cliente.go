@@ -20,11 +20,11 @@ type Cliente struct {
 }
 
 func NewCliente(
-	documento Documento,
+	documento string,
 	tipo TipoPessoa,
 	nome string,
 	email string, //Substitua pelo Value Object de email
-	telefone Telefone,
+	telefone string,
 	senha string, //Substitua pelo Value Object de senha
 ) (Cliente, error) {
 	nome = texts.NormalizeUcFirst(nome)
@@ -41,32 +41,52 @@ func NewCliente(
 		return Cliente{}, ErrSenhaObrigatoria
 	}
 
+	documentoVO, err := NewDocumento(documento, tipo)
+	if err != nil {
+		return Cliente{}, err
+	}
+
+	telefoneVO, err := NewTelefone(telefone)
+	if err != nil {
+		return Cliente{}, err
+	}
+
+	agora := time.Now()
+
 	return Cliente{
-		documento:       documento,
+		documento:       documentoVO,
 		tipo:            tipo,
 		nome:            nome,
 		email:           email,
-		telefone:        telefone,
+		telefone:        telefoneVO,
 		senha:           senha,
 		ativo:           true,
-		dataCadastro:    time.Now(),
-		dataAtualizacao: time.Now(),
+		dataCadastro:    agora,
+		dataAtualizacao: agora,
 	}, nil
 }
 
-func (c *Cliente) Atualizar(nome string, email string, telefone Telefone) error {
+func (c *Cliente) Atualizar(nome string, email string, telefone string) error {
+	nome = texts.NormalizeUcFirst(nome)
+
 	if nome == "" {
 		return ErrNomeObrigatorio
 	}
 
-	if email == "" { //Substitua pelo Value Object de email
+	if email == "" {
 		return ErrEmailObrigatorio
 	}
 
-	c.nome = texts.NormalizeUcFirst(nome)
+	telefoneVO, err := NewTelefone(telefone)
+	if err != nil {
+		return err
+	}
+
+	c.nome = nome
 	c.email = email
-	c.telefone = telefone
+	c.telefone = telefoneVO
 	c.dataAtualizacao = time.Now()
+
 	return nil
 }
 

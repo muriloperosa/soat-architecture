@@ -1,229 +1,276 @@
-package cliente_test
+package cliente
 
 import (
 	"testing"
 	"time"
 
-	"github.com/muriloperosa/soat-architecture/internal/domain/cliente"
-	"github.com/muriloperosa/soat-architecture/internal/test/factory"
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewClienteValido(t *testing.T) {
-	documento := factory.DocumentoPFValido(t)
-	telefone := factory.TelefoneCelularValido(t)
+func NovoClienteValido(t *testing.T) Cliente {
+	t.Helper()
 
+	cliente, err := NewCliente(
+		"529.982.247-25",
+		TipoPessoaFisica,
+		"  joÃO   da SILVA  ",
+		"joao@email.com",
+		"(44) 99999-1234",
+		"senha123",
+	)
+
+	require.NoError(t, err)
+
+	return cliente
+}
+
+func TestNewClienteValido(t *testing.T) {
 	antes := time.Now()
 
-	c, err := cliente.NewCliente(
-		documento,
-		cliente.TipoPessoaFisica,
-		"  caio   henrique  ",
-		"cliente@email.com",
-		telefone,
-		"Senha@123",
+	cliente, err := NewCliente(
+		"529.982.247-25",
+		TipoPessoaFisica,
+		"  joÃO   da SILVA  ",
+		"joao@email.com",
+		"(44) 99999-1234",
+		"senha123",
 	)
 
 	depois := time.Now()
 
 	require.NoError(t, err)
 
-	require.Zero(t, c.ID())
-	require.Equal(t, documento, c.Documento())
-	require.Equal(t, cliente.TipoPessoaFisica, c.Tipo())
-	require.Equal(t, "Caio Henrique", c.Nome())
-	require.Equal(t, "cliente@email.com", c.Email())
-	require.Equal(t, telefone, c.Telefone())
-	require.Equal(t, "Senha@123", c.Senha())
-	require.True(t, c.Ativo())
+	require.Equal(t, uint64(0), cliente.ID())
+	require.Equal(t, "52998224725", cliente.Documento().String())
+	require.Equal(t, TipoPessoaFisica, cliente.Tipo())
+	require.Equal(t, "João Da Silva", cliente.Nome())
+	require.Equal(t, "joao@email.com", cliente.Email())
+	require.Equal(t, "44999991234", cliente.Telefone().String())
+	require.Equal(t, "senha123", cliente.Senha())
+	require.True(t, cliente.Ativo())
 
-	require.False(t, c.DataCadastro().Before(antes))
-	require.False(t, c.DataCadastro().After(depois))
-	require.False(t, c.DataAtualizacao().Before(antes))
-	require.False(t, c.DataAtualizacao().After(depois))
+	require.False(t, cliente.DataCadastro().IsZero())
+	require.False(t, cliente.DataAtualizacao().IsZero())
+
+	require.False(t, cliente.DataCadastro().Before(antes))
+	require.False(t, cliente.DataCadastro().After(depois))
+
+	require.Equal(t, cliente.DataCadastro(), cliente.DataAtualizacao())
 }
 
 func TestNewClienteNomeObrigatorio(t *testing.T) {
-	documento := factory.DocumentoPFValido(t)
-	telefone := factory.TelefoneCelularValido(t)
-
-	c, err := cliente.NewCliente(
-		documento,
-		cliente.TipoPessoaFisica,
+	cliente, err := NewCliente(
+		"529.982.247-25",
+		TipoPessoaFisica,
 		"   ",
-		"cliente@email.com",
-		telefone,
-		"Senha@123",
+		"joao@email.com",
+		"(44) 99999-1234",
+		"senha123",
 	)
 
-	require.ErrorIs(t, err, cliente.ErrNomeObrigatorio)
-
-	require.Zero(t, c)
+	require.ErrorIs(t, err, ErrNomeObrigatorio)
+	require.Equal(t, Cliente{}, cliente)
 }
 
 func TestNewClienteEmailObrigatorio(t *testing.T) {
-	documento := factory.DocumentoPFValido(t)
-	telefone := factory.TelefoneCelularValido(t)
-
-	c, err := cliente.NewCliente(
-		documento,
-		cliente.TipoPessoaFisica,
-		"Caio Henrique",
+	cliente, err := NewCliente(
+		"529.982.247-25",
+		TipoPessoaFisica,
+		"João da Silva",
 		"",
-		telefone,
-		"Senha@123",
+		"(44) 99999-1234",
+		"senha123",
 	)
 
-	require.ErrorIs(t, err, cliente.ErrEmailObrigatorio)
-
-	require.Zero(t, c)
+	require.ErrorIs(t, err, ErrEmailObrigatorio)
+	require.Equal(t, Cliente{}, cliente)
 }
 
 func TestNewClienteSenhaObrigatoria(t *testing.T) {
-	documento := factory.DocumentoPFValido(t)
-	telefone := factory.TelefoneCelularValido(t)
-
-	c, err := cliente.NewCliente(
-		documento,
-		cliente.TipoPessoaFisica,
-		"Caio Henrique",
-		"cliente@email.com",
-		telefone,
+	cliente, err := NewCliente(
+		"529.982.247-25",
+		TipoPessoaFisica,
+		"João da Silva",
+		"joao@email.com",
+		"(44) 99999-1234",
 		"",
 	)
 
-	require.ErrorIs(t, err, cliente.ErrSenhaObrigatoria)
+	require.ErrorIs(t, err, ErrSenhaObrigatoria)
+	require.Equal(t, Cliente{}, cliente)
+}
 
-	require.Zero(t, c)
+func TestNewClienteDocumentoInvalido(t *testing.T) {
+	cliente, err := NewCliente(
+		"123.456.789-00",
+		TipoPessoaFisica,
+		"João da Silva",
+		"joao@email.com",
+		"(44) 99999-1234",
+		"senha123",
+	)
+
+	require.ErrorIs(t, err, ErrCPFInvalido)
+	require.Equal(t, Cliente{}, cliente)
+}
+
+func TestNewClienteTelefoneInvalido(t *testing.T) {
+	cliente, err := NewCliente(
+		"529.982.247-25",
+		TipoPessoaFisica,
+		"João da Silva",
+		"joao@email.com",
+		"123",
+		"senha123",
+	)
+
+	require.ErrorIs(t, err, ErrTelefoneInvalido)
+	require.Equal(t, Cliente{}, cliente)
 }
 
 func TestClienteAtualizar(t *testing.T) {
-	c := factory.ClienteValido(t)
-	telefone := factory.TelefoneFixoValido(t)
+	cliente := NovoClienteValido(t)
 
-	antes := time.Now()
-	err := c.Atualizar("Novo NOME", "novo@email.com", telefone)
-	depois := time.Now()
+	dataAtualizacaoAnterior := cliente.DataAtualizacao()
+
+	time.Sleep(time.Millisecond)
+
+	err := cliente.Atualizar("  mARIA   da SILVA ", "maria@email.com", "(44) 3031-1234")
 
 	require.NoError(t, err)
-	require.Equal(t, "Novo Nome", c.Nome())
-	require.Equal(t, "novo@email.com", c.Email())
-	require.Equal(t, telefone, c.Telefone())
-	require.False(t, c.DataAtualizacao().Before(antes))
-	require.False(t, c.DataAtualizacao().After(depois))
+	require.Equal(t, "Maria Da Silva", cliente.Nome())
+	require.Equal(t, "maria@email.com", cliente.Email())
+	require.Equal(t, "4430311234", cliente.Telefone().String())
+	require.True(t, cliente.DataAtualizacao().After(dataAtualizacaoAnterior))
 }
 
 func TestClienteAtualizarNomeObrigatorio(t *testing.T) {
-	c := factory.ClienteValido(t)
+	cliente := NovoClienteValido(t)
 
-	nomeAnterior := c.Nome()
-	emailAnterior := c.Email()
-	telefoneAnterior := c.Telefone()
-	dataAnterior := c.DataAtualizacao()
+	nomeAnterior := cliente.Nome()
+	emailAnterior := cliente.Email()
+	telefoneAnterior := cliente.Telefone()
+	dataAnterior := cliente.DataAtualizacao()
 
-	err := c.Atualizar("", "novo@email.com", factory.TelefoneFixoValido(t))
+	err := cliente.Atualizar("","novo@email.com","(44) 3031-1234")
 
-	require.ErrorIs(t, err, cliente.ErrNomeObrigatorio)
-	require.Equal(t, nomeAnterior, c.Nome())
-	require.Equal(t, emailAnterior, c.Email())
-	require.Equal(t, telefoneAnterior, c.Telefone())
-	require.Equal(t, dataAnterior, c.DataAtualizacao())
+	require.ErrorIs(t, err, ErrNomeObrigatorio)
+
+	require.Equal(t, nomeAnterior, cliente.Nome())
+	require.Equal(t, emailAnterior, cliente.Email())
+	require.Equal(t, telefoneAnterior, cliente.Telefone())
+	require.Equal(t, dataAnterior, cliente.DataAtualizacao())
 }
 
 func TestClienteAtualizarEmailObrigatorio(t *testing.T) {
-	c := factory.ClienteValido(t)
+	cliente := NovoClienteValido(t)
 
-	nomeAnterior := c.Nome()
-	emailAnterior := c.Email()
-	telefoneAnterior := c.Telefone()
-	dataAnterior := c.DataAtualizacao()
+	nomeAnterior := cliente.Nome()
+	emailAnterior := cliente.Email()
+	telefoneAnterior := cliente.Telefone()
+	dataAnterior := cliente.DataAtualizacao()
 
-	err := c.Atualizar("Novo Nome", "", factory.TelefoneFixoValido(t))
+	err := cliente.Atualizar("Maria da Silva","","(44) 3031-1234")
 
-	require.ErrorIs(t, err, cliente.ErrEmailObrigatorio)
-	require.Equal(t, nomeAnterior, c.Nome())
-	require.Equal(t, emailAnterior, c.Email())
-	require.Equal(t, telefoneAnterior, c.Telefone())
-	require.Equal(t, dataAnterior, c.DataAtualizacao())
+	require.ErrorIs(t, err, ErrEmailObrigatorio)
+
+	require.Equal(t, nomeAnterior, cliente.Nome())
+	require.Equal(t, emailAnterior, cliente.Email())
+	require.Equal(t, telefoneAnterior, cliente.Telefone())
+	require.Equal(t, dataAnterior, cliente.DataAtualizacao())
+}
+
+func TestClienteAtualizarTelefoneInvalido(t *testing.T) {
+	cliente := NovoClienteValido(t)
+
+	nomeAnterior := cliente.Nome()
+	emailAnterior := cliente.Email()
+	telefoneAnterior := cliente.Telefone()
+	dataAnterior := cliente.DataAtualizacao()
+
+	err := cliente.Atualizar("Maria da Silva","maria@email.com","123")
+
+	require.ErrorIs(t, err, ErrTelefoneInvalido)
+
+	require.Equal(t, nomeAnterior, cliente.Nome())
+	require.Equal(t, emailAnterior, cliente.Email())
+	require.Equal(t, telefoneAnterior, cliente.Telefone())
+	require.Equal(t, dataAnterior, cliente.DataAtualizacao())
 }
 
 func TestClienteAlterarSenha(t *testing.T) {
-	c := factory.ClienteValido(t)
+	cliente := NovoClienteValido(t)
 
-	senhaAnterior := c.Senha()
-	antes := time.Now()
-	err := c.AlterarSenha("NovaSenha@123")
-	depois := time.Now()
+	dataAnterior := cliente.DataAtualizacao()
+
+	time.Sleep(time.Millisecond)
+
+	err := cliente.AlterarSenha("novaSenha123")
 
 	require.NoError(t, err)
-
-	require.NotEqual(t, senhaAnterior, c.Senha())
-	require.Equal(t, "NovaSenha@123", c.Senha())
-	require.False(t, c.DataAtualizacao().Before(antes))
-	require.False(t, c.DataAtualizacao().After(depois))
+	require.Equal(t, "novaSenha123", cliente.Senha())
+	require.True(t, cliente.DataAtualizacao().After(dataAnterior))
 }
 
 func TestClienteAlterarSenhaObrigatoria(t *testing.T) {
-	c := factory.ClienteValido(t)
+	cliente := NovoClienteValido(t)
 
-	senhaAnterior := c.Senha()
-	dataAnterior := c.DataAtualizacao()
+	senhaAnterior := cliente.Senha()
+	dataAnterior := cliente.DataAtualizacao()
 
-	err := c.AlterarSenha("")
+	err := cliente.AlterarSenha("")
 
-	require.ErrorIs(t, err, cliente.ErrSenhaObrigatoria)
-
-	require.Equal(t, senhaAnterior, c.Senha())
-
-	require.Equal(t, dataAnterior, c.DataAtualizacao())
+	require.ErrorIs(t, err, ErrSenhaObrigatoria)
+	require.Equal(t, senhaAnterior, cliente.Senha())
+	require.Equal(t, dataAnterior, cliente.DataAtualizacao())
 }
 
 func TestClienteInativar(t *testing.T) {
-	c := factory.ClienteValido(t)
+	cliente := NovoClienteValido(t)
 
-	require.True(t, c.Ativo())
-	antes := time.Now()
-	c.Inativar()
-	depois := time.Now()
+	dataAnterior := cliente.DataAtualizacao()
 
-	require.False(t, c.Ativo())
-	require.False(t, c.DataAtualizacao().Before(antes))
+	time.Sleep(time.Millisecond)
 
-	require.False(t, c.DataAtualizacao().After(depois))
+	cliente.Inativar()
+
+	require.False(t, cliente.Ativo())
+	require.True(t, cliente.DataAtualizacao().After(dataAnterior))
 }
 
-func TestClienteInativarQuandoJaInativoNaoAlteraData(t *testing.T) {
-	c := factory.ClienteValido(t)
+func TestClienteInativarQuandoJaEstiverInativo(t *testing.T) {
+	cliente := NovoClienteValido(t)
 
-	c.Inativar()
-	dataAnterior := c.DataAtualizacao()
-	c.Inativar()
+	cliente.Inativar()
+	dataAnterior := cliente.DataAtualizacao()
 
-	require.False(t, c.Ativo())
-	require.Equal(t, dataAnterior, c.DataAtualizacao())
+	cliente.Inativar()
+
+	require.False(t, cliente.Ativo())
+	require.Equal(t, dataAnterior, cliente.DataAtualizacao())
 }
 
 func TestClienteAtivar(t *testing.T) {
-	c := factory.ClienteValido(t)
+	cliente := NovoClienteValido(t)
 
-	c.Inativar()
-	require.False(t, c.Ativo())
+	cliente.Inativar()
+	dataAnterior := cliente.DataAtualizacao()
 
-	antes := time.Now()
-	c.Ativar()
-	depois := time.Now()
+	time.Sleep(time.Millisecond)
 
-	require.True(t, c.Ativo())
-	require.False(t, c.DataAtualizacao().Before(antes))
-	require.False(t, c.DataAtualizacao().After(depois))
+	cliente.Ativar()
+
+	require.True(t, cliente.Ativo())
+	require.True(t, cliente.DataAtualizacao().After(dataAnterior))
 }
 
-func TestClienteAtivarQuandoJaAtivoNaoAlteraData(t *testing.T) {
-	c := factory.ClienteValido(t)
+func TestClienteAtivarQuandoJaEstiverAtivo(t *testing.T) {
+	cliente := NovoClienteValido(t)
 
-	dataAnterior := c.DataAtualizacao()
-	c.Ativar()
+	dataAnterior := cliente.DataAtualizacao()
 
-	require.True(t, c.Ativo())
-	require.Equal(t, dataAnterior, c.DataAtualizacao())
+	cliente.Ativar()
+
+	require.True(t, cliente.Ativo())
+	require.Equal(t, dataAnterior, cliente.DataAtualizacao())
 }
