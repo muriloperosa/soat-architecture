@@ -135,7 +135,21 @@ Isso abre o prompt interativo do delve (`break`, `continue`, `print`, etc.) cont
 make test
 ```
 
-Roda os testes unitários de todos os pacotes com cobertura. Testes de integração, MySQL real via `testcontainers`, ficam em `test/integration/`.
+Roda os testes unitários de todos os pacotes com cobertura.
+
+### Testes de integração
+
+```bash
+make test-integration
+```
+
+Sobem um MySQL real via `testcontainers` (precisa do Docker rodando), aplicam as migrations de produção e montam o `wiring.Container`/router reais; nada de mock, é o router completo batendo num banco de verdade. Ficam em `test/integration/`, atrás da build tag `integration` (por isso não entram em `make test`; container leva alguns segundos pra subir, não faz sentido no loop rápido do dia a dia).
+
+Organização de `test/integration/`:
+- `setup_test.go`: `TestMain`, sobe o container e monta a aplicação uma vez por execução do pacote.
+- `fixtures_test.go`: dados de teste (`resetDB`, `seedUsuario`).
+- `client_test.go`: helpers de request HTTP (`doRequest`, `doLogin`).
+- Um arquivo por cenário de negócio (ciclo de auth completo, inativação em sessão ativa, senha provisória, autorização por papel, etc.).
 
 ### Cobertura
 

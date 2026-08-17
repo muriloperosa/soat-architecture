@@ -56,6 +56,18 @@ Cada uma dona de uma camada:
 
 Cada fonte de identidade (usuário interno, cliente) implementa as duas via um adapter em infraestrutura. O wiring decide, por endpoint, qual adapter injetar (`LoginUseCase` de `/v1/auth/login` recebe o adapter de `usuario`; o de `/v1/auth/cliente/login` receberia o de `cliente`, quando existir).
 
+## Testes de integração
+
+Unitário com mock prova a lógica de cada peça isolada; não prova que as peças se encaixam. `test/integration/` (pacote `integration_test`, atrás da build tag `integration`, `make test-integration`) sobe um MySQL real via `testcontainers`, aplica as migrations de produção e monta `wiring.Container`/router exatamente como em produção — o teste bate no router de verdade, não numa função isolada.
+
+Organização, um arquivo por responsabilidade:
+- `setup_test.go`: `TestMain` — sobe o container e monta a aplicação uma vez por execução do pacote (subir um container por teste seria caro demais; testes compartilham o container e usam `resetDB` pra isolamento).
+- `fixtures_test.go`: dados de teste (`resetDB`, `seedUsuario` — este último cria usuário direto via use case, sem depender de rota HTTP, pra não esbarrar no problema de "admin zero").
+- `client_test.go`: helpers de request HTTP (`doRequest`, `doLogin`).
+- Um arquivo por cenário de negócio.
+
+Critério do que vira teste de integração: só o que só aparece quando as peças se juntam — wiring, SQL real contra o dialeto do MySQL, comportamento do middleware ao longo de múltiplas requisições. Validação de campo (senha fraca, nome vazio, papel inválido) já está 100% coberta no domínio, unitária; reprovar isso aqui seria desperdício de tempo de execução sem ganho de sinal. Foi essa disciplina que, na prática, achou um bug real: `Updates(struct)` do GORM ignora silenciosamente campos com valor zero (`false`, `""`) a menos que force com `.Select("*")` — inativar usuário (`ativo=false`) e destravar senha provisória (`requer_alterar_senha=false`) não estavam persistindo, e nenhum teste com `sqlmock` pegava isso porque só valida que uma query rodou, não as colunas que ela afeta.
+
 ## Convenção de nomes
 
 Ver [ADR 0005](adr/0005-convencao-de-nomes.md).
@@ -135,7 +147,7 @@ soat-architecture/
 ├── migrations/
 │   ├── main.go            # runner (go run ./migrations up|down|version|force N)
 │   └── mysql/             # schema versionado, numerado (NNNNNN_nome.up/down.sql)
-├── test/integration/      # testcontainers (MySQL real)
+├── test/integration/      # testcontainers (MySQL real), build tag "integration"
 ├── docs/
 │   ├── ARQUITETURA.md     # este documento
 │   ├── event-storming.md
@@ -150,7 +162,7 @@ soat-architecture/
 
 Migrations: `.sql` versionado em `migrations/` na raiz, onde o avaliador procura. Migration é detalhe de persistência, vive fora do domínio.
 
-Testes: cada pacote tem um `*_test.go` de exemplo, unitário, ao lado do código. Os de integração ficam em `test/integration/`.
+Testes: cada pacote tem um `*_test.go` de exemplo, unitário, ao lado do código. Os de integração ficam em `test/integration/` — ver seção "Testes de integração" acima.
 
 ## Wiring e rotas
 
