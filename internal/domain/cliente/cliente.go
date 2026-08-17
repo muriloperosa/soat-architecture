@@ -119,42 +119,60 @@ func (c *Cliente) Inativar() {
 	c.dataAtualizacao = time.Now()
 }
 
-func (c Cliente) ID() uint64 {
-	return c.id
-}
+func (c *Cliente) DefinirID(ID uint64) { c.id = ID }
 
-func (c Cliente) Documento() Documento {
-	return c.documento
-}
+func (c Cliente) ID() uint64 { return c.id }
 
-func (c Cliente) Tipo() TipoPessoa {
-	return c.tipo
-}
+func (c Cliente) Documento() Documento { return c.documento }
 
-func (c Cliente) Nome() string {
-	return c.nome
-}
+func (c Cliente) Tipo() TipoPessoa { return c.tipo }
 
-func (c Cliente) Email() string { //Substitua pelo Value Object de email
-	return c.email
-}
+func (c Cliente) Nome() string { return c.nome }
 
-func (c Cliente) Telefone() Telefone {
-	return c.telefone
-}
+func (c Cliente) Email() string { return c.email }
 
-func (c Cliente) Senha() string { //Substitua pelo Value Object de senha
-	return c.senha
-}
+func (c Cliente) Telefone() Telefone { return c.telefone }
 
-func (c Cliente) Ativo() bool {
-	return c.ativo
-}
+func (c Cliente) Senha() string { return c.senha }
 
-func (c Cliente) DataCadastro() time.Time {
-	return c.dataCadastro
-}
+func (c Cliente) Ativo() bool { return c.ativo }
 
-func (c Cliente) DataAtualizacao() time.Time {
-	return c.dataAtualizacao
+func (c Cliente) DataCadastro() time.Time { return c.dataCadastro }
+
+func (c Cliente) DataAtualizacao() time.Time { return c.dataAtualizacao }
+
+func ReidratarCliente(
+	id uint64,
+	documento string,
+	tipo TipoPessoa,
+	nome string,
+	email string,
+	telefone string,
+	senha string,
+	ativo bool,
+	dataCadastro time.Time,
+	dataAtualizacao time.Time,
+) (*Cliente, error) {
+	documentoVO, err := NewDocumento(documento, tipo)
+	if err != nil {
+		return nil, err
+	}
+
+	telefoneVO, err := NewTelefone(telefone)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Cliente{
+		id:              id,
+		documento:       documentoVO,
+		tipo:            tipo,
+		nome:            nome,
+		email:           email,
+		senha:           senha,
+		telefone:        telefoneVO,
+		ativo:           ativo,
+		dataCadastro:    dataCadastro,
+		dataAtualizacao: dataAtualizacao,
+	}, nil
 }
