@@ -6,6 +6,9 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 
 	_ "github.com/muriloperosa/soat-architecture/docs/swagger"
+	httpauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/auth"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/health"
+	httpusuario "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/usuario"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/wiring"
 )
 
@@ -18,7 +21,9 @@ func NewRouter(c *wiring.Container) *gin.Engine {
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	v1 := router.Group("/v1")
-	RegisterHealthRoutes(v1, c)
+	health.RegisterHealthRoutes(v1, c)
+	httpauth.RegisterAuthRoutes(v1, c)
+	httpusuario.RegisterUsuarioRoutes(v1, c)
 
 	return router
 }
