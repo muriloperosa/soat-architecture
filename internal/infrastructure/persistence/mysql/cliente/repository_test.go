@@ -64,6 +64,7 @@ func clienteRows() *sqlmock.Rows {
 		"nome",
 		"email",
 		"senha_hash",
+		"requer_alterar_senha",
 		"telefone",
 		"ativo",
 		"data_cadastro",
@@ -75,6 +76,7 @@ func clienteRows() *sqlmock.Rows {
 		"João Da Silva",
 		"joao@email.com",
 		"senha123",
+		true,
 		"44999991234",
 		true,
 		agora,
@@ -138,7 +140,7 @@ func TestRepositoryBuscarPorID(t *testing.T) {
 	require.Equal(t, "52998224725", cliente.Documento().String())
 	require.Equal(t, domain.TipoPessoaFisica, cliente.Tipo())
 	require.Equal(t, "João Da Silva", cliente.Nome())
-	require.Equal(t, "joao@email.com", cliente.Email())
+	require.Equal(t, "joao@email.com", cliente.Email().String())
 	require.Equal(t, "44999991234", cliente.Telefone().String())
 	require.True(t, cliente.Ativo())
 
@@ -190,7 +192,7 @@ func TestRepositoryBuscarPorDocumento(t *testing.T) {
 	require.Equal(t, "52998224725", cliente.Documento().String())
 	require.Equal(t, domain.TipoPessoaFisica, cliente.Tipo())
 	require.Equal(t, "João Da Silva", cliente.Nome())
-	require.Equal(t, "joao@email.com", cliente.Email())
+	require.Equal(t, "joao@email.com", cliente.Email().String())
 
 	require.NoError(t, mock.ExpectationsWereMet())
 }
@@ -234,7 +236,7 @@ func TestRepositoryAtualizar(t *testing.T) {
 
 	mock.ExpectExec("UPDATE .*").WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err := repository.Atualizar(context.Background(),cliente)
+	err := repository.Atualizar(context.Background(), cliente)
 
 	require.NoError(t, err)
 	require.NoError(t, mock.ExpectationsWereMet())
@@ -249,7 +251,7 @@ func TestRepositoryAtualizarDeveRetornarClienteNaoEncontrado(t *testing.T) {
 
 	mock.ExpectExec("UPDATE .*").WillReturnResult(sqlmock.NewResult(0, 0))
 
-	err := repository.Atualizar(context.Background(),cliente)
+	err := repository.Atualizar(context.Background(), cliente)
 
 	require.ErrorIs(t, err, domain.ErrClienteNaoEncontrado)
 	require.NoError(t, mock.ExpectationsWereMet())
@@ -266,7 +268,7 @@ func TestRepositoryAtualizarDeveRetornarErroDoBanco(t *testing.T) {
 
 	mock.ExpectExec("UPDATE .*").WillReturnError(erroBanco)
 
-	err := repository.Atualizar(context.Background(),cliente)
+	err := repository.Atualizar(context.Background(), cliente)
 
 	require.ErrorIs(t, err, erroBanco)
 	require.NoError(t, mock.ExpectationsWereMet())

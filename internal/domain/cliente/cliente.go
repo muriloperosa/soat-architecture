@@ -3,20 +3,22 @@ package cliente
 import (
 	"time"
 
+	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared/texts"
 )
 
 type Cliente struct {
-	id              uint64
-	documento       Documento
-	tipo            TipoPessoa
-	nome            string
-	email           string //Substitua pelo Value Object de email
-	senha           string //Substitua pelo Value Object de senha
-	telefone        Telefone
-	ativo           bool
-	dataCadastro    time.Time
-	dataAtualizacao time.Time
+	id                 uint64
+	documento          Documento
+	tipo               TipoPessoa
+	nome               string
+	email              shared.Email
+	senha              shared.SenhaHash
+	telefone           Telefone
+	ativo              bool
+	dataCadastro       time.Time
+	dataAtualizacao    time.Time
+	requerAlterarSenha bool
 }
 
 func NewCliente(
@@ -33,14 +35,6 @@ func NewCliente(
 		return Cliente{}, ErrNomeObrigatorio
 	}
 
-	if email == "" { //Substitua pelo Value Object de email
-		return Cliente{}, ErrEmailObrigatorio
-	}
-
-	if senha == "" { //Substitua pelo Value Object de senha
-		return Cliente{}, ErrSenhaObrigatoria
-	}
-
 	documentoVO, err := NewDocumento(documento, tipo)
 	if err != nil {
 		return Cliente{}, err
@@ -51,18 +45,29 @@ func NewCliente(
 		return Cliente{}, err
 	}
 
+	emailVO, err := shared.NewEmail(email)
+	if err != nil {
+		return Cliente{}, err
+	}
+
+	senhaVO, err := shared.NewSenhaHash(senha)
+	if err != nil {
+		return Cliente{}, err
+	}
+
 	agora := time.Now()
 
 	return Cliente{
-		documento:       documentoVO,
-		tipo:            tipo,
-		nome:            nome,
-		email:           email,
-		telefone:        telefoneVO,
-		senha:           senha,
-		ativo:           true,
-		dataCadastro:    agora,
-		dataAtualizacao: agora,
+		documento:          documentoVO,
+		tipo:               tipo,
+		nome:               nome,
+		email:              emailVO,
+		telefone:           telefoneVO,
+		senha:              senhaVO,
+		ativo:              true,
+		requerAlterarSenha: true,
+		dataCadastro:       agora,
+		dataAtualizacao:    agora,
 	}, nil
 }
 
@@ -73,8 +78,9 @@ func (c *Cliente) Atualizar(nome string, email string, telefone string) error {
 		return ErrNomeObrigatorio
 	}
 
-	if email == "" {
-		return ErrEmailObrigatorio
+	emailVO, err := shared.NewEmail(email)
+	if err != nil {
+		return err
 	}
 
 	telefoneVO, err := NewTelefone(telefone)
@@ -83,7 +89,7 @@ func (c *Cliente) Atualizar(nome string, email string, telefone string) error {
 	}
 
 	c.nome = nome
-	c.email = email
+	c.email = emailVO
 	c.telefone = telefoneVO
 	c.dataAtualizacao = time.Now()
 
@@ -91,11 +97,12 @@ func (c *Cliente) Atualizar(nome string, email string, telefone string) error {
 }
 
 func (c *Cliente) AlterarSenha(novaSenha string) error {
-	if novaSenha == "" {
-		return ErrSenhaObrigatoria
+	senhaVO, err := shared.NewSenhaHash(novaSenha)
+	if err != nil {
+		return err
 	}
-
-	c.senha = novaSenha
+	c.requerAlterarSenha = false
+	c.senha = senhaVO
 	c.dataAtualizacao = time.Now()
 
 	return nil
@@ -129,17 +136,19 @@ func (c Cliente) Tipo() TipoPessoa { return c.tipo }
 
 func (c Cliente) Nome() string { return c.nome }
 
-func (c Cliente) Email() string { return c.email }
+func (c Cliente) Email() shared.Email { return c.email }
 
 func (c Cliente) Telefone() Telefone { return c.telefone }
 
-func (c Cliente) Senha() string { return c.senha }
+func (c Cliente) Senha() shared.SenhaHash { return c.senha }
 
 func (c Cliente) Ativo() bool { return c.ativo }
 
 func (c Cliente) DataCadastro() time.Time { return c.dataCadastro }
 
 func (c Cliente) DataAtualizacao() time.Time { return c.dataAtualizacao }
+
+func (c Cliente) RequerAlterarSenha() bool { return c.requerAlterarSenha }
 
 func ReidratarCliente(
 	id uint64,
@@ -149,6 +158,7 @@ func ReidratarCliente(
 	email string,
 	telefone string,
 	senha string,
+	requerAlterarSenha bool,
 	ativo bool,
 	dataCadastro time.Time,
 	dataAtualizacao time.Time,
@@ -163,16 +173,24 @@ func ReidratarCliente(
 		return nil, err
 	}
 
+	emailVO, err := shared.NewEmail(email)
+	if err != nil {
+		return nil, err
+	}
+
+	senhaVO := shared.RestaurarSenhaHash(senha)
+
 	return &Cliente{
-		id:              id,
-		documento:       documentoVO,
-		tipo:            tipo,
-		nome:            nome,
-		email:           email,
-		senha:           senha,
-		telefone:        telefoneVO,
-		ativo:           ativo,
-		dataCadastro:    dataCadastro,
-		dataAtualizacao: dataAtualizacao,
+		id:                 id,
+		documento:          documentoVO,
+		tipo:               tipo,
+		nome:               nome,
+		email:              emailVO,
+		senha:              senhaVO,
+		requerAlterarSenha: requerAlterarSenha,
+		telefone:           telefoneVO,
+		ativo:              ativo,
+		dataCadastro:       dataCadastro,
+		dataAtualizacao:    dataAtualizacao,
 	}, nil
 }

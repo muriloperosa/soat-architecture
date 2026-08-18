@@ -75,14 +75,15 @@ func (r *Repository) Atualizar(ctx context.Context, cliente *domain.Cliente) err
 		Model(&ClienteModel{}).
 		Where("id = ?", model.ID).
 		Updates(map[string]any{
-			"documento":        model.Documento,
-			"tipo":             model.Tipo,
-			"nome":             model.Nome,
-			"email":            model.Email,
-			"senha_hash":       model.Senha,
-			"telefone":         model.Telefone,
-			"ativo":            model.Ativo,
-			"data_atualizacao": model.DataAtualizacao,
+			"documento":            model.Documento,
+			"tipo":                 model.Tipo,
+			"nome":                 model.Nome,
+			"email":                model.Email,
+			"senha_hash":           model.Senha,
+			"requer_alterar_senha": model.RequerAlterarSenha,
+			"telefone":             model.Telefone,
+			"ativo":                model.Ativo,
+			"data_atualizacao":     model.DataAtualizacao,
 		})
 
 	if result.Error != nil {

@@ -10,8 +10,6 @@ var (
 	ErrTelefoneObrigatorio   = shared.NewValidationError("telefone é obrigatório")
 	ErrTelefoneInvalido      = shared.NewValidationError("telefone inválido")
 	ErrNomeObrigatorio       = shared.NewValidationError("nome é obrigatório")
-	ErrEmailObrigatorio      = shared.NewValidationError("email é obrigatório")
-	ErrSenhaObrigatoria      = shared.NewValidationError("senha é obrigatória")
 	ErrClienteNaoEncontrado  = shared.NewNotFoundError("cliente não encontrado")
 	ErrDocumentoJaCadastrado = shared.NewConflictError("documento já cadastrado")
 	ErrEmailJaCadastrado     = shared.NewConflictError("email já cadastrado")

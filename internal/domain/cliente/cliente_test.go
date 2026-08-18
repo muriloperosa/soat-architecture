@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,10 +45,18 @@ func TestNewClienteValido(t *testing.T) {
 	require.Equal(t, "52998224725", cliente.Documento().String())
 	require.Equal(t, TipoPessoaFisica, cliente.Tipo())
 	require.Equal(t, "João Da Silva", cliente.Nome())
-	require.Equal(t, "joao@email.com", cliente.Email())
+
+	// Value Object Email
+	require.Equal(t, "joao@email.com", cliente.Email().String())
+
 	require.Equal(t, "44999991234", cliente.Telefone().String())
-	require.Equal(t, "senha123", cliente.Senha())
+
+	// A senha armazenada é um SenhaHash, não a senha em texto puro.
+	require.NotEmpty(t, cliente.Senha().String())
+	require.NotEqual(t, "senha123", cliente.Senha().String())
+
 	require.True(t, cliente.Ativo())
+	require.True(t, cliente.RequerAlterarSenha())
 
 	require.False(t, cliente.DataCadastro().IsZero())
 	require.False(t, cliente.DataAtualizacao().IsZero())
@@ -55,7 +64,11 @@ func TestNewClienteValido(t *testing.T) {
 	require.False(t, cliente.DataCadastro().Before(antes))
 	require.False(t, cliente.DataCadastro().After(depois))
 
-	require.Equal(t, cliente.DataCadastro(), cliente.DataAtualizacao())
+	require.Equal(
+		t,
+		cliente.DataCadastro(),
+		cliente.DataAtualizacao(),
+	)
 }
 
 func TestNewClienteNomeObrigatorio(t *testing.T) {
@@ -69,34 +82,6 @@ func TestNewClienteNomeObrigatorio(t *testing.T) {
 	)
 
 	require.ErrorIs(t, err, ErrNomeObrigatorio)
-	require.Equal(t, Cliente{}, cliente)
-}
-
-func TestNewClienteEmailObrigatorio(t *testing.T) {
-	cliente, err := NewCliente(
-		"529.982.247-25",
-		TipoPessoaFisica,
-		"João da Silva",
-		"",
-		"(44) 99999-1234",
-		"senha123",
-	)
-
-	require.ErrorIs(t, err, ErrEmailObrigatorio)
-	require.Equal(t, Cliente{}, cliente)
-}
-
-func TestNewClienteSenhaObrigatoria(t *testing.T) {
-	cliente, err := NewCliente(
-		"529.982.247-25",
-		TipoPessoaFisica,
-		"João da Silva",
-		"joao@email.com",
-		"(44) 99999-1234",
-		"",
-	)
-
-	require.ErrorIs(t, err, ErrSenhaObrigatoria)
 	require.Equal(t, Cliente{}, cliente)
 }
 
@@ -128,20 +113,67 @@ func TestNewClienteTelefoneInvalido(t *testing.T) {
 	require.Equal(t, Cliente{}, cliente)
 }
 
+func TestNewClienteEmailObrigatorio(t *testing.T) {
+	cliente, err := NewCliente(
+		"529.982.247-25",
+		TipoPessoaFisica,
+		"João da Silva",
+		"",
+		"(44) 99999-1234",
+		"senha123",
+	)
+
+	require.Error(t, err)
+	require.Equal(t, Cliente{}, cliente)
+}
+
+func TestNewClienteEmailInvalido(t *testing.T) {
+	cliente, err := NewCliente(
+		"529.982.247-25",
+		TipoPessoaFisica,
+		"João da Silva",
+		"email-invalido",
+		"(44) 99999-1234",
+		"senha123",
+	)
+
+	require.Error(t, err)
+	require.Equal(t, Cliente{}, cliente)
+}
+
+func TestNewClienteSenhaObrigatoria(t *testing.T) {
+	cliente, err := NewCliente(
+		"529.982.247-25",
+		TipoPessoaFisica,
+		"João da Silva",
+		"joao@email.com",
+		"(44) 99999-1234",
+		"",
+	)
+
+	require.Error(t, err)
+	require.Equal(t, Cliente{}, cliente)
+}
+
 func TestClienteAtualizar(t *testing.T) {
 	cliente := novoClienteValido(t)
 
-	dataAtualizacaoAnterior := cliente.DataAtualizacao()
+	dataAnterior := cliente.DataAtualizacao()
 
 	time.Sleep(time.Millisecond)
 
-	err := cliente.Atualizar("  mARIA   da SILVA ", "maria@email.com", "(44) 3031-1234")
+	err := cliente.Atualizar("  mARIA   da SILVA ", "MARIA@EMAIL.COM", "(44) 3031-1234")
 
 	require.NoError(t, err)
+
 	require.Equal(t, "Maria Da Silva", cliente.Nome())
-	require.Equal(t, "maria@email.com", cliente.Email())
+
+	// O próprio VO normaliza o e-mail.
+	require.Equal(t, "maria@email.com", cliente.Email().String())
+
 	require.Equal(t, "4430311234", cliente.Telefone().String())
-	require.True(t, cliente.DataAtualizacao().After(dataAtualizacaoAnterior))
+
+	require.True(t, cliente.DataAtualizacao().After(dataAnterior))
 }
 
 func TestClienteAtualizarNomeObrigatorio(t *testing.T) {
@@ -152,7 +184,7 @@ func TestClienteAtualizarNomeObrigatorio(t *testing.T) {
 	telefoneAnterior := cliente.Telefone()
 	dataAnterior := cliente.DataAtualizacao()
 
-	err := cliente.Atualizar("","novo@email.com","(44) 3031-1234")
+	err := cliente.Atualizar("", "novo@email.com", "(44) 3031-1234")
 
 	require.ErrorIs(t, err, ErrNomeObrigatorio)
 
@@ -170,9 +202,28 @@ func TestClienteAtualizarEmailObrigatorio(t *testing.T) {
 	telefoneAnterior := cliente.Telefone()
 	dataAnterior := cliente.DataAtualizacao()
 
-	err := cliente.Atualizar("Maria da Silva","","(44) 3031-1234")
+	err := cliente.Atualizar("Maria da Silva", "", "(44) 3031-1234")
 
-	require.ErrorIs(t, err, ErrEmailObrigatorio)
+	require.Error(t, err)
+
+	// A entidade não deve ser alterada parcialmente.
+	require.Equal(t, nomeAnterior, cliente.Nome())
+	require.Equal(t, emailAnterior, cliente.Email())
+	require.Equal(t, telefoneAnterior, cliente.Telefone())
+	require.Equal(t, dataAnterior, cliente.DataAtualizacao())
+}
+
+func TestClienteAtualizarEmailInvalido(t *testing.T) {
+	cliente := novoClienteValido(t)
+
+	nomeAnterior := cliente.Nome()
+	emailAnterior := cliente.Email()
+	telefoneAnterior := cliente.Telefone()
+	dataAnterior := cliente.DataAtualizacao()
+
+	err := cliente.Atualizar("Maria da Silva", "email-invalido", "(44) 3031-1234")
+
+	require.Error(t, err)
 
 	require.Equal(t, nomeAnterior, cliente.Nome())
 	require.Equal(t, emailAnterior, cliente.Email())
@@ -188,10 +239,16 @@ func TestClienteAtualizarTelefoneInvalido(t *testing.T) {
 	telefoneAnterior := cliente.Telefone()
 	dataAnterior := cliente.DataAtualizacao()
 
-	err := cliente.Atualizar("Maria da Silva","maria@email.com","123")
+	err := cliente.Atualizar(
+		"Maria da Silva",
+		"maria@email.com",
+		"123",
+	)
 
 	require.ErrorIs(t, err, ErrTelefoneInvalido)
 
+	// Como a alteração somente ocorre após todas as validações,
+	// nenhum dado deve ter sido modificado.
 	require.Equal(t, nomeAnterior, cliente.Nome())
 	require.Equal(t, emailAnterior, cliente.Email())
 	require.Equal(t, telefoneAnterior, cliente.Telefone())
@@ -203,38 +260,58 @@ func TestClienteAlterarSenha(t *testing.T) {
 
 	dataAnterior := cliente.DataAtualizacao()
 
+	require.True(t, cliente.RequerAlterarSenha())
+	require.True(t, cliente.Senha().Confere("senha123"))
+
 	time.Sleep(time.Millisecond)
 
 	err := cliente.AlterarSenha("novaSenha123")
 
 	require.NoError(t, err)
-	require.Equal(t, "novaSenha123", cliente.Senha())
-	require.True(t, cliente.DataAtualizacao().After(dataAnterior))
+
+	require.False(t, cliente.Senha().Confere("senha123"))
+	require.True(t, cliente.Senha().Confere("novaSenha123"))
+	require.False(t, cliente.RequerAlterarSenha())
+
+	require.True(
+		t,
+		cliente.DataAtualizacao().After(dataAnterior),
+	)
 }
 
-func TestClienteAlterarSenhaObrigatoria(t *testing.T) {
+func TestClienteAlterarSenhaInvalida(t *testing.T) {
 	cliente := novoClienteValido(t)
 
 	senhaAnterior := cliente.Senha()
 	dataAnterior := cliente.DataAtualizacao()
 
+	require.True(t, cliente.RequerAlterarSenha())
+
 	err := cliente.AlterarSenha("")
 
-	require.ErrorIs(t, err, ErrSenhaObrigatoria)
+	require.Error(t, err)
+
 	require.Equal(t, senhaAnterior, cliente.Senha())
 	require.Equal(t, dataAnterior, cliente.DataAtualizacao())
+
+	// Se a alteração falhou, a troca continua sendo obrigatória.
+	require.True(t, cliente.RequerAlterarSenha())
+}
+
+func TestClienteDefinirID(t *testing.T) {
+	cliente := novoClienteValido(t)
+	require.Equal(t, uint64(0), cliente.ID())
+	cliente.DefinirID(10)
+	require.Equal(t, uint64(10), cliente.ID())
 }
 
 func TestClienteInativar(t *testing.T) {
 	cliente := novoClienteValido(t)
-
 	dataAnterior := cliente.DataAtualizacao()
-
 	time.Sleep(time.Millisecond)
-
 	cliente.Inativar()
-
 	require.False(t, cliente.Ativo())
+
 	require.True(t, cliente.DataAtualizacao().After(dataAnterior))
 }
 
@@ -242,6 +319,7 @@ func TestClienteInativarQuandoJaEstiverInativo(t *testing.T) {
 	cliente := novoClienteValido(t)
 
 	cliente.Inativar()
+
 	dataAnterior := cliente.DataAtualizacao()
 
 	cliente.Inativar()
@@ -254,6 +332,7 @@ func TestClienteAtivar(t *testing.T) {
 	cliente := novoClienteValido(t)
 
 	cliente.Inativar()
+
 	dataAnterior := cliente.DataAtualizacao()
 
 	time.Sleep(time.Millisecond)
@@ -261,6 +340,7 @@ func TestClienteAtivar(t *testing.T) {
 	cliente.Ativar()
 
 	require.True(t, cliente.Ativo())
+
 	require.True(t, cliente.DataAtualizacao().After(dataAnterior))
 }
 
@@ -273,4 +353,101 @@ func TestClienteAtivarQuandoJaEstiverAtivo(t *testing.T) {
 
 	require.True(t, cliente.Ativo())
 	require.Equal(t, dataAnterior, cliente.DataAtualizacao())
+}
+
+func TestReidratarCliente(t *testing.T) {
+	dataCadastro := time.Now().Add(-time.Hour)
+	dataAtualizacao := time.Now()
+
+	senhaHash, err := shared.NewSenhaHash("senha123")
+	require.NoError(t, err)
+
+	cliente, err := ReidratarCliente(
+		10,
+		"52998224725",
+		TipoPessoaFisica,
+		"João Da Silva",
+		"joao@email.com",
+		"44999991234",
+		senhaHash.String(),
+		false,
+		true,
+		dataCadastro,
+		dataAtualizacao,
+	)
+
+	require.NoError(t, err)
+	require.NotNil(t, cliente)
+
+	require.Equal(t, uint64(10), cliente.ID())
+	require.Equal(t, "52998224725", cliente.Documento().String())
+	require.Equal(t, TipoPessoaFisica, cliente.Tipo())
+	require.Equal(t, "João Da Silva", cliente.Nome())
+	require.Equal(t, "joao@email.com", cliente.Email().String())
+	require.Equal(t, "44999991234", cliente.Telefone().String())
+
+	require.Equal(t, senhaHash.String(), cliente.Senha().String())
+	require.True(t, cliente.Senha().Confere("senha123"))
+
+	require.False(t, cliente.RequerAlterarSenha())
+	require.True(t, cliente.Ativo())
+	require.Equal(t, dataCadastro, cliente.DataCadastro())
+	require.Equal(t, dataAtualizacao, cliente.DataAtualizacao())
+}
+
+func TestReidratarClienteDocumentoInvalido(t *testing.T) {
+	cliente, err := ReidratarCliente(
+		10,
+		"12345678900",
+		TipoPessoaFisica,
+		"João Da Silva",
+		"joao@email.com",
+		"44999991234",
+		"senha123",
+		true,
+		true,
+		time.Now(),
+		time.Now(),
+	)
+
+	require.Nil(t, cliente)
+	require.ErrorIs(t, err, ErrCPFInvalido)
+}
+
+func TestReidratarClienteTelefoneInvalido(t *testing.T) {
+	cliente, err := ReidratarCliente(
+		10,
+		"52998224725",
+		TipoPessoaFisica,
+		"João Da Silva",
+		"joao@email.com",
+		"123",
+		"senha123",
+		true,
+		true,
+		time.Now(),
+		time.Now(),
+	)
+
+	require.Nil(t, cliente)
+	require.ErrorIs(t, err, ErrTelefoneInvalido)
+}
+
+func TestReidratarClienteEmailInvalido(t *testing.T) {
+	cliente, err := ReidratarCliente(
+		10,
+		"52998224725",
+		TipoPessoaFisica,
+		"João Da Silva",
+		"email-invalido",
+		"44999991234",
+		"senha123",
+		true,
+		true,
+		time.Now(),
+		time.Now(),
+	)
+
+	require.Nil(t, cliente)
+	require.Error(t, err)
 }
