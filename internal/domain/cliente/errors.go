@@ -13,4 +13,5 @@ var (
 	ErrClienteNaoEncontrado  = shared.NewNotFoundError("cliente não encontrado")
 	ErrDocumentoJaCadastrado = shared.NewConflictError("documento já cadastrado")
 	ErrEmailJaCadastrado     = shared.NewConflictError("email já cadastrado")
+	ErrClienteJaCadastrado   = shared.NewConflictError("cliente já cadastrado")
 )
