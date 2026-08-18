@@ -12,6 +12,20 @@ type CriarClienteInput struct {
 	Senha     string
 }
 
+// AtualizarClienteInput é o DTO de entrada do AtualizarClienteUseCase.
+type AtualizarClienteInput struct {
+	ID       uint64
+	Nome     string
+	Email    string
+	Telefone string
+}
+
+// AlterarSenhaInput é o DTO de entrada do AlterarSenhaUseCase.
+type AlterarSenhaInput struct {
+	ClienteID uint64
+	SenhaNova string
+}
+
 // ClienteOutput é o DTO de saída comum aos use cases de gestão/consulta de cliente.
 type ClienteOutput struct {
 	ID                 uint64
