@@ -2,8 +2,8 @@ package cliente
 
 import domain "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
 
-func toModel(cliente domain.Cliente) ClienteModel {
-	return ClienteModel{
+func toModel(cliente domain.Cliente) *ClienteModel {
+	return &ClienteModel{
 		ID:                 cliente.ID(),
 		Documento:          cliente.Documento().String(),
 		Tipo:               string(cliente.Tipo()),
