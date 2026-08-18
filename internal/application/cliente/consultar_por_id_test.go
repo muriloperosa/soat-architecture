@@ -9,19 +9,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewConsultarClientePorDocumentoUseCase(t *testing.T) {
+func TestNewConsultarClientePorIDUseCase(t *testing.T) {
 	repository := mocks.NewRepository(t)
 
-	useCase := NewConsultarClientePorDocumentoUseCase(repository)
+	useCase := NewConsultarClientePorIDUseCase(repository)
 
 	require.NotNil(t, useCase)
 	require.Equal(t, repository, useCase.repository)
 }
 
-func TestConsultarPorDocumentoUseCaseExecutarComSucesso(t *testing.T) {
+func TestConsultarPorIDUseCaseExecutarComSucesso(t *testing.T) {
 	ctx := context.Background()
 	repository := mocks.NewRepository(t)
-	useCase := NewConsultarClientePorDocumentoUseCase(repository)
+	useCase := NewConsultarClientePorIDUseCase(repository)
 
 	cliente, err := domain.NewCliente(
 		"529.982.247-25",
@@ -35,15 +35,13 @@ func TestConsultarPorDocumentoUseCaseExecutarComSucesso(t *testing.T) {
 
 	cliente.DefinirID(1)
 
-	documento := "52998224725"
-
 	repository.
 		EXPECT().
-		BuscarPorDocumento(ctx, documento).
+		BuscarPorID(ctx, uint64(1)).
 		Return(&cliente, nil).
 		Once()
 
-	resultado, err := useCase.Executar(ctx, documento)
+	resultado, err := useCase.Executar(ctx, 1)
 
 	require.NoError(t, err)
 
@@ -57,20 +55,18 @@ func TestConsultarPorDocumentoUseCaseExecutarComSucesso(t *testing.T) {
 	require.True(t, resultado.RequerAlterarSenha)
 }
 
-func TestConsultarPorDocumentoUseCaseExecutarDeveRetornarErro(t *testing.T) {
+func TestConsultarPorIDUseCaseExecutarDeveRetornarErro(t *testing.T) {
 	ctx := context.Background()
 	repository := mocks.NewRepository(t)
-	useCase := NewConsultarClientePorDocumentoUseCase(repository)
-
-	documento := "00000000000"
+	useCase := NewConsultarClientePorIDUseCase(repository)
 
 	repository.
 		EXPECT().
-		BuscarPorDocumento(ctx, documento).
+		BuscarPorID(ctx, uint64(999)).
 		Return(nil, domain.ErrClienteNaoEncontrado).
 		Once()
 
-	resultado, err := useCase.Executar(ctx, documento)
+	resultado, err := useCase.Executar(ctx, 999)
 
 	require.Equal(t, ClienteOutput{}, resultado)
 	require.ErrorIs(t, err, domain.ErrClienteNaoEncontrado)

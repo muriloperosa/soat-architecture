@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func cadastrarInputValido() CadastrarInput {
-	return CadastrarInput{
+func criarClienteInputValido() CriarClienteInput {
+	return CriarClienteInput{
 		Documento: "529.982.247-25",
 		Tipo:      domain.TipoPessoaFisica,
 		Nome:      "João da Silva",
@@ -22,7 +22,7 @@ func cadastrarInputValido() CadastrarInput {
 	}
 }
 
-func mockCliente() interface{} {
+func clienteValidoMatcher() interface{} {
 	return mock.MatchedBy(func(cliente *domain.Cliente) bool {
 		if cliente == nil {
 			return false
@@ -39,21 +39,21 @@ func mockCliente() interface{} {
 	})
 }
 
-func TestNewCadastrar(t *testing.T) {
+func TestNewCriarClienteUseCase(t *testing.T) {
 	repository := mocks.NewRepository(t)
 
-	useCase := NewCadastrar(repository)
+	useCase := NewCriarClienteUseCase(repository)
 
 	require.NotNil(t, useCase)
 	require.Equal(t, repository, useCase.repository)
 }
 
-func TestCadastrarExecutarComSucesso(t *testing.T) {
+func TestCriarClienteUseCaseExecutarComSucesso(t *testing.T) {
 	ctx := context.Background()
 	repository := mocks.NewRepository(t)
-	useCase := NewCadastrar(repository)
+	useCase := NewCriarClienteUseCase(repository)
 
-	input := cadastrarInputValido()
+	input := criarClienteInputValido()
 
 	repository.
 		EXPECT().
@@ -63,31 +63,33 @@ func TestCadastrarExecutarComSucesso(t *testing.T) {
 
 	repository.
 		EXPECT().
-		Salvar(ctx, mockCliente()).
+		Salvar(ctx, clienteValidoMatcher()).
+		Run(func(ctx context.Context, cliente *domain.Cliente) {
+			cliente.DefinirID(1)
+		}).
 		Return(nil).
 		Once()
 
-	cliente, err := useCase.Executar(ctx, input)
+	output, err := useCase.Executar(ctx, input)
 
 	require.NoError(t, err)
-	require.NotNil(t, cliente)
 
-	require.Equal(t, "52998224725", cliente.Documento().String())
-	require.Equal(t, domain.TipoPessoaFisica, cliente.Tipo())
-	require.Equal(t, "João Da Silva", cliente.Nome())
-	require.Equal(t, "joao@email.com", cliente.Email().String())
-	require.Equal(t, "44999991234", cliente.Telefone().String())
-	require.True(t, cliente.Senha().Confere("senha123"))
-	require.True(t, cliente.Ativo())
-	require.True(t, cliente.RequerAlterarSenha())
+	require.Equal(t, uint64(1), output.ID)
+	require.Equal(t, "52998224725", output.Documento)
+	require.Equal(t, domain.TipoPessoaFisica, output.Tipo)
+	require.Equal(t, "João Da Silva", output.Nome)
+	require.Equal(t, "joao@email.com", output.Email)
+	require.Equal(t, "44999991234", output.Telefone)
+	require.True(t, output.Ativo)
+	require.True(t, output.RequerAlterarSenha)
 }
 
-func TestCadastrarExecutarDeveRetornarErroAoBuscarCliente(t *testing.T) {
+func TestCriarClienteUseCaseExecutarDeveRetornarErroAoBuscarCliente(t *testing.T) {
 	ctx := context.Background()
 	repository := mocks.NewRepository(t)
-	useCase := NewCadastrar(repository)
+	useCase := NewCriarClienteUseCase(repository)
 
-	input := cadastrarInputValido()
+	input := criarClienteInputValido()
 
 	erroRepository := errors.New("erro ao consultar banco")
 
@@ -97,18 +99,18 @@ func TestCadastrarExecutarDeveRetornarErroAoBuscarCliente(t *testing.T) {
 		Return(nil, erroRepository).
 		Once()
 
-	cliente, err := useCase.Executar(ctx, input)
+	output, err := useCase.Executar(ctx, input)
 
-	require.Nil(t, cliente)
+	require.Equal(t, ClienteOutput{}, output)
 	require.ErrorIs(t, err, erroRepository)
 }
 
-func TestCadastrarExecutarDeveRetornarErroQuandoClienteJaExistir(t *testing.T) {
+func TestCriarClienteUseCaseExecutarDeveRetornarErroQuandoClienteJaExistir(t *testing.T) {
 	ctx := context.Background()
 	repository := mocks.NewRepository(t)
-	useCase := NewCadastrar(repository)
+	useCase := NewCriarClienteUseCase(repository)
 
-	input := cadastrarInputValido()
+	input := criarClienteInputValido()
 
 	existente, err := domain.NewCliente(
 		input.Documento,
@@ -126,18 +128,18 @@ func TestCadastrarExecutarDeveRetornarErroQuandoClienteJaExistir(t *testing.T) {
 		Return(&existente, nil).
 		Once()
 
-	cliente, err := useCase.Executar(ctx, input)
+	output, err := useCase.Executar(ctx, input)
 
-	require.Nil(t, cliente)
+	require.Equal(t, ClienteOutput{}, output)
 	require.ErrorIs(t, err, domain.ErrClienteJaCadastrado)
 }
 
-func TestCadastrarExecutarDeveRetornarErroQuandoClienteForInvalido(t *testing.T) {
+func TestCriarClienteUseCaseExecutarDeveRetornarErroQuandoClienteForInvalido(t *testing.T) {
 	ctx := context.Background()
 	repository := mocks.NewRepository(t)
-	useCase := NewCadastrar(repository)
+	useCase := NewCriarClienteUseCase(repository)
 
-	input := cadastrarInputValido()
+	input := criarClienteInputValido()
 	input.Nome = ""
 
 	repository.
@@ -146,18 +148,18 @@ func TestCadastrarExecutarDeveRetornarErroQuandoClienteForInvalido(t *testing.T)
 		Return(nil, domain.ErrClienteNaoEncontrado).
 		Once()
 
-	cliente, err := useCase.Executar(ctx, input)
+	output, err := useCase.Executar(ctx, input)
 
-	require.Nil(t, cliente)
+	require.Equal(t, ClienteOutput{}, output)
 	require.ErrorIs(t, err, domain.ErrNomeObrigatorio)
 }
 
-func TestCadastrarExecutarDeveRetornarErroAoSalvar(t *testing.T) {
+func TestCriarClienteUseCaseExecutarDeveRetornarErroAoSalvar(t *testing.T) {
 	ctx := context.Background()
 	repository := mocks.NewRepository(t)
-	useCase := NewCadastrar(repository)
+	useCase := NewCriarClienteUseCase(repository)
 
-	input := cadastrarInputValido()
+	input := criarClienteInputValido()
 
 	erroRepository := errors.New("erro ao salvar cliente")
 
@@ -169,12 +171,12 @@ func TestCadastrarExecutarDeveRetornarErroAoSalvar(t *testing.T) {
 
 	repository.
 		EXPECT().
-		Salvar(ctx, mockCliente()).
+		Salvar(ctx, clienteValidoMatcher()).
 		Return(erroRepository).
 		Once()
 
-	cliente, err := useCase.Executar(ctx, input)
+	output, err := useCase.Executar(ctx, input)
 
-	require.Nil(t, cliente)
+	require.Equal(t, ClienteOutput{}, output)
 	require.ErrorIs(t, err, erroRepository)
 }

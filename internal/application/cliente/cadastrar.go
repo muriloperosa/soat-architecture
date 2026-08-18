@@ -7,31 +7,25 @@ import (
 	domain "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
 )
 
-type CadastrarInput struct {
-	Documento string
-	Tipo      domain.TipoPessoa
-	Nome      string
-	Email     string
-	Telefone  string
-	Senha     string
-}
-
-type Cadastrar struct {
+type CriarClienteUseCase struct {
 	repository domain.Repository
 }
 
-func NewCadastrar(repository domain.Repository) *Cadastrar {
-	return &Cadastrar{repository: repository}
+func NewCriarClienteUseCase(repository domain.Repository) *CriarClienteUseCase {
+	return &CriarClienteUseCase{repository: repository}
 }
 
-func (uc *Cadastrar) Executar(ctx context.Context, input CadastrarInput) (*domain.Cliente, error) {
+func (uc *CriarClienteUseCase) Executar(
+	ctx context.Context,
+	input CriarClienteInput,
+) (ClienteOutput, error) {
 	existente, err := uc.repository.BuscarPorDocumento(ctx, input.Documento)
 	if err != nil && !errors.Is(err, domain.ErrClienteNaoEncontrado) {
-		return nil, err
+		return ClienteOutput{}, err
 	}
 
 	if existente != nil {
-		return nil, domain.ErrClienteJaCadastrado
+		return ClienteOutput{}, domain.ErrClienteJaCadastrado
 	}
 
 	cliente, err := domain.NewCliente(
@@ -43,12 +37,12 @@ func (uc *Cadastrar) Executar(ctx context.Context, input CadastrarInput) (*domai
 		input.Senha,
 	)
 	if err != nil {
-		return nil, err
+		return ClienteOutput{}, err
 	}
 
 	if err := uc.repository.Salvar(ctx, &cliente); err != nil {
-		return nil, err
+		return ClienteOutput{}, err
 	}
 
-	return &cliente, nil
+	return toOutput(&cliente), nil
 }
