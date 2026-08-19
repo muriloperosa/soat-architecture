@@ -8,6 +8,7 @@ import (
 	_ "github.com/muriloperosa/soat-architecture/docs/swagger"
 	httpauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/auth"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/health"
+	httppeca "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/peca"
 	httpusuario "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/usuario"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/wiring"
 )
@@ -24,6 +25,7 @@ func NewRouter(c *wiring.Container) *gin.Engine {
 	health.RegisterHealthRoutes(v1, c)
 	httpauth.RegisterAuthRoutes(v1, c)
 	httpusuario.RegisterUsuarioRoutes(v1, c)
+	httppeca.RegisterPecaRoutes(v1, c)
 
 	return router
 }

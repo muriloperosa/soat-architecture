@@ -190,10 +190,10 @@ func TestPeca_AtribuirID_PreencheID(t *testing.T) {
 
 func TestRestaurarPeca_NaoRevalidaEPreservaEstado(t *testing.T) {
 	agora := time.Now()
-	p := peca.RestaurarPeca(42, "PC123", "Peca 1", "Marca 1", "Descricao 1", 100.0, 10, 5, 1, false, agora, agora)
+	p := peca.RestaurarPeca(42, "P123", "Peca 1", "Marca 1", "Descricao 1", 100.0, 10, 5, 1, false, agora, agora)
 
 	require.Equal(t, uint64(42), p.ID())
-	require.Equal(t, "PC123", p.Codigo())
+	require.Equal(t, "P123", p.Codigo())
 	require.Equal(t, "Peca 1", p.Nome())
 	require.False(t, p.Ativo())
 }

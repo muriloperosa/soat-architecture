@@ -296,6 +296,363 @@
                 }
             }
         },
+        "/v1/pecas": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cadastra uma peça de estoque. Restrito a admin.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pecas"
+                ],
+                "summary": "Cadastra peça",
+                "parameters": [
+                    {
+                        "description": "Dados da peça",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/peca.CadastrarPecaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/peca.PecaResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/pecas/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna os dados de uma peça pelo ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pecas"
+                ],
+                "summary": "Consulta peça por ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da peça",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/peca.PecaResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Atualiza dados cadastrais e estoque mínimo de uma peça. Restrito a admin.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pecas"
+                ],
+                "summary": "Atualiza peça",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da peça",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados atualizados",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/peca.AtualizarPecaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/peca.PecaResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/pecas/{id}/ativar": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Reabilita uma peça pra uso em Ordens de Serviço. Restrito a admin.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pecas"
+                ],
+                "summary": "Ativa peça",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da peça",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Sem conteúdo"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/pecas/{id}/inativar": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Bloqueia uma peça de ser usada em novas Ordens de Serviço. Restrito a admin.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pecas"
+                ],
+                "summary": "Inativa peça",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da peça",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Sem conteúdo"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/pecas/{id}/repor-estoque": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Adiciona quantidade ao estoque físico de uma peça (ex. entrada de fornecedor). Restrito a admin.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pecas"
+                ],
+                "summary": "Repõe estoque de peça",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da peça",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Quantidade a repor",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/peca.ReporEstoqueRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/peca.PecaResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/usuarios": {
             "post": {
                 "security": [
@@ -705,6 +1062,129 @@
                 "type": {
                     "type": "string",
                     "example": "validation"
+                }
+            }
+        },
+        "peca.AtualizarPecaRequest": {
+            "type": "object",
+            "required": [
+                "descricao",
+                "marca",
+                "nome",
+                "preco"
+            ],
+            "properties": {
+                "descricao": {
+                    "type": "string",
+                    "example": "Pastilha de freio dianteira"
+                },
+                "estoque_minimo": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "marca": {
+                    "type": "string",
+                    "example": "Bosch"
+                },
+                "nome": {
+                    "type": "string",
+                    "example": "Pastilha de freio"
+                },
+                "preco": {
+                    "type": "number",
+                    "example": 89.9
+                }
+            }
+        },
+        "peca.CadastrarPecaRequest": {
+            "type": "object",
+            "required": [
+                "descricao",
+                "marca",
+                "nome",
+                "preco"
+            ],
+            "properties": {
+                "descricao": {
+                    "type": "string",
+                    "example": "Pastilha de freio dianteira"
+                },
+                "estoque_minimo": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "marca": {
+                    "type": "string",
+                    "example": "Bosch"
+                },
+                "nome": {
+                    "type": "string",
+                    "example": "Pastilha de freio"
+                },
+                "preco": {
+                    "type": "number",
+                    "example": 89.9
+                },
+                "quantidade_em_estoque": {
+                    "type": "integer",
+                    "example": 20
+                }
+            }
+        },
+        "peca.PecaResponse": {
+            "type": "object",
+            "properties": {
+                "ativo": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "codigo": {
+                    "type": "string",
+                    "example": "PC1J3K2L1M0N"
+                },
+                "criado_por": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "descricao": {
+                    "type": "string",
+                    "example": "Pastilha de freio dianteira"
+                },
+                "estoque_minimo": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "marca": {
+                    "type": "string",
+                    "example": "Bosch"
+                },
+                "nome": {
+                    "type": "string",
+                    "example": "Pastilha de freio"
+                },
+                "preco": {
+                    "type": "number",
+                    "example": 89.9
+                },
+                "quantidade_em_estoque": {
+                    "type": "integer",
+                    "example": 20
+                }
+            }
+        },
+        "peca.ReporEstoqueRequest": {
+            "type": "object",
+            "required": [
+                "quantidade"
+            ],
+            "properties": {
+                "quantidade": {
+                    "type": "integer",
+                    "example": 10
                 }
             }
         },

@@ -91,7 +91,7 @@ func RestaurarPeca(id uint64, codigo, nome, marca, descricao string, preco float
 }
 
 func gerarCodigo() string {
-	return "PC" + strconv.FormatInt(time.Now().UnixNano(), 36)
+	return "P" + strconv.FormatInt(time.Now().UnixNano(), 36)
 }
 
 // Atualizar troca os dados cadastrais e o estoque mínimo. O estoque físico

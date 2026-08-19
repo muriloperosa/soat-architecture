@@ -57,6 +57,96 @@ definitions:
         example: validation
         type: string
     type: object
+  peca.AtualizarPecaRequest:
+    properties:
+      descricao:
+        example: Pastilha de freio dianteira
+        type: string
+      estoque_minimo:
+        example: 5
+        type: integer
+      marca:
+        example: Bosch
+        type: string
+      nome:
+        example: Pastilha de freio
+        type: string
+      preco:
+        example: 89.9
+        type: number
+    required:
+    - descricao
+    - marca
+    - nome
+    - preco
+    type: object
+  peca.CadastrarPecaRequest:
+    properties:
+      descricao:
+        example: Pastilha de freio dianteira
+        type: string
+      estoque_minimo:
+        example: 5
+        type: integer
+      marca:
+        example: Bosch
+        type: string
+      nome:
+        example: Pastilha de freio
+        type: string
+      preco:
+        example: 89.9
+        type: number
+      quantidade_em_estoque:
+        example: 20
+        type: integer
+    required:
+    - descricao
+    - marca
+    - nome
+    - preco
+    type: object
+  peca.PecaResponse:
+    properties:
+      ativo:
+        example: true
+        type: boolean
+      codigo:
+        example: PC1J3K2L1M0N
+        type: string
+      criado_por:
+        example: 1
+        type: integer
+      descricao:
+        example: Pastilha de freio dianteira
+        type: string
+      estoque_minimo:
+        example: 5
+        type: integer
+      id:
+        example: 1
+        type: integer
+      marca:
+        example: Bosch
+        type: string
+      nome:
+        example: Pastilha de freio
+        type: string
+      preco:
+        example: 89.9
+        type: number
+      quantidade_em_estoque:
+        example: 20
+        type: integer
+    type: object
+  peca.ReporEstoqueRequest:
+    properties:
+      quantidade:
+        example: 10
+        type: integer
+    required:
+    - quantidade
+    type: object
   shared.PapelUsuario:
     enum:
     - ADMINISTRADOR
@@ -331,6 +421,237 @@ paths:
       summary: Verifica saúde da API
       tags:
       - Health
+  /v1/pecas:
+    post:
+      consumes:
+      - application/json
+      description: Cadastra uma peça de estoque. Restrito a admin.
+      parameters:
+      - description: Dados da peça
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/peca.CadastrarPecaRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/peca.PecaResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Cadastra peça
+      tags:
+      - Pecas
+  /v1/pecas/{id}:
+    get:
+      description: Retorna os dados de uma peça pelo ID.
+      parameters:
+      - description: ID da peça
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/peca.PecaResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Consulta peça por ID
+      tags:
+      - Pecas
+    put:
+      consumes:
+      - application/json
+      description: Atualiza dados cadastrais e estoque mínimo de uma peça. Restrito
+        a admin.
+      parameters:
+      - description: ID da peça
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Dados atualizados
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/peca.AtualizarPecaRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/peca.PecaResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualiza peça
+      tags:
+      - Pecas
+  /v1/pecas/{id}/ativar:
+    patch:
+      description: Reabilita uma peça pra uso em Ordens de Serviço. Restrito a admin.
+      parameters:
+      - description: ID da peça
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Sem conteúdo
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Ativa peça
+      tags:
+      - Pecas
+  /v1/pecas/{id}/inativar:
+    patch:
+      description: Bloqueia uma peça de ser usada em novas Ordens de Serviço. Restrito
+        a admin.
+      parameters:
+      - description: ID da peça
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Sem conteúdo
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Inativa peça
+      tags:
+      - Pecas
+  /v1/pecas/{id}/repor-estoque:
+    patch:
+      consumes:
+      - application/json
+      description: Adiciona quantidade ao estoque físico de uma peça (ex. entrada
+        de fornecedor). Restrito a admin.
+      parameters:
+      - description: ID da peça
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Quantidade a repor
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/peca.ReporEstoqueRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/peca.PecaResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Repõe estoque de peça
+      tags:
+      - Pecas
   /v1/usuarios:
     post:
       consumes:
