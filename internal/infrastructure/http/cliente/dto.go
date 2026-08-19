@@ -32,4 +32,5 @@ type ClienteResponse struct {
 	Telefone           string `json:"telefone" example:"11999998888"`
 	Ativo              bool   `json:"ativo" example:"true"`
 	RequerAlterarSenha bool   `json:"requer_alterar_senha" example:"true"`
+	CriadoPor          uint64 `json:"criado_por" example:"1"`
 }

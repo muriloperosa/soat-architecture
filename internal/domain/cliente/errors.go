@@ -14,4 +14,5 @@ var (
 	ErrDocumentoJaCadastrado = shared.NewConflictError("documento já cadastrado")
 	ErrEmailJaCadastrado     = shared.NewConflictError("email já cadastrado")
 	ErrClienteJaCadastrado   = shared.NewConflictError("cliente já cadastrado")
+	ErrCriadoPorObrigatorio  = shared.NewValidationError("usuário criador é obrigatório")
 )

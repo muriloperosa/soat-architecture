@@ -2,6 +2,8 @@ package cliente
 
 import (
 	"github.com/gin-gonic/gin"
+	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/middleware"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/wiring"
 )
 
@@ -20,7 +22,11 @@ func RegisterClienteRoutes(
 		container.AlterarSenhaClienteUseCase,
 	)
 
-	clientes := rg.Group("/clientes")
+	clientes := rg.Group(
+		"/clientes",
+		middleware.AuthenticationMiddleware(container.JWTAuth, container.RefreshTokensRepo, container.UsuarioStatusRepo),
+		middleware.AuthorizationMiddleware(domainauth.TipoInterno),
+	)
 
 	clientes.POST("", handler.Criar)
 
@@ -34,5 +40,10 @@ func RegisterClienteRoutes(
 
 	clientes.PATCH("/:id/inativar", handler.Inativar)
 
-	clientes.PATCH("/:id/senha", handler.AlterarSenha)
+	self := rg.Group(
+		"/clientes",
+		middleware.AuthenticationMiddleware(container.JWTAuth, container.RefreshTokensRepo, container.ClienteStatusRepo),
+		middleware.AuthorizationMiddleware(domainauth.TipoCliente),
+	)
+	self.PUT("/me/senha", handler.AlterarSenha)
 }

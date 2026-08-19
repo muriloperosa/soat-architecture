@@ -10,6 +10,7 @@ type CriarClienteInput struct {
 	Email     string
 	Telefone  string
 	Senha     string
+	CriadoPor uint64
 }
 
 // AtualizarClienteInput é o DTO de entrada do AtualizarClienteUseCase.
@@ -19,8 +20,6 @@ type AtualizarClienteInput struct {
 	Email    string
 	Telefone string
 }
-
-
 
 // AlterarSenhaInput é o DTO de entrada do AlterarSenhaUseCase.
 type AlterarSenhaInput struct {
@@ -38,6 +37,7 @@ type ClienteOutput struct {
 	Telefone           string
 	Ativo              bool
 	RequerAlterarSenha bool
+	CriadoPor          uint64
 }
 
 func toOutput(c *domain.Cliente) ClienteOutput {
@@ -50,5 +50,6 @@ func toOutput(c *domain.Cliente) ClienteOutput {
 		Telefone:           c.Telefone().String(),
 		Ativo:              c.Ativo(),
 		RequerAlterarSenha: c.RequerAlterarSenha(),
+		CriadoPor:          c.CriadoPor(),
 	}
 }

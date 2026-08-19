@@ -7,10 +7,10 @@ import (
 )
 
 type AtivarClienteUseCase struct {
-	repository domain.Repository
+	repository domain.ClienteRepository
 }
 
-func NewAtivarClienteUseCase(repository domain.Repository) *AtivarClienteUseCase {
+func NewAtivarClienteUseCase(repository domain.ClienteRepository) *AtivarClienteUseCase {
 	return &AtivarClienteUseCase{repository: repository}
 }
 

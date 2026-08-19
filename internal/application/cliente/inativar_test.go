@@ -20,6 +20,7 @@ func novoClienteValido(t *testing.T) domain.Cliente {
 		"joao@email.com",
 		"(44) 99999-1234",
 		"senha123",
+		1,
 	)
 
 	require.NoError(t, err)

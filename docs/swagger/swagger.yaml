@@ -69,6 +69,9 @@ definitions:
       ativo:
         example: true
         type: boolean
+      criado_por:
+        example: 1
+        type: integer
       documento:
         example: "12345678909"
         type: string
@@ -219,7 +222,7 @@ definitions:
         example: true
         type: boolean
     type: object
-host: http://localhost:8080
+host: localhost:8080
 info:
   contact: {}
   description: API de gestão de ordens de serviço de uma oficina mecânica. Tech Challenge
@@ -586,49 +589,6 @@ paths:
       summary: Inativa cliente
       tags:
       - Clientes
-  /v1/clientes/{id}/senha:
-    patch:
-      consumes:
-      - application/json
-      description: Altera a senha do cliente e remove a exigência de troca de senha.
-      parameters:
-      - description: ID do cliente
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Nova senha
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/cliente.AlterarSenhaRequest'
-      produces:
-      - application/json
-      responses:
-        "204":
-          description: Sem conteúdo
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/httperror.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/httperror.ErrorResponse'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/httperror.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/httperror.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Altera senha do cliente
-      tags:
-      - Clientes
   /v1/clientes/documento/{documento}:
     get:
       description: Retorna os dados de um cliente pelo CPF ou CNPJ.
@@ -664,6 +624,44 @@ paths:
       security:
       - BearerAuth: []
       summary: Busca cliente por documento
+      tags:
+      - Clientes
+  /v1/clientes/me/senha:
+    put:
+      consumes:
+      - application/json
+      description: Altera a senha do cliente e remove a exigência de troca de senha.
+      parameters:
+      - description: Nova senha
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/cliente.AlterarSenhaRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Sem conteúdo
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Altera senha do cliente
       tags:
       - Clientes
   /v1/health:

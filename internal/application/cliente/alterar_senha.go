@@ -7,10 +7,10 @@ import (
 )
 
 type AlterarSenhaClienteUseCase struct {
-	repository domain.Repository
+	repository domain.ClienteRepository
 }
 
-func NewAlterarSenhaClienteUseCase(repository domain.Repository) *AlterarSenhaClienteUseCase {
+func NewAlterarSenhaClienteUseCase(repository domain.ClienteRepository) *AlterarSenhaClienteUseCase {
 	return &AlterarSenhaClienteUseCase{repository: repository}
 }
 

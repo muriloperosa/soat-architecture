@@ -7,14 +7,14 @@ import (
 )
 
 type InativarClienteUseCase struct {
-	repository domain.Repository
+	repository domain.ClienteRepository
 }
 
-func NewInativarClienteUseCase(repository domain.Repository) *InativarClienteUseCase {
+func NewInativarClienteUseCase(repository domain.ClienteRepository) *InativarClienteUseCase {
 	return &InativarClienteUseCase{repository: repository}
 }
 
-func (uc *InativarClienteUseCase) Executar(ctx context.Context,id uint64) (ClienteOutput, error) {
+func (uc *InativarClienteUseCase) Executar(ctx context.Context, id uint64) (ClienteOutput, error) {
 	cliente, err := uc.repository.BuscarPorID(ctx, id)
 	if err != nil {
 		return ClienteOutput{}, err

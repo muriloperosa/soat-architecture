@@ -8,10 +8,10 @@ import (
 )
 
 type CriarClienteUseCase struct {
-	repository domain.Repository
+	repository domain.ClienteRepository
 }
 
-func NewCriarClienteUseCase(repository domain.Repository) *CriarClienteUseCase {
+func NewCriarClienteUseCase(repository domain.ClienteRepository) *CriarClienteUseCase {
 	return &CriarClienteUseCase{repository: repository}
 }
 
@@ -35,6 +35,7 @@ func (uc *CriarClienteUseCase) Executar(
 		input.Email,
 		input.Telefone,
 		input.Senha,
+		input.CriadoPor,
 	)
 	if err != nil {
 		return ClienteOutput{}, err

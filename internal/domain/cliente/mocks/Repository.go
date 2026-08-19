@@ -129,6 +129,65 @@ func (_c *Repository_BuscarPorDocumento_Call) RunAndReturn(run func(context.Cont
 	return _c
 }
 
+// BuscarPorEmail provides a mock function with given fields: ctx, email
+func (_m *Repository) BuscarPorEmail(ctx context.Context, email string) (*cliente.Cliente, error) {
+	ret := _m.Called(ctx, email)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BuscarPorEmail")
+	}
+
+	var r0 *cliente.Cliente
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (*cliente.Cliente, error)); ok {
+		return rf(ctx, email)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) *cliente.Cliente); ok {
+		r0 = rf(ctx, email)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cliente.Cliente)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, email)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Repository_BuscarPorEmail_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BuscarPorEmail'
+type Repository_BuscarPorEmail_Call struct {
+	*mock.Call
+}
+
+// BuscarPorEmail is a helper method to define mock.On call
+//   - ctx context.Context
+//   - email string
+func (_e *Repository_Expecter) BuscarPorEmail(ctx interface{}, email interface{}) *Repository_BuscarPorEmail_Call {
+	return &Repository_BuscarPorEmail_Call{Call: _e.mock.On("BuscarPorEmail", ctx, email)}
+}
+
+func (_c *Repository_BuscarPorEmail_Call) Run(run func(ctx context.Context, email string)) *Repository_BuscarPorEmail_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *Repository_BuscarPorEmail_Call) Return(_a0 *cliente.Cliente, _a1 error) *Repository_BuscarPorEmail_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Repository_BuscarPorEmail_Call) RunAndReturn(run func(context.Context, string) (*cliente.Cliente, error)) *Repository_BuscarPorEmail_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // BuscarPorID provides a mock function with given fields: ctx, id
 func (_m *Repository) BuscarPorID(ctx context.Context, id uint64) (*cliente.Cliente, error) {
 	ret := _m.Called(ctx, id)

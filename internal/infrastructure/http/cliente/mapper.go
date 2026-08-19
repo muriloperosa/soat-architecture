@@ -5,7 +5,7 @@ import (
 	domain "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
 )
 
-func toCriarInput(req CriarClienteRequest) app.CriarClienteInput {
+func toCriarInput(criadoPor uint64, req CriarClienteRequest) app.CriarClienteInput {
 	return app.CriarClienteInput{
 		Documento: req.Documento,
 		Tipo:      domain.TipoPessoa(req.TipoPessoa),
@@ -13,6 +13,7 @@ func toCriarInput(req CriarClienteRequest) app.CriarClienteInput {
 		Email:     req.Email,
 		Telefone:  req.Telefone,
 		Senha:     req.Senha,
+		CriadoPor: criadoPor,
 	}
 }
 
@@ -42,5 +43,6 @@ func toResponse(output app.ClienteOutput) ClienteResponse {
 		Telefone:           output.Telefone,
 		Ativo:              output.Ativo,
 		RequerAlterarSenha: output.RequerAlterarSenha,
+		CriadoPor:          output.CriadoPor,
 	}
 }

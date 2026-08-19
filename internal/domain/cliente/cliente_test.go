@@ -18,6 +18,7 @@ func novoClienteValido(t *testing.T) Cliente {
 		"joao@email.com",
 		"(44) 99999-1234",
 		"senha123",
+		1,
 	)
 
 	require.NoError(t, err)
@@ -35,6 +36,7 @@ func TestNewClienteValido(t *testing.T) {
 		"joao@email.com",
 		"(44) 99999-1234",
 		"senha123",
+		1,
 	)
 
 	depois := time.Now()
@@ -79,6 +81,7 @@ func TestNewClienteNomeObrigatorio(t *testing.T) {
 		"joao@email.com",
 		"(44) 99999-1234",
 		"senha123",
+		1,
 	)
 
 	require.ErrorIs(t, err, ErrNomeObrigatorio)
@@ -93,6 +96,7 @@ func TestNewClienteDocumentoInvalido(t *testing.T) {
 		"joao@email.com",
 		"(44) 99999-1234",
 		"senha123",
+		1,
 	)
 
 	require.ErrorIs(t, err, ErrCPFInvalido)
@@ -107,6 +111,7 @@ func TestNewClienteTelefoneInvalido(t *testing.T) {
 		"joao@email.com",
 		"123",
 		"senha123",
+		1,
 	)
 
 	require.ErrorIs(t, err, ErrTelefoneInvalido)
@@ -121,6 +126,7 @@ func TestNewClienteEmailObrigatorio(t *testing.T) {
 		"",
 		"(44) 99999-1234",
 		"senha123",
+		1,
 	)
 
 	require.Error(t, err)
@@ -135,6 +141,7 @@ func TestNewClienteEmailInvalido(t *testing.T) {
 		"email-invalido",
 		"(44) 99999-1234",
 		"senha123",
+		1,
 	)
 
 	require.Error(t, err)
@@ -149,6 +156,7 @@ func TestNewClienteSenhaObrigatoria(t *testing.T) {
 		"joao@email.com",
 		"(44) 99999-1234",
 		"",
+		1,
 	)
 
 	require.Error(t, err)
@@ -355,14 +363,14 @@ func TestClienteAtivarQuandoJaEstiverAtivo(t *testing.T) {
 	require.Equal(t, dataAnterior, cliente.DataAtualizacao())
 }
 
-func TestReidratarCliente(t *testing.T) {
+func TestRestaurarCliente(t *testing.T) {
 	dataCadastro := time.Now().Add(-time.Hour)
 	dataAtualizacao := time.Now()
 
 	senhaHash, err := shared.NewSenhaHash("senha123")
 	require.NoError(t, err)
 
-	cliente, err := ReidratarCliente(
+	cliente, err := RestaurarCliente(
 		10,
 		"52998224725",
 		TipoPessoaFisica,
@@ -370,6 +378,7 @@ func TestReidratarCliente(t *testing.T) {
 		"joao@email.com",
 		"44999991234",
 		senhaHash.String(),
+		1,
 		false,
 		true,
 		dataCadastro,
@@ -395,8 +404,8 @@ func TestReidratarCliente(t *testing.T) {
 	require.Equal(t, dataAtualizacao, cliente.DataAtualizacao())
 }
 
-func TestReidratarClienteDocumentoInvalido(t *testing.T) {
-	cliente, err := ReidratarCliente(
+func TestRestaurarClienteDocumentoInvalido(t *testing.T) {
+	cliente, err := RestaurarCliente(
 		10,
 		"12345678900",
 		TipoPessoaFisica,
@@ -404,6 +413,7 @@ func TestReidratarClienteDocumentoInvalido(t *testing.T) {
 		"joao@email.com",
 		"44999991234",
 		"senha123",
+		1,
 		true,
 		true,
 		time.Now(),
@@ -414,8 +424,8 @@ func TestReidratarClienteDocumentoInvalido(t *testing.T) {
 	require.ErrorIs(t, err, ErrCPFInvalido)
 }
 
-func TestReidratarClienteTelefoneInvalido(t *testing.T) {
-	cliente, err := ReidratarCliente(
+func TestRestaurarClienteTelefoneInvalido(t *testing.T) {
+	cliente, err := RestaurarCliente(
 		10,
 		"52998224725",
 		TipoPessoaFisica,
@@ -423,6 +433,7 @@ func TestReidratarClienteTelefoneInvalido(t *testing.T) {
 		"joao@email.com",
 		"123",
 		"senha123",
+		1,
 		true,
 		true,
 		time.Now(),
@@ -433,8 +444,8 @@ func TestReidratarClienteTelefoneInvalido(t *testing.T) {
 	require.ErrorIs(t, err, ErrTelefoneInvalido)
 }
 
-func TestReidratarClienteEmailInvalido(t *testing.T) {
-	cliente, err := ReidratarCliente(
+func TestRestaurarClienteEmailInvalido(t *testing.T) {
+	cliente, err := RestaurarCliente(
 		10,
 		"52998224725",
 		TipoPessoaFisica,
@@ -442,6 +453,7 @@ func TestReidratarClienteEmailInvalido(t *testing.T) {
 		"email-invalido",
 		"44999991234",
 		"senha123",
+		1,
 		true,
 		true,
 		time.Now(),

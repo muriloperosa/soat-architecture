@@ -10,7 +10,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	app "github.com/muriloperosa/soat-architecture/internal/application/cliente"
+	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 	domain "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/middleware"
 	"github.com/stretchr/testify/require"
 )
 
@@ -117,6 +119,13 @@ func requestJSON(t *testing.T, method string, path string, body any) *http.Reque
 	return req
 }
 
+func withSubject(subject string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: subject})
+		c.Next()
+	}
+}
+
 func TestNewHandler(t *testing.T) {
 	criar := &criarClienteUseCaseMock{}
 	atualizar := &atualizarClienteUseCaseMock{}
@@ -151,6 +160,7 @@ func TestHandlerCriarComSucesso(t *testing.T) {
 
 	useCase := &criarClienteUseCaseMock{
 		executar: func(ctx context.Context, input app.CriarClienteInput) (app.ClienteOutput, error) {
+			require.Equal(t, uint64(1), input.CriadoPor)
 			require.Equal(t, "529.982.247-25", input.Documento)
 			require.Equal(t, domain.TipoPessoaFisica, input.Tipo)
 			require.Equal(t, "João da Silva", input.Nome)
@@ -165,7 +175,7 @@ func TestHandlerCriarComSucesso(t *testing.T) {
 	handler := &Handler{criar: useCase}
 
 	router := gin.New()
-	router.POST("/v1/clientes", handler.Criar)
+	router.POST("/v1/clientes", withSubject("1"), handler.Criar)
 
 	req := requestJSON(
 		t,
@@ -194,7 +204,7 @@ func TestHandlerCriarComBodyInvalido(t *testing.T) {
 	handler := &Handler{}
 
 	router := gin.New()
-	router.POST("/v1/clientes", handler.Criar)
+	router.POST("/v1/clientes", withSubject("1"), handler.Criar)
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/clientes", bytes.NewBufferString("{"))
 
@@ -219,7 +229,7 @@ func TestHandlerCriarComErroDoUseCase(t *testing.T) {
 	handler := &Handler{criar: useCase}
 
 	router := gin.New()
-	router.POST("/v1/clientes", handler.Criar)
+	router.POST("/v1/clientes", withSubject("1"), handler.Criar)
 
 	req := requestJSON(
 		t,
@@ -651,12 +661,12 @@ func TestHandlerAlterarSenhaComSucesso(t *testing.T) {
 	}
 
 	router := gin.New()
-	router.PATCH("/v1/clientes/:id/senha", handler.AlterarSenha)
+	router.PUT("/v1/clientes/me/senha", withSubject("1"), handler.AlterarSenha)
 
 	req := requestJSON(
 		t,
-		http.MethodPatch,
-		"/v1/clientes/1/senha",
+		http.MethodPut,
+		"/v1/clientes/me/senha",
 		AlterarSenhaRequest{
 			SenhaNova: "novaSenha123",
 		},
@@ -670,18 +680,18 @@ func TestHandlerAlterarSenhaComSucesso(t *testing.T) {
 	require.Empty(t, recorder.Body.String())
 }
 
-func TestHandlerAlterarSenhaComIDInvalido(t *testing.T) {
+func TestHandlerAlterarSenhaComSubjectInvalido(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	handler := &Handler{}
 
 	router := gin.New()
-	router.PATCH("/v1/clientes/:id/senha", handler.AlterarSenha)
+	router.PUT("/v1/clientes/me/senha", withSubject("abc"), handler.AlterarSenha)
 
 	req := requestJSON(
 		t,
-		http.MethodPatch,
-		"/v1/clientes/abc/senha",
+		http.MethodPut,
+		"/v1/clientes/me/senha",
 		AlterarSenhaRequest{
 			SenhaNova: "novaSenha123",
 		},
@@ -691,7 +701,7 @@ func TestHandlerAlterarSenhaComIDInvalido(t *testing.T) {
 
 	router.ServeHTTP(recorder, req)
 
-	require.Equal(t, http.StatusBadRequest, recorder.Code)
+	require.Equal(t, http.StatusUnauthorized, recorder.Code)
 }
 
 func TestHandlerAlterarSenhaComBodyInvalido(t *testing.T) {
@@ -700,11 +710,11 @@ func TestHandlerAlterarSenhaComBodyInvalido(t *testing.T) {
 	handler := &Handler{}
 
 	router := gin.New()
-	router.PATCH("/v1/clientes/:id/senha", handler.AlterarSenha)
+	router.PUT("/v1/clientes/me/senha", withSubject("1"), handler.AlterarSenha)
 
 	req := httptest.NewRequest(
-		http.MethodPatch,
-		"/v1/clientes/1/senha",
+		http.MethodPut,
+		"/v1/clientes/me/senha",
 		bytes.NewBufferString("{"),
 	)
 
@@ -734,12 +744,12 @@ func TestHandlerAlterarSenhaComErroDoUseCase(t *testing.T) {
 	}
 
 	router := gin.New()
-	router.PATCH("/v1/clientes/:id/senha", handler.AlterarSenha)
+	router.PUT("/v1/clientes/me/senha", withSubject("999"), handler.AlterarSenha)
 
 	req := requestJSON(
 		t,
-		http.MethodPatch,
-		"/v1/clientes/999/senha",
+		http.MethodPut,
+		"/v1/clientes/me/senha",
 		AlterarSenhaRequest{
 			SenhaNova: "novaSenha123",
 		},

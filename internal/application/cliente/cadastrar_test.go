@@ -19,6 +19,7 @@ func criarClienteInputValido() CriarClienteInput {
 		Email:     "joao@email.com",
 		Telefone:  "(44) 99999-1234",
 		Senha:     "senha123",
+		CriadoPor: 1,
 	}
 }
 
@@ -35,7 +36,8 @@ func clienteValidoMatcher() interface{} {
 			cliente.Telefone().String() == "44999991234" &&
 			cliente.Senha().Confere("senha123") &&
 			cliente.Ativo() &&
-			cliente.RequerAlterarSenha()
+			cliente.RequerAlterarSenha() &&
+			cliente.CriadoPor() == 1
 	})
 }
 
@@ -82,6 +84,7 @@ func TestCriarClienteUseCaseExecutarComSucesso(t *testing.T) {
 	require.Equal(t, "44999991234", output.Telefone)
 	require.True(t, output.Ativo)
 	require.True(t, output.RequerAlterarSenha)
+	require.Equal(t, uint64(1), output.CriadoPor)
 }
 
 func TestCriarClienteUseCaseExecutarDeveRetornarErroAoBuscarCliente(t *testing.T) {
@@ -119,6 +122,7 @@ func TestCriarClienteUseCaseExecutarDeveRetornarErroQuandoClienteJaExistir(t *te
 		input.Email,
 		input.Telefone,
 		input.Senha,
+		1,
 	)
 	require.NoError(t, err)
 

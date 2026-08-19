@@ -2,7 +2,7 @@ package cliente
 
 import "time"
 
-type ClienteModel struct {
+type Model struct {
 	ID                 uint64    `gorm:"column:id;primaryKey;autoIncrement"`
 	Documento          string    `gorm:"column:documento"`
 	Tipo               string    `gorm:"column:tipo"`
@@ -17,6 +17,9 @@ type ClienteModel struct {
 	DataAtualizacao    time.Time `gorm:"column:data_atualizacao"`
 }
 
-func (ClienteModel) TableName() string {
+// ClienteModel é um alias de compatibilidade. Prefira Model.
+type ClienteModel = Model
+
+func (Model) TableName() string {
 	return "clientes"
 }

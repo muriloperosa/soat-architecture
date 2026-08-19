@@ -8,6 +8,7 @@ import (
 	app "github.com/muriloperosa/soat-architecture/internal/application/cliente"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httperror"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httprequest"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/middleware"
 )
 
 type CriarClienteUseCase interface {
@@ -83,6 +84,11 @@ func NewHandler(
 // @Failure 409 {object} httperror.ErrorResponse
 // @Router /v1/clientes [post]
 func (h *Handler) Criar(c *gin.Context) {
+	criadoPor, ok := middleware.SubjectID(c)
+	if !ok {
+		return
+	}
+
 	var req CriarClienteRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -90,7 +96,7 @@ func (h *Handler) Criar(c *gin.Context) {
 		return
 	}
 
-	output, err := h.criar.Executar(c.Request.Context(), toCriarInput(req))
+	output, err := h.criar.Executar(c.Request.Context(), toCriarInput(criadoPor, req))
 	if err != nil {
 		httperror.RespondError(c, err)
 		return
@@ -246,16 +252,15 @@ func (h *Handler) Inativar(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param id path int true "ID do cliente"
 // @Param request body AlterarSenhaRequest true "Nova senha"
 // @Success 204 "Sem conteúdo"
 // @Failure 400 {object} httperror.ErrorResponse
 // @Failure 401 {object} httperror.ErrorResponse
 // @Failure 403 {object} httperror.ErrorResponse
 // @Failure 404 {object} httperror.ErrorResponse
-// @Router /v1/clientes/{id}/senha [patch]
+// @Router /v1/clientes/me/senha [put]
 func (h *Handler) AlterarSenha(c *gin.Context) {
-	id, ok := httprequest.ParseUintParam(c, "id")
+	id, ok := middleware.SubjectID(c)
 	if !ok {
 		return
 	}

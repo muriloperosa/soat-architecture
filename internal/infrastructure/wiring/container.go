@@ -28,9 +28,11 @@ type Container struct {
 	RefreshTokensRepo domainauth.RefreshTokenRepository
 	UsuarioRepo       domainusuario.UsuarioRepository
 	UsuarioStatusRepo domainauth.UsuarioStatusRepository
-	ClienteRepository domaincliente.Repository
+	ClienteRepository domaincliente.ClienteRepository
+	ClienteStatusRepo domainauth.UsuarioStatusRepository
 
 	LoginInternoUC *appauth.LoginUseCase
+	LoginClienteUC *appauth.LoginUseCase
 	RefreshUC      *appauth.RefreshUseCase
 	LogoutUC       *appauth.LogoutUseCase
 
@@ -55,7 +57,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c := &Container{Config: cfg, DB: db}
 	c.RefreshTokensRepo = mysqlauth.NewRefreshTokenRepository(db)
 	c.UsuarioRepo = mysqlusuario.NewUsuarioRepository(db)
-	c.ClienteRepository = mysqlcliente.NewRepository(db)
+	c.ClienteRepository = mysqlcliente.NewClienteRepository(db)
 	if cfg == nil {
 		return c
 	}
@@ -65,8 +67,11 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.JWTAuth = infraauth.NewAuthenticatorJWT(cfg.JWTSecret, accessTTL)
 
 	credenciaisInterno := mysqlusuario.NewCredenciaisAdapter(c.UsuarioRepo)
+	credenciaisCliente := mysqlcliente.NewCredenciaisAdapter(c.ClienteRepository)
 	c.UsuarioStatusRepo = credenciaisInterno
+	c.ClienteStatusRepo = credenciaisCliente
 	c.LoginInternoUC = appauth.NewLoginUseCase(credenciaisInterno, c.RefreshTokensRepo, c.JWTAuth, domainauth.TipoInterno, accessTTL, refreshTTL)
+	c.LoginClienteUC = appauth.NewLoginUseCase(credenciaisCliente, c.RefreshTokensRepo, c.JWTAuth, domainauth.TipoCliente, accessTTL, refreshTTL)
 	c.RefreshUC = appauth.NewRefreshUseCase(c.RefreshTokensRepo, c.JWTAuth, accessTTL, refreshTTL)
 	c.LogoutUC = appauth.NewLogoutUseCase(c.RefreshTokensRepo)
 

@@ -7,11 +7,11 @@ import (
 )
 
 type ConsultarClientePorDocumentoUseCase struct {
-	repository domain.Repository
+	repository domain.ClienteRepository
 }
 
 func NewConsultarClientePorDocumentoUseCase(
-	repository domain.Repository,
+	repository domain.ClienteRepository,
 ) *ConsultarClientePorDocumentoUseCase {
 	return &ConsultarClientePorDocumentoUseCase{repository: repository}
 }

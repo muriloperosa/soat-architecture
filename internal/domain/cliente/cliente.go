@@ -19,6 +19,7 @@ type Cliente struct {
 	dataCadastro       time.Time
 	dataAtualizacao    time.Time
 	requerAlterarSenha bool
+	criadoPor          uint64
 }
 
 func NewCliente(
@@ -27,12 +28,16 @@ func NewCliente(
 	nome string,
 	email string, //Substitua pelo Value Object de email
 	telefone string,
-	senha string, //Substitua pelo Value Object de senha
+	senha string,
+	criadoPor uint64,
 ) (Cliente, error) {
 	nome = texts.NormalizeUcFirst(nome)
 
 	if nome == "" {
 		return Cliente{}, ErrNomeObrigatorio
+	}
+	if criadoPor == 0 {
+		return Cliente{}, ErrCriadoPorObrigatorio
 	}
 
 	documentoVO, err := NewDocumento(documento, tipo)
@@ -66,6 +71,7 @@ func NewCliente(
 		senha:              senhaVO,
 		ativo:              true,
 		requerAlterarSenha: true,
+		criadoPor:          criadoPor,
 		dataCadastro:       agora,
 		dataAtualizacao:    agora,
 	}, nil
@@ -126,7 +132,7 @@ func (c *Cliente) Inativar() {
 	c.dataAtualizacao = time.Now()
 }
 
-func (c *Cliente) DefinirID(ID uint64) { c.id = ID }
+func (c *Cliente) DefinirID(id uint64) { c.id = id }
 
 func (c Cliente) ID() uint64 { return c.id }
 
@@ -150,7 +156,9 @@ func (c Cliente) DataAtualizacao() time.Time { return c.dataAtualizacao }
 
 func (c Cliente) RequerAlterarSenha() bool { return c.requerAlterarSenha }
 
-func ReidratarCliente(
+func (c Cliente) CriadoPor() uint64 { return c.criadoPor }
+
+func RestaurarCliente(
 	id uint64,
 	documento string,
 	tipo TipoPessoa,
@@ -158,6 +166,7 @@ func ReidratarCliente(
 	email string,
 	telefone string,
 	senha string,
+	criadoPor uint64,
 	requerAlterarSenha bool,
 	ativo bool,
 	dataCadastro time.Time,
@@ -188,6 +197,7 @@ func ReidratarCliente(
 		email:              emailVO,
 		senha:              senhaVO,
 		requerAlterarSenha: requerAlterarSenha,
+		criadoPor:          criadoPor,
 		telefone:           telefoneVO,
 		ativo:              ativo,
 		dataCadastro:       dataCadastro,

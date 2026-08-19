@@ -7,10 +7,10 @@ import (
 )
 
 type AtualizarClienteUseCase struct {
-	repository domain.Repository
+	repository domain.ClienteRepository
 }
 
-func NewAtualizarClienteUseCase(repository domain.Repository) *AtualizarClienteUseCase {
+func NewAtualizarClienteUseCase(repository domain.ClienteRepository) *AtualizarClienteUseCase {
 	return &AtualizarClienteUseCase{repository: repository}
 }
 
@@ -18,16 +18,16 @@ func (uc *AtualizarClienteUseCase) Executar(
 	ctx context.Context,
 	input AtualizarClienteInput,
 ) (ClienteOutput, error) {
-	cliente, err := uc.repository.BuscarPorID(ctx,input.ID)
+	cliente, err := uc.repository.BuscarPorID(ctx, input.ID)
 	if err != nil {
 		return ClienteOutput{}, err
 	}
 
-	if err := cliente.Atualizar(input.Nome,input.Email,input.Telefone); err != nil {
+	if err := cliente.Atualizar(input.Nome, input.Email, input.Telefone); err != nil {
 		return ClienteOutput{}, err
 	}
 
-	if err := uc.repository.Atualizar(ctx,cliente); err != nil {
+	if err := uc.repository.Atualizar(ctx, cliente); err != nil {
 		return ClienteOutput{}, err
 	}
 
