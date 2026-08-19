@@ -20,6 +20,8 @@ type AtualizarClienteInput struct {
 	Telefone string
 }
 
+
+
 // AlterarSenhaInput é o DTO de entrada do AlterarSenhaUseCase.
 type AlterarSenhaInput struct {
 	ClienteID uint64
