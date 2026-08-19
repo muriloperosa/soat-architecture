@@ -173,7 +173,7 @@ func TestHandlerCriarComSucesso(t *testing.T) {
 		"/v1/clientes",
 		CriarClienteRequest{
 			Documento:  "529.982.247-25",
-			TipoPessoa: domain.TipoPessoaFisica,
+			TipoPessoa: "PF",
 			Nome:       "João da Silva",
 			Email:      "joao@email.com",
 			Telefone:   "(44) 99999-1234",
@@ -227,7 +227,7 @@ func TestHandlerCriarComErroDoUseCase(t *testing.T) {
 		"/v1/clientes",
 		CriarClienteRequest{
 			Documento:  "529.982.247-25",
-			TipoPessoa: domain.TipoPessoaFisica,
+			TipoPessoa: "PF",
 			Nome:       "João da Silva",
 			Email:      "joao@email.com",
 			Telefone:   "(44) 99999-1234",

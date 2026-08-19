@@ -38,6 +38,87 @@ definitions:
         example: true
         type: boolean
     type: object
+  cliente.AlterarSenhaRequest:
+    properties:
+      senha_nova:
+        type: string
+    required:
+    - senha_nova
+    type: object
+  cliente.AtualizarClienteRequest:
+    properties:
+      email:
+        example: maria@oficina.com
+        type: string
+      nome:
+        example: Maria Silva
+        type: string
+      senha_nova:
+        example: novaSenha123
+        type: string
+      telefone:
+        example: "11999998888"
+        type: string
+    required:
+    - email
+    - nome
+    - telefone
+    type: object
+  cliente.ClienteResponse:
+    properties:
+      ativo:
+        example: true
+        type: boolean
+      documento:
+        example: "12345678909"
+        type: string
+      email:
+        example: maria@oficina.com
+        type: string
+      id:
+        example: 1
+        type: integer
+      nome:
+        example: Maria Silva
+        type: string
+      requer_alterar_senha:
+        example: true
+        type: boolean
+      telefone:
+        example: "11999998888"
+        type: string
+      tipo_pessoa:
+        example: PF
+        type: string
+    type: object
+  cliente.CriarClienteRequest:
+    properties:
+      documento:
+        example: "12345678909"
+        type: string
+      email:
+        example: maria@oficina.com
+        type: string
+      nome:
+        example: Maria Silva
+        type: string
+      senha:
+        example: senha123
+        type: string
+      telefone:
+        example: "11999998888"
+        type: string
+      tipo_pessoa:
+        example: PF
+        type: string
+    required:
+    - documento
+    - email
+    - nome
+    - senha
+    - telefone
+    - tipo_pessoa
+    type: object
   health.HealthCheckResponse:
     properties:
       status:
@@ -314,6 +395,277 @@ paths:
       summary: Refresh de token de usuário interno
       tags:
       - Auth Interno
+  /v1/clientes:
+    post:
+      consumes:
+      - application/json
+      description: Cria um cliente para atendimento da oficina.
+      parameters:
+      - description: Dados do cliente
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/cliente.CriarClienteRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/cliente.ClienteResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Cria cliente
+      tags:
+      - Clientes
+  /v1/clientes/{id}:
+    get:
+      description: Retorna os dados de um cliente pelo identificador.
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/cliente.ClienteResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Busca cliente por ID
+      tags:
+      - Clientes
+    put:
+      consumes:
+      - application/json
+      description: Atualiza os dados cadastrais de um cliente.
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Dados atualizados
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/cliente.AtualizarClienteRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/cliente.ClienteResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualiza cliente
+      tags:
+      - Clientes
+  /v1/clientes/{id}/ativar:
+    patch:
+      description: Reabilita o cliente para login e uso do sistema.
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Sem conteúdo
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Ativa cliente
+      tags:
+      - Clientes
+  /v1/clientes/{id}/inativar:
+    patch:
+      description: Bloqueia o cliente para login e uso do sistema.
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Sem conteúdo
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Inativa cliente
+      tags:
+      - Clientes
+  /v1/clientes/{id}/senha:
+    patch:
+      consumes:
+      - application/json
+      description: Altera a senha do cliente e remove a exigência de troca de senha.
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Nova senha
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/cliente.AlterarSenhaRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Sem conteúdo
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Altera senha do cliente
+      tags:
+      - Clientes
+  /v1/clientes/documento/{documento}:
+    get:
+      description: Retorna os dados de um cliente pelo CPF ou CNPJ.
+      parameters:
+      - description: CPF ou CNPJ do cliente
+        in: path
+        name: documento
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/cliente.ClienteResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Busca cliente por documento
+      tags:
+      - Clientes
   /v1/health:
     get:
       description: Retorna 200 se a API e a conexão com o MySQL estão respondendo
