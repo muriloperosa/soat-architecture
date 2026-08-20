@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	"github.com/muriloperosa/soat-architecture/internal/domain/veiculo"
 	"github.com/stretchr/testify/require"
 )
@@ -17,14 +16,14 @@ func TestNewVeiculo_Valido_NasceAtivo(t *testing.T) {
 	require.Equal(t, "Uno", veiculoCriado.Modelo())
 	require.Equal(t, uint32(15000), veiculoCriado.QuilometragemAtual())
 	require.Equal(t, uint16(2020), veiculoCriado.Ano())
-	require.Equal(t, "Branco", veiculoCriado.Cor())
+	require.Equal(t, "Branco", veiculoCriado.Cor().String())
 	require.Equal(t, uint64(1), veiculoCriado.CriadoPor())
 	require.True(t, veiculoCriado.Ativo())
 }
 
 func TestNewVeiculo_PlacaInvalida_RetornaErro(t *testing.T) {
 	_, err := veiculo.NewVeiculo("INVALIDA", "Fiat", "Uno", 15000, 2020, "Branco", 1)
-	require.ErrorIs(t, err, shared.ErrPlacaInvalida)
+	require.ErrorIs(t, err, veiculo.ErrPlacaInvalida)
 }
 
 func TestNewVeiculo_MarcaVazia_RetornaErro(t *testing.T) {
@@ -66,7 +65,7 @@ func TestVeiculo_Atualizar_TrocaMarcaModeloECor(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "Volkswagen", veiculoCriado.Marca())
 	require.Equal(t, "Gol", veiculoCriado.Modelo())
-	require.Equal(t, "Prata", veiculoCriado.Cor())
+	require.Equal(t, "Prata", veiculoCriado.Cor().String())
 }
 
 func TestVeiculo_Atualizar_MarcaVazia_RetornaErroENaoAltera(t *testing.T) {
@@ -128,11 +127,14 @@ func TestNewVeiculo_DataCadastroEDataAtualizacao_NascemIguais(t *testing.T) {
 }
 
 func TestRestaurarVeiculo_NaoRevalidaEPreservaEstado(t *testing.T) {
-	placa, err := shared.NewPlaca("ABC1234")
+	placa, err := veiculo.NewPlaca("ABC1234")
+	require.NoError(t, err)
+
+	cor, err := veiculo.NewCor("Branco")
 	require.NoError(t, err)
 
 	agora := time.Now()
-	veiculoCriado := veiculo.RestaurarVeiculo(42, placa, "Fiat", "Uno", 15000, 2020, "Branco", 1, false, agora, agora)
+	veiculoCriado := veiculo.RestaurarVeiculo(42, placa, "Fiat", "Uno", 15000, 2020, cor, 1, false, agora, agora)
 
 	require.Equal(t, uint64(42), veiculoCriado.ID())
 	require.Equal(t, "Fiat", veiculoCriado.Marca())

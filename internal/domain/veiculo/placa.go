@@ -1,16 +1,17 @@
-package shared
+package veiculo
 
 import (
 	"regexp"
 	"strings"
 
+	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared/texts"
 )
 
 var (
-	ErrPlacaObrigatoria = NewValidationError("placa é obrigatória")
-	ErrPlacaInvalida    = NewValidationError("placa inválida")
-	
+	ErrPlacaObrigatoria = shared.NewValidationError("placa é obrigatória")
+	ErrPlacaInvalida    = shared.NewValidationError("placa inválida")
+
 	placaAntigaRegex   = regexp.MustCompile(`^[A-Z]{3}[0-9]{4}$`)
 	placaMercosulRegex = regexp.MustCompile(`^[A-Z]{3}[0-9][A-Z][0-9]{2}$`)
 )

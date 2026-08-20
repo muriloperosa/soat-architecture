@@ -2,20 +2,18 @@ package veiculo
 
 import (
 	"time"
-
-	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 )
 
 const anoMinimo = 1900
 
 type Veiculo struct {
 	id                 uint64
-	placa              shared.Placa
+	placa              Placa
 	marca              string
 	modelo             string
 	quilometragemAtual uint32
 	ano                uint16
-	cor                string
+	cor                Cor
 	criadoPor          uint64
 	ativo              bool
 	dataCadastro       time.Time
@@ -23,7 +21,7 @@ type Veiculo struct {
 }
 
 func NewVeiculo(placa, marca, modelo string, quilometragemAtual uint32, ano uint16, cor string, criadoPor uint64) (*Veiculo, error) {
-	placaVO, err := shared.NewPlaca(placa)
+	placaVO, err := NewPlaca(placa)
 
 	if err != nil {
 		return nil, err
@@ -37,8 +35,10 @@ func NewVeiculo(placa, marca, modelo string, quilometragemAtual uint32, ano uint
 		return nil, ErrModeloObrigatorio
 	}
 
-	if cor == "" {
-		return nil, ErrCorObrigatoria
+	corVO, err := NewCor(cor)
+
+	if err != nil {
+		return nil, err
 	}
 
 	if !anoValido(ano) {
@@ -57,7 +57,7 @@ func NewVeiculo(placa, marca, modelo string, quilometragemAtual uint32, ano uint
 		modelo:             modelo,
 		quilometragemAtual: quilometragemAtual,
 		ano:                ano,
-		cor:                cor,
+		cor:                corVO,
 		criadoPor:          criadoPor,
 		ativo:              true,
 		dataCadastro:       agora,
@@ -65,7 +65,7 @@ func NewVeiculo(placa, marca, modelo string, quilometragemAtual uint32, ano uint
 	}, nil
 }
 
-func RestaurarVeiculo(id uint64, placa shared.Placa, marca, modelo string, quilometragemAtual uint32, ano uint16, cor string, criadoPor uint64, ativo bool, dataCadastro, dataAtualizacao time.Time) *Veiculo {
+func RestaurarVeiculo(id uint64, placa Placa, marca, modelo string, quilometragemAtual uint32, ano uint16, cor Cor, criadoPor uint64, ativo bool, dataCadastro, dataAtualizacao time.Time) *Veiculo {
 	return &Veiculo{
 		id:                 id,
 		placa:              placa,
@@ -90,13 +90,15 @@ func (veiculo *Veiculo) Atualizar(marca, modelo, cor string) error {
 		return ErrModeloObrigatorio
 	}
 
-	if cor == "" {
-		return ErrCorObrigatoria
+	corVO, err := NewCor(cor)
+
+	if err != nil {
+		return err
 	}
 
 	veiculo.marca = marca
 	veiculo.modelo = modelo
-	veiculo.cor = cor
+	veiculo.cor = corVO
 	veiculo.dataAtualizacao = time.Now()
 
 	return nil
@@ -134,12 +136,12 @@ func anoValido(ano uint16) bool {
 }
 
 func (veiculo *Veiculo) ID() uint64                 { return veiculo.id }
-func (veiculo *Veiculo) Placa() shared.Placa        { return veiculo.placa }
+func (veiculo *Veiculo) Placa() Placa               { return veiculo.placa }
 func (veiculo *Veiculo) Marca() string              { return veiculo.marca }
 func (veiculo *Veiculo) Modelo() string             { return veiculo.modelo }
 func (veiculo *Veiculo) QuilometragemAtual() uint32 { return veiculo.quilometragemAtual }
 func (veiculo *Veiculo) Ano() uint16                { return veiculo.ano }
-func (veiculo *Veiculo) Cor() string                { return veiculo.cor }
+func (veiculo *Veiculo) Cor() Cor                   { return veiculo.cor }
 func (veiculo *Veiculo) CriadoPor() uint64          { return veiculo.criadoPor }
 func (veiculo *Veiculo) Ativo() bool                { return veiculo.ativo }
 func (veiculo *Veiculo) DataCadastro() time.Time    { return veiculo.dataCadastro }
