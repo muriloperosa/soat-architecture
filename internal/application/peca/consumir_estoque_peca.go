@@ -7,8 +7,7 @@ import (
 )
 
 // ConsumirEstoqueUseCase baixa o estoque físico de uma peça (ex. aplicada
-// numa Ordem de Serviço). Não cuida de reserva — isso é responsabilidade do
-// agregado ReservaPeca, ainda não implementado.
+// numa Ordem de Serviço).
 type ConsumirEstoqueUseCase struct {
 	repository domain.Repository
 }
