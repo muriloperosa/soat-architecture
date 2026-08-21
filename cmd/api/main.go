@@ -13,7 +13,7 @@ import (
 // @version 1.0
 // @description API de gestão de ordens de serviço de uma oficina mecânica. Tech Challenge Fase 1 - Soat.
 // @BasePath /
-// @Host http://localhost:8080
+// @host localhost:8080
 // @Schemes http
 // @securityDefinitions.apikey BearerAuth
 // @in header

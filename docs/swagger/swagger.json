@@ -9,7 +9,7 @@
         "contact": {},
         "version": "1.0"
     },
-    "host": "http://localhost:8080",
+    "host": "localhost:8080",
     "basePath": "/",
     "paths": {
         "/v1/auth/cliente/login": {
@@ -263,6 +263,423 @@
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/clientes": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cria um cliente para atendimento da oficina.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clientes"
+                ],
+                "summary": "Cria cliente",
+                "parameters": [
+                    {
+                        "description": "Dados do cliente",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/cliente.CriarClienteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/cliente.ClienteResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/clientes/documento/{documento}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna os dados de um cliente pelo CPF ou CNPJ.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clientes"
+                ],
+                "summary": "Busca cliente por documento",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "CPF ou CNPJ do cliente",
+                        "name": "documento",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/cliente.ClienteResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/clientes/me/senha": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Altera a senha do cliente e remove a exigência de troca de senha.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clientes"
+                ],
+                "summary": "Altera senha do cliente",
+                "parameters": [
+                    {
+                        "description": "Nova senha",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/cliente.AlterarSenhaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Sem conteúdo"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/clientes/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna os dados de um cliente pelo identificador.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clientes"
+                ],
+                "summary": "Busca cliente por ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do cliente",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/cliente.ClienteResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Atualiza os dados cadastrais de um cliente.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clientes"
+                ],
+                "summary": "Atualiza cliente",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do cliente",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados atualizados",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/cliente.AtualizarClienteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/cliente.ClienteResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/clientes/{id}/ativar": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Reabilita o cliente para login e uso do sistema.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clientes"
+                ],
+                "summary": "Ativa cliente",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do cliente",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Sem conteúdo"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/clientes/{id}/inativar": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Bloqueia o cliente para login e uso do sistema.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clientes"
+                ],
+                "summary": "Inativa cliente",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do cliente",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Sem conteúdo"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/httperror.ErrorResponse"
                         }
@@ -677,6 +1094,121 @@
                 "requer_alterar_senha": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "cliente.AlterarSenhaRequest": {
+            "type": "object",
+            "required": [
+                "senha_nova"
+            ],
+            "properties": {
+                "senha_nova": {
+                    "type": "string"
+                }
+            }
+        },
+        "cliente.AtualizarClienteRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "nome",
+                "telefone"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "maria@oficina.com"
+                },
+                "nome": {
+                    "type": "string",
+                    "example": "Maria Silva"
+                },
+                "senha_nova": {
+                    "type": "string",
+                    "example": "novaSenha123"
+                },
+                "telefone": {
+                    "type": "string",
+                    "example": "11999998888"
+                }
+            }
+        },
+        "cliente.ClienteResponse": {
+            "type": "object",
+            "properties": {
+                "ativo": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "criado_por": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "documento": {
+                    "type": "string",
+                    "example": "12345678909"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "maria@oficina.com"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "nome": {
+                    "type": "string",
+                    "example": "Maria Silva"
+                },
+                "requer_alterar_senha": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "telefone": {
+                    "type": "string",
+                    "example": "11999998888"
+                },
+                "tipo_pessoa": {
+                    "type": "string",
+                    "example": "PF"
+                }
+            }
+        },
+        "cliente.CriarClienteRequest": {
+            "type": "object",
+            "required": [
+                "documento",
+                "email",
+                "nome",
+                "senha",
+                "telefone",
+                "tipo_pessoa"
+            ],
+            "properties": {
+                "documento": {
+                    "type": "string",
+                    "example": "12345678909"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "maria@oficina.com"
+                },
+                "nome": {
+                    "type": "string",
+                    "example": "Maria Silva"
+                },
+                "senha": {
+                    "type": "string",
+                    "example": "senha123"
+                },
+                "telefone": {
+                    "type": "string",
+                    "example": "11999998888"
+                },
+                "tipo_pessoa": {
+                    "type": "string",
+                    "example": "PF"
                 }
             }
         },
