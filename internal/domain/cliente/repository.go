@@ -9,6 +9,3 @@ type ClienteRepository interface {
 	BuscarPorEmail(ctx context.Context, email string) (*Cliente, error)
 	Atualizar(ctx context.Context, cliente *Cliente) error
 }
-
-// Repository é um alias de compatibilidade. Prefira ClienteRepository.
-type Repository = ClienteRepository

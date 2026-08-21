@@ -26,7 +26,7 @@ func NewCliente(
 	documento string,
 	tipo TipoPessoa,
 	nome string,
-	email string, //Substitua pelo Value Object de email
+	email string, 
 	telefone string,
 	senha string,
 	criadoPor uint64,

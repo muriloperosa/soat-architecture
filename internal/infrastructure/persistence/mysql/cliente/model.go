@@ -17,9 +17,6 @@ type Model struct {
 	DataAtualizacao    time.Time `gorm:"column:data_atualizacao"`
 }
 
-// ClienteModel é um alias de compatibilidade. Prefira Model.
-type ClienteModel = Model
-
 func (Model) TableName() string {
 	return "clientes"
 }

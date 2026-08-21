@@ -1,7 +1,6 @@
 package cliente
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -11,53 +10,25 @@ import (
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/middleware"
 )
 
-type CriarClienteUseCase interface {
-	Executar(ctx context.Context, input app.CriarClienteInput) (app.ClienteOutput, error)
-}
-
-type AtualizarClienteUseCase interface {
-	Executar(ctx context.Context, input app.AtualizarClienteInput) (app.ClienteOutput, error)
-}
-
-type ConsultarClientePorIDUseCase interface {
-	Executar(ctx context.Context, id uint64) (app.ClienteOutput, error)
-}
-
-type ConsultarClientePorDocumentoUseCase interface {
-	Executar(ctx context.Context, documento string) (app.ClienteOutput, error)
-}
-
-type AtivarClienteUseCase interface {
-	Executar(ctx context.Context, id uint64) (app.ClienteOutput, error)
-}
-
-type InativarClienteUseCase interface {
-	Executar(ctx context.Context, id uint64) (app.ClienteOutput, error)
-}
-
-type AlterarSenhaUseCase interface {
-	Executar(ctx context.Context, input app.AlterarSenhaInput) (app.ClienteOutput, error)
-}
-
 // Handler expõe as operações HTTP de gestão de clientes.
 type Handler struct {
-	criar                 CriarClienteUseCase
-	atualizar             AtualizarClienteUseCase
-	consultarPorID        ConsultarClientePorIDUseCase
-	consultarPorDocumento ConsultarClientePorDocumentoUseCase
-	ativar                AtivarClienteUseCase
-	inativar              InativarClienteUseCase
-	alterarSenha          AlterarSenhaUseCase
+	criar                 *app.CriarClienteUseCase
+	atualizar             *app.AtualizarClienteUseCase
+	consultarPorID        *app.ConsultarClientePorIDUseCase
+	consultarPorDocumento *app.ConsultarClientePorDocumentoUseCase
+	ativar                *app.AtivarClienteUseCase
+	inativar              *app.InativarClienteUseCase
+	alterarSenha          *app.AlterarSenhaClienteUseCase
 }
 
 func NewHandler(
-	criar CriarClienteUseCase,
-	atualizar AtualizarClienteUseCase,
-	consultarPorID ConsultarClientePorIDUseCase,
-	consultarPorDocumento ConsultarClientePorDocumentoUseCase,
-	ativar AtivarClienteUseCase,
-	inativar InativarClienteUseCase,
-	alterarSenha AlterarSenhaUseCase,
+	criar *app.CriarClienteUseCase,
+	atualizar *app.AtualizarClienteUseCase,
+	consultarPorID *app.ConsultarClientePorIDUseCase,
+	consultarPorDocumento *app.ConsultarClientePorDocumentoUseCase,
+	ativar *app.AtivarClienteUseCase,
+	inativar *app.InativarClienteUseCase,
+	alterarSenha *app.AlterarSenhaClienteUseCase,
 ) *Handler {
 	return &Handler{
 		criar:                 criar,
