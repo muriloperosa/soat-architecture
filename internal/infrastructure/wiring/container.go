@@ -7,14 +7,17 @@ import (
 
 	appauth "github.com/muriloperosa/soat-architecture/internal/application/auth"
 	appcliente "github.com/muriloperosa/soat-architecture/internal/application/cliente"
+	apppeca "github.com/muriloperosa/soat-architecture/internal/application/peca"
 	appusuario "github.com/muriloperosa/soat-architecture/internal/application/usuario"
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 	domaincliente "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
+	domainpeca "github.com/muriloperosa/soat-architecture/internal/domain/peca"
 	domainusuario "github.com/muriloperosa/soat-architecture/internal/domain/usuario"
 	infraauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/auth"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/config"
 	mysqlauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/auth"
 	mysqlcliente "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/cliente"
+	mysqlpeca "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/peca"
 	mysqlusuario "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/usuario"
 )
 
@@ -30,6 +33,7 @@ type Container struct {
 	UsuarioStatusRepo domainauth.UsuarioStatusRepository
 	ClienteRepository domaincliente.ClienteRepository
 	ClienteStatusRepo domainauth.UsuarioStatusRepository
+	PecaRepo          domainpeca.Repository
 
 	LoginInternoUC *appauth.LoginUseCase
 	LoginClienteUC *appauth.LoginUseCase
@@ -50,6 +54,13 @@ type Container struct {
 	AtivarClienteUseCase                *appcliente.AtivarClienteUseCase
 	InativarClienteUseCase              *appcliente.InativarClienteUseCase
 	AlterarSenhaClienteUseCase          *appcliente.AlterarSenhaClienteUseCase
+
+	CadastrarPecaUC      *apppeca.CadastrarPecaUseCase
+	AtualizarPecaUC      *apppeca.AtualizarPecaUseCase
+	AtivarPecaUC         *apppeca.AtivarPecaUseCase
+	InativarPecaUC       *apppeca.InativarPecaUseCase
+	ConsultarPecaPorIDUC *apppeca.ConsultarPecaPorIDUseCase
+	ReporEstoquePecaUC   *apppeca.ReporEstoqueUseCase
 }
 
 // NewContainer monta o grafo de dependências da aplicação.
@@ -58,6 +69,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.RefreshTokensRepo = mysqlauth.NewRefreshTokenRepository(db)
 	c.UsuarioRepo = mysqlusuario.NewUsuarioRepository(db)
 	c.ClienteRepository = mysqlcliente.NewClienteRepository(db)
+	c.PecaRepo = mysqlpeca.NewRepository(db)
 	if cfg == nil {
 		return c
 	}
@@ -89,6 +101,13 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.AtivarClienteUseCase = appcliente.NewAtivarClienteUseCase(c.ClienteRepository)
 	c.InativarClienteUseCase = appcliente.NewInativarClienteUseCase(c.ClienteRepository)
 	c.AlterarSenhaClienteUseCase = appcliente.NewAlterarSenhaClienteUseCase(c.ClienteRepository)
+
+	c.CadastrarPecaUC = apppeca.NewCadastrarPecaUseCase(c.PecaRepo)
+	c.AtualizarPecaUC = apppeca.NewAtualizarPecaUseCase(c.PecaRepo)
+	c.AtivarPecaUC = apppeca.NewAtivarPecaUseCase(c.PecaRepo)
+	c.InativarPecaUC = apppeca.NewInativarPecaUseCase(c.PecaRepo)
+	c.ConsultarPecaPorIDUC = apppeca.NewConsultarPecaPorIDUseCase(c.PecaRepo)
+	c.ReporEstoquePecaUC = apppeca.NewReporEstoqueUseCase(c.PecaRepo)
 
 	return c
 }
