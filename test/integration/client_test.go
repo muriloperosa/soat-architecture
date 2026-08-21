@@ -60,6 +60,18 @@ func doLogin(t *testing.T, email, senha string) httpauth.TokenResponse {
 	return resp
 }
 
+// doLoginCliente faz POST /v1/auth/cliente/login e falha o teste se não
+// vier 200. Mantém separado o endpoint da fonte de identidade interna.
+func doLoginCliente(t *testing.T, email, senha string) httpauth.TokenResponse {
+	t.Helper()
+	var resp httpauth.TokenResponse
+	rec := doRequest(t, http.MethodPost, "/v1/auth/cliente/login", "", httpauth.LoginRequest{Email: email, Senha: senha}, &resp)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("login de cliente falhou: status %d, body %q", rec.Code, rec.Body.String())
+	}
+	return resp
+}
+
 // Retorna bearer token formatado.
 func fmtBearer(token string) string {
 	return fmt.Sprintf("Bearer %s", token)
