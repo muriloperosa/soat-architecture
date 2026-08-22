@@ -158,3 +158,53 @@ func TestLiberarReservaPeca_LiberacaoParcialEDepoisTotal(t *testing.T) {
 	require.NoError(t, err)
 	require.Zero(t, reservada, "reserva totalmente liberada não deveria deixar linha em reservas_pecas")
 }
+
+// TestLiberarReservaPeca_Concorrencia_NaoPerdeAtualizacoes prova a mesma
+// proteção do Reservar, agora pro Liberar: Atualizar grava a quantidade
+// absoluta calculada em memória, então duas liberações concorrentes na
+// mesma reserva, sem lock, fariam a segunda sobrescrever a primeira (lost
+// update) — a reserva pararia num valor intermediário em vez de chegar a
+// zero, e todas reportariam sucesso incorretamente. Com
+// BuscarPorOrdemEPecaComBloqueio + transação, as 5 liberações concorrentes
+// de 1 unidade cada serializam e a reserva termina exatamente em zero.
+func TestLiberarReservaPeca_Concorrencia_NaoPerdeAtualizacoes(t *testing.T) {
+	resetDB(t)
+	admin := seedUsuario(t, "Admin Oficina", "admin@oficina.com", "senha123", shared.PapelAdmin)
+	pecaID := seedPecaComEstoque(t, admin.ID, 10, 0)
+	ordemServicoID := seedOrdemServico(t, admin.ID)
+
+	_, err := testContainer.ReservarPecaUC.Executar(context.Background(), apppeca.ReservarPecaInput{
+		PecaID: pecaID, OrdemServicoID: ordemServicoID, Quantidade: 5,
+	})
+	require.NoError(t, err)
+
+	const tentativas = 5
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	sucessos := 0
+
+	for i := 0; i < tentativas; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			_, err := testContainer.LiberarReservaPecaUC.Executar(context.Background(), apppeca.LiberarReservaPecaInput{
+				PecaID: pecaID, OrdemServicoID: ordemServicoID, Quantidade: 1,
+			})
+
+			mu.Lock()
+			defer mu.Unlock()
+			if err == nil {
+				sucessos++
+			}
+		}()
+	}
+	wg.Wait()
+
+	require.Equal(t, tentativas, sucessos, "as 5 liberações concorrentes de 1 unidade deveriam ter sucesso")
+
+	reservada, err := testContainer.ReservaPecaRepo.SomarQuantidadeReservada(context.Background(), pecaID)
+	require.NoError(t, err)
+	require.Zero(t, reservada, "5 liberações de 1 sobre uma reserva de 5 têm que zerar exatamente, sem lost update")
+}

@@ -9,6 +9,7 @@ import (
 	"github.com/muriloperosa/soat-architecture/internal/domain/peca/mocks"
 	domainreservapeca "github.com/muriloperosa/soat-architecture/internal/domain/reservapeca"
 	reservamocks "github.com/muriloperosa/soat-architecture/internal/domain/reservapeca/mocks"
+	"github.com/muriloperosa/soat-architecture/test/helpers"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -27,7 +28,7 @@ func TestNewReservarPecaUseCase(t *testing.T) {
 	repository := mocks.NewRepository(t)
 	reservaRepository := reservamocks.NewRepository(t)
 
-	useCase := NewReservarPecaUseCase(repository, reservaRepository, transacaoFake{})
+	useCase := NewReservarPecaUseCase(repository, reservaRepository, &helpers.FakeTransactionRunner{})
 
 	require.NotNil(t, useCase)
 	require.Equal(t, repository, useCase.repository)
@@ -38,7 +39,8 @@ func TestReservarPecaUseCaseExecutar_CriaReservaNova(t *testing.T) {
 	ctx := context.Background()
 	repository := mocks.NewRepository(t)
 	reservaRepository := reservamocks.NewRepository(t)
-	useCase := NewReservarPecaUseCase(repository, reservaRepository, transacaoFake{})
+	runner := &helpers.FakeTransactionRunner{}
+	useCase := NewReservarPecaUseCase(repository, reservaRepository, runner)
 
 	p := pecaComEstoque(t, 10, 5)
 
@@ -58,13 +60,14 @@ func TestReservarPecaUseCaseExecutar_CriaReservaNova(t *testing.T) {
 	require.Equal(t, uint64(10), output.OrdemServicoID)
 	require.Equal(t, uint64(1), output.PecaID)
 	require.Equal(t, 3, output.Quantidade)
+	require.Equal(t, 1, runner.Calls, "use case deveria delegar ao TransactionRunner, não rodar a lógica direto")
 }
 
 func TestReservarPecaUseCaseExecutar_IncrementaReservaExistente(t *testing.T) {
 	ctx := context.Background()
 	repository := mocks.NewRepository(t)
 	reservaRepository := reservamocks.NewRepository(t)
-	useCase := NewReservarPecaUseCase(repository, reservaRepository, transacaoFake{})
+	useCase := NewReservarPecaUseCase(repository, reservaRepository, &helpers.FakeTransactionRunner{})
 
 	p := pecaComEstoque(t, 10, 0)
 
@@ -89,7 +92,7 @@ func TestReservarPecaUseCaseExecutar_PecaNaoEncontrada_RetornaErro(t *testing.T)
 	ctx := context.Background()
 	repository := mocks.NewRepository(t)
 	reservaRepository := reservamocks.NewRepository(t)
-	useCase := NewReservarPecaUseCase(repository, reservaRepository, transacaoFake{})
+	useCase := NewReservarPecaUseCase(repository, reservaRepository, &helpers.FakeTransactionRunner{})
 
 	repository.EXPECT().BuscarPorIDComBloqueio(mock.Anything, uint64(999)).Return(nil, domain.ErrPecaNaoEncontrada).Once()
 
@@ -103,7 +106,7 @@ func TestReservarPecaUseCaseExecutar_ErroAoSomarReservado_RetornaErro(t *testing
 	ctx := context.Background()
 	repository := mocks.NewRepository(t)
 	reservaRepository := reservamocks.NewRepository(t)
-	useCase := NewReservarPecaUseCase(repository, reservaRepository, transacaoFake{})
+	useCase := NewReservarPecaUseCase(repository, reservaRepository, &helpers.FakeTransactionRunner{})
 
 	p := pecaComEstoque(t, 10, 5)
 	erroBanco := errors.New("erro ao somar reservas")
@@ -121,7 +124,7 @@ func TestReservarPecaUseCaseExecutar_QuantidadeIndisponivel_RetornaErro(t *testi
 	ctx := context.Background()
 	repository := mocks.NewRepository(t)
 	reservaRepository := reservamocks.NewRepository(t)
-	useCase := NewReservarPecaUseCase(repository, reservaRepository, transacaoFake{})
+	useCase := NewReservarPecaUseCase(repository, reservaRepository, &helpers.FakeTransactionRunner{})
 
 	// estoque 10, minimo 5, reservado 2: disponivel pra reservar sem furar o minimo é 3 (10-2-5=3)
 	p := pecaComEstoque(t, 10, 5)
@@ -139,7 +142,7 @@ func TestReservarPecaUseCaseExecutar_QuantidadeZeroOuNegativa_RetornaErro(t *tes
 	ctx := context.Background()
 	repository := mocks.NewRepository(t)
 	reservaRepository := reservamocks.NewRepository(t)
-	useCase := NewReservarPecaUseCase(repository, reservaRepository, transacaoFake{})
+	useCase := NewReservarPecaUseCase(repository, reservaRepository, &helpers.FakeTransactionRunner{})
 
 	output, err := useCase.Executar(ctx, ReservarPecaInput{PecaID: 1, OrdemServicoID: 10, Quantidade: 0})
 
@@ -151,7 +154,7 @@ func TestReservarPecaUseCaseExecutar_ErroAoBuscarReservaExistente_RetornaErro(t 
 	ctx := context.Background()
 	repository := mocks.NewRepository(t)
 	reservaRepository := reservamocks.NewRepository(t)
-	useCase := NewReservarPecaUseCase(repository, reservaRepository, transacaoFake{})
+	useCase := NewReservarPecaUseCase(repository, reservaRepository, &helpers.FakeTransactionRunner{})
 
 	p := pecaComEstoque(t, 10, 5)
 	erroBanco := errors.New("erro ao consultar reserva")
@@ -170,7 +173,7 @@ func TestReservarPecaUseCaseExecutar_ErroAoSalvar_RetornaErro(t *testing.T) {
 	ctx := context.Background()
 	repository := mocks.NewRepository(t)
 	reservaRepository := reservamocks.NewRepository(t)
-	useCase := NewReservarPecaUseCase(repository, reservaRepository, transacaoFake{})
+	useCase := NewReservarPecaUseCase(repository, reservaRepository, &helpers.FakeTransactionRunner{})
 
 	p := pecaComEstoque(t, 10, 5)
 	erroBanco := errors.New("erro ao salvar reserva")
