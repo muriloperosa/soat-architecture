@@ -8,6 +8,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	domain "github.com/muriloperosa/soat-architecture/internal/domain/reservapeca"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql"
 	"github.com/stretchr/testify/require"
 	gormmysql "gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -77,6 +78,26 @@ func TestRepositorySalvar(t *testing.T) {
 	mock.ExpectExec("INSERT INTO .*").WillReturnResult(sqlmock.NewResult(1, 1))
 
 	err := repository.Salvar(context.Background(), r)
+
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), r.ID())
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestRepositorySalvar_ParticipaDaTransacaoDoContexto(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewRepository(db)
+	runner := mysql.NewTransactionRunner(db)
+
+	r := novaReservaValida(t)
+
+	mock.ExpectBegin()
+	mock.ExpectExec("INSERT INTO .*").WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectCommit()
+
+	err := runner.Executar(context.Background(), func(ctx context.Context) error {
+		return repository.Salvar(ctx, r)
+	})
 
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), r.ID())

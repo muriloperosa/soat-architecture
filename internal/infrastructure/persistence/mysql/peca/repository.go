@@ -5,8 +5,10 @@ import (
 	"errors"
 
 	domain "github.com/muriloperosa/soat-architecture/internal/domain/peca"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type Repository struct {
@@ -54,6 +56,25 @@ func (r *Repository) BuscarPorCodigo(ctx context.Context, codigo string) (*domai
 	var model PecaModel
 
 	err := r.db.WithContext(ctx).Where("codigo = ?", codigo).First(&model).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrPecaNaoEncontrada
+		}
+
+		return nil, err
+	}
+
+	return toDomain(model), nil
+}
+
+// BuscarPorIDComBloqueio implements [peca.Repository].
+func (r *Repository) BuscarPorIDComBloqueio(ctx context.Context, id uint64) (*domain.Peca, error) {
+	var model PecaModel
+
+	db := mysql.DBFromContext(ctx, r.db)
+
+	err := db.WithContext(ctx).Clauses(clause.Locking{Strength: "UPDATE"}).First(&model, id).Error
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

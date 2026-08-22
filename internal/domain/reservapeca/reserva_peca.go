@@ -55,15 +55,35 @@ func RestaurarReservaPeca(id, ordemServicoID, pecaID uint64, quantidade int, cri
 	}
 }
 
-// AlterarQuantidade troca a quantidade reservada (ex. OS altera a
-// quantidade de uma peça já reservada). Quem garante que o novo total não
-// fura o estoque mínimo é o orquestrador (OrdemServico), não a reserva.
-func (r *ReservaPeca) AlterarQuantidade(quantidade int) error {
+// Aumentar soma quantidade à reserva (ex. a OS reserva mais unidades da
+// mesma peça). Quem garante que o novo total não fura o estoque mínimo é
+// o orquestrador (ReservarPecaUseCase), não a reserva.
+func (r *ReservaPeca) Aumentar(quantidade int) error {
 	if quantidade <= 0 {
 		return ErrQuantidadeInvalida
 	}
 
-	r.quantidade = quantidade
+	r.quantidade += quantidade
+	r.atualizadaEm = time.Now()
+
+	return nil
+}
+
+// Reduzir libera quantidade da reserva. Não é possível liberar mais do
+// que está reservado. Se o resultado chegar a zero, a reserva deixou de
+// existir — quem chama isso deve remover o registro
+// (Repository.Remover), nunca persistir quantidade zero (violaria o
+// CHECK quantidade > 0 da migration).
+func (r *ReservaPeca) Reduzir(quantidade int) error {
+	if quantidade <= 0 {
+		return ErrQuantidadeInvalida
+	}
+
+	if quantidade > r.quantidade {
+		return ErrQuantidadeSuperiorAReservada
+	}
+
+	r.quantidade -= quantidade
 	r.atualizadaEm = time.Now()
 
 	return nil

@@ -47,21 +47,57 @@ func TestNewReservaPeca_DataCriacaoEAtualizacao_NascemIguais(t *testing.T) {
 	require.Equal(t, r.CriadaEm(), r.AtualizadaEm())
 }
 
-func TestReservaPeca_AlterarQuantidade_Valida(t *testing.T) {
-	r, err := reservapeca.NewReservaPeca(1, 2, 3)
+func TestReservaPeca_Aumentar_SomaQuantidade(t *testing.T) {
+	r, err := reservapeca.NewReservaPeca(1, 2, 2)
 	require.NoError(t, err)
 
-	err = r.AlterarQuantidade(5)
+	err = r.Aumentar(3)
 	require.NoError(t, err)
 	require.Equal(t, 5, r.Quantidade())
 }
 
-func TestReservaPeca_AlterarQuantidade_Invalida_RetornaErroENaoAltera(t *testing.T) {
+func TestReservaPeca_Aumentar_QuantidadeInvalida_RetornaErroENaoAltera(t *testing.T) {
 	r, err := reservapeca.NewReservaPeca(1, 2, 3)
 	require.NoError(t, err)
 
-	err = r.AlterarQuantidade(0)
+	err = r.Aumentar(0)
 	require.ErrorIs(t, err, reservapeca.ErrQuantidadeInvalida)
+	require.Equal(t, 3, r.Quantidade())
+}
+
+func TestReservaPeca_Reduzir_SubtraiQuantidade(t *testing.T) {
+	r, err := reservapeca.NewReservaPeca(1, 2, 5)
+	require.NoError(t, err)
+
+	err = r.Reduzir(2)
+	require.NoError(t, err)
+	require.Equal(t, 3, r.Quantidade())
+}
+
+func TestReservaPeca_Reduzir_ExatamenteAteZero_Permitido(t *testing.T) {
+	r, err := reservapeca.NewReservaPeca(1, 2, 5)
+	require.NoError(t, err)
+
+	err = r.Reduzir(5)
+	require.NoError(t, err)
+	require.Zero(t, r.Quantidade())
+}
+
+func TestReservaPeca_Reduzir_QuantidadeInvalida_RetornaErroENaoAltera(t *testing.T) {
+	r, err := reservapeca.NewReservaPeca(1, 2, 3)
+	require.NoError(t, err)
+
+	err = r.Reduzir(0)
+	require.ErrorIs(t, err, reservapeca.ErrQuantidadeInvalida)
+	require.Equal(t, 3, r.Quantidade())
+}
+
+func TestReservaPeca_Reduzir_MaiorQueReservada_RetornaErroENaoAltera(t *testing.T) {
+	r, err := reservapeca.NewReservaPeca(1, 2, 3)
+	require.NoError(t, err)
+
+	err = r.Reduzir(4)
+	require.ErrorIs(t, err, reservapeca.ErrQuantidadeSuperiorAReservada)
 	require.Equal(t, 3, r.Quantidade())
 }
 

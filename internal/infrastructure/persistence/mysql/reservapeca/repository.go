@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	domain "github.com/muriloperosa/soat-architecture/internal/domain/reservapeca"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql"
 
 	"gorm.io/gorm"
 )
@@ -23,7 +24,7 @@ func NewRepository(db *gorm.DB) domain.Repository {
 func (r *Repository) Salvar(ctx context.Context, reserva *domain.ReservaPeca) error {
 	model := toModel(reserva)
 
-	if err := r.db.WithContext(ctx).Create(&model).Error; err != nil {
+	if err := mysql.DBFromContext(ctx, r.db).WithContext(ctx).Create(&model).Error; err != nil {
 		return err
 	}
 
@@ -36,7 +37,7 @@ func (r *Repository) Salvar(ctx context.Context, reserva *domain.ReservaPeca) er
 func (r *Repository) Atualizar(ctx context.Context, reserva *domain.ReservaPeca) error {
 	model := toModel(reserva)
 
-	result := r.db.
+	result := mysql.DBFromContext(ctx, r.db).
 		WithContext(ctx).
 		Model(&ReservaPecaModel{}).
 		Where("id = ?", model.ID).
@@ -60,7 +61,7 @@ func (r *Repository) Atualizar(ctx context.Context, reserva *domain.ReservaPeca)
 func (r *Repository) BuscarPorOrdemEPeca(ctx context.Context, ordemServicoID, pecaID uint64) (*domain.ReservaPeca, error) {
 	var model ReservaPecaModel
 
-	err := r.db.WithContext(ctx).
+	err := mysql.DBFromContext(ctx, r.db).WithContext(ctx).
 		Where("ordem_servico_id = ? AND peca_id = ?", ordemServicoID, pecaID).
 		First(&model).Error
 
@@ -79,7 +80,7 @@ func (r *Repository) BuscarPorOrdemEPeca(ctx context.Context, ordemServicoID, pe
 func (r *Repository) BuscarPorOrdemServico(ctx context.Context, ordemServicoID uint64) ([]*domain.ReservaPeca, error) {
 	var models []ReservaPecaModel
 
-	if err := r.db.WithContext(ctx).Where("ordem_servico_id = ?", ordemServicoID).Find(&models).Error; err != nil {
+	if err := mysql.DBFromContext(ctx, r.db).WithContext(ctx).Where("ordem_servico_id = ?", ordemServicoID).Find(&models).Error; err != nil {
 		return nil, err
 	}
 
@@ -96,7 +97,7 @@ func (r *Repository) BuscarPorOrdemServico(ctx context.Context, ordemServicoID u
 func (r *Repository) SomarQuantidadeReservada(ctx context.Context, pecaID uint64) (int, error) {
 	var total int
 
-	err := r.db.WithContext(ctx).
+	err := mysql.DBFromContext(ctx, r.db).WithContext(ctx).
 		Model(&ReservaPecaModel{}).
 		Where("peca_id = ?", pecaID).
 		Select("COALESCE(SUM(quantidade), 0)").
@@ -111,7 +112,7 @@ func (r *Repository) SomarQuantidadeReservada(ctx context.Context, pecaID uint64
 
 // Remover implements [reservapeca.Repository].
 func (r *Repository) Remover(ctx context.Context, ordemServicoID, pecaID uint64) error {
-	result := r.db.WithContext(ctx).
+	result := mysql.DBFromContext(ctx, r.db).WithContext(ctx).
 		Where("ordem_servico_id = ? AND peca_id = ?", ordemServicoID, pecaID).
 		Delete(&ReservaPecaModel{})
 

@@ -10,4 +10,11 @@ type Repository interface {
 	BuscarPorID(ctx context.Context, id uint64) (*Peca, error)
 	BuscarPorCodigo(ctx context.Context, codigo string) (*Peca, error)
 	Atualizar(ctx context.Context, peca *Peca) error
+
+	// BuscarPorIDComBloqueio busca a peça travando a linha (SELECT ... FOR
+	// UPDATE) até o fim da transação corrente. Só faz sentido chamado
+	// dentro de um shared.TransactionRunner.Executar, pra serializar
+	// operações concorrentes (ex. reservar estoque) que leem e decidem com
+	// base no mesmo estado.
+	BuscarPorIDComBloqueio(ctx context.Context, id uint64) (*Peca, error)
 }
