@@ -32,6 +32,10 @@ func NewReservarPecaUseCase(
 }
 
 func (uc *ReservarPecaUseCase) Executar(ctx context.Context, input ReservarPecaInput) (ReservaPecaOutput, error) {
+	if input.Quantidade <= 0 {
+		return ReservaPecaOutput{}, domainreservapeca.ErrQuantidadeInvalida
+	}
+
 	var output ReservaPecaOutput
 
 	err := uc.transactionRunner.Executar(ctx, func(ctx context.Context) error {
@@ -49,7 +53,7 @@ func (uc *ReservarPecaUseCase) Executar(ctx context.Context, input ReservarPecaI
 			return domain.ErrQuantidadeIndisponivelParaReserva
 		}
 
-		existente, err := uc.reservaRepository.BuscarPorOrdemEPeca(ctx, input.OrdemServicoID, input.PecaID)
+		existente, err := uc.reservaRepository.BuscarPorOrdemEPecaComBloqueio(ctx, input.OrdemServicoID, input.PecaID)
 		if err != nil && !errors.Is(err, domainreservapeca.ErrReservaNaoEncontrada) {
 			return err
 		}

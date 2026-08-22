@@ -130,6 +130,66 @@ func (_c *Repository_BuscarPorOrdemEPeca_Call) RunAndReturn(run func(context.Con
 	return _c
 }
 
+// BuscarPorOrdemEPecaComBloqueio provides a mock function with given fields: ctx, ordemServicoID, pecaID
+func (_m *Repository) BuscarPorOrdemEPecaComBloqueio(ctx context.Context, ordemServicoID uint64, pecaID uint64) (*reservapeca.ReservaPeca, error) {
+	ret := _m.Called(ctx, ordemServicoID, pecaID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BuscarPorOrdemEPecaComBloqueio")
+	}
+
+	var r0 *reservapeca.ReservaPeca
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint64, uint64) (*reservapeca.ReservaPeca, error)); ok {
+		return rf(ctx, ordemServicoID, pecaID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uint64, uint64) *reservapeca.ReservaPeca); ok {
+		r0 = rf(ctx, ordemServicoID, pecaID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*reservapeca.ReservaPeca)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uint64, uint64) error); ok {
+		r1 = rf(ctx, ordemServicoID, pecaID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Repository_BuscarPorOrdemEPecaComBloqueio_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BuscarPorOrdemEPecaComBloqueio'
+type Repository_BuscarPorOrdemEPecaComBloqueio_Call struct {
+	*mock.Call
+}
+
+// BuscarPorOrdemEPecaComBloqueio is a helper method to define mock.On call
+//   - ctx context.Context
+//   - ordemServicoID uint64
+//   - pecaID uint64
+func (_e *Repository_Expecter) BuscarPorOrdemEPecaComBloqueio(ctx interface{}, ordemServicoID interface{}, pecaID interface{}) *Repository_BuscarPorOrdemEPecaComBloqueio_Call {
+	return &Repository_BuscarPorOrdemEPecaComBloqueio_Call{Call: _e.mock.On("BuscarPorOrdemEPecaComBloqueio", ctx, ordemServicoID, pecaID)}
+}
+
+func (_c *Repository_BuscarPorOrdemEPecaComBloqueio_Call) Run(run func(ctx context.Context, ordemServicoID uint64, pecaID uint64)) *Repository_BuscarPorOrdemEPecaComBloqueio_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uint64), args[2].(uint64))
+	})
+	return _c
+}
+
+func (_c *Repository_BuscarPorOrdemEPecaComBloqueio_Call) Return(_a0 *reservapeca.ReservaPeca, _a1 error) *Repository_BuscarPorOrdemEPecaComBloqueio_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Repository_BuscarPorOrdemEPecaComBloqueio_Call) RunAndReturn(run func(context.Context, uint64, uint64) (*reservapeca.ReservaPeca, error)) *Repository_BuscarPorOrdemEPecaComBloqueio_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // BuscarPorOrdemServico provides a mock function with given fields: ctx, ordemServicoID
 func (_m *Repository) BuscarPorOrdemServico(ctx context.Context, ordemServicoID uint64) ([]*reservapeca.ReservaPeca, error) {
 	ret := _m.Called(ctx, ordemServicoID)

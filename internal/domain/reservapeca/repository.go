@@ -14,4 +14,10 @@ type Repository interface {
 	BuscarPorOrdemServico(ctx context.Context, ordemServicoID uint64) ([]*ReservaPeca, error)
 	SomarQuantidadeReservada(ctx context.Context, pecaID uint64) (int, error)
 	Remover(ctx context.Context, ordemServicoID, pecaID uint64) error
+
+	// BuscarPorOrdemEPecaComBloqueio busca a reserva travando a linha
+	// (SELECT ... FOR UPDATE) até o fim da transação corrente. Só faz
+	// sentido chamado dentro de um shared.TransactionRunner.Executar, pra
+	// serializar Reservar/LiberarReserva concorrentes na mesma reserva.
+	BuscarPorOrdemEPecaComBloqueio(ctx context.Context, ordemServicoID, pecaID uint64) (*ReservaPeca, error)
 }

@@ -44,7 +44,7 @@ func TestReservarPecaUseCaseExecutar_CriaReservaNova(t *testing.T) {
 
 	repository.EXPECT().BuscarPorIDComBloqueio(mock.Anything, uint64(1)).Return(p, nil).Once()
 	reservaRepository.EXPECT().SomarQuantidadeReservada(mock.Anything, uint64(1)).Return(2, nil).Once()
-	reservaRepository.EXPECT().BuscarPorOrdemEPeca(mock.Anything, uint64(10), uint64(1)).Return(nil, domainreservapeca.ErrReservaNaoEncontrada).Once()
+	reservaRepository.EXPECT().BuscarPorOrdemEPecaComBloqueio(mock.Anything, uint64(10), uint64(1)).Return(nil, domainreservapeca.ErrReservaNaoEncontrada).Once()
 	reservaRepository.EXPECT().
 		Salvar(mock.Anything, mock.AnythingOfType("*reservapeca.ReservaPeca")).
 		Run(func(ctx context.Context, r *domainreservapeca.ReservaPeca) { r.AtribuirID(99) }).
@@ -74,7 +74,7 @@ func TestReservarPecaUseCaseExecutar_IncrementaReservaExistente(t *testing.T) {
 
 	repository.EXPECT().BuscarPorIDComBloqueio(mock.Anything, uint64(1)).Return(p, nil).Once()
 	reservaRepository.EXPECT().SomarQuantidadeReservada(mock.Anything, uint64(1)).Return(2, nil).Once()
-	reservaRepository.EXPECT().BuscarPorOrdemEPeca(mock.Anything, uint64(10), uint64(1)).Return(existente, nil).Once()
+	reservaRepository.EXPECT().BuscarPorOrdemEPecaComBloqueio(mock.Anything, uint64(10), uint64(1)).Return(existente, nil).Once()
 	reservaRepository.EXPECT().Atualizar(mock.Anything, existente).Return(nil).Once()
 
 	output, err := useCase.Executar(ctx, ReservarPecaInput{PecaID: 1, OrdemServicoID: 10, Quantidade: 3})
@@ -135,6 +135,18 @@ func TestReservarPecaUseCaseExecutar_QuantidadeIndisponivel_RetornaErro(t *testi
 	require.ErrorIs(t, err, domain.ErrQuantidadeIndisponivelParaReserva)
 }
 
+func TestReservarPecaUseCaseExecutar_QuantidadeZeroOuNegativa_RetornaErro(t *testing.T) {
+	ctx := context.Background()
+	repository := mocks.NewRepository(t)
+	reservaRepository := reservamocks.NewRepository(t)
+	useCase := NewReservarPecaUseCase(repository, reservaRepository, transacaoFake{})
+
+	output, err := useCase.Executar(ctx, ReservarPecaInput{PecaID: 1, OrdemServicoID: 10, Quantidade: 0})
+
+	require.Equal(t, ReservaPecaOutput{}, output)
+	require.ErrorIs(t, err, domainreservapeca.ErrQuantidadeInvalida)
+}
+
 func TestReservarPecaUseCaseExecutar_ErroAoBuscarReservaExistente_RetornaErro(t *testing.T) {
 	ctx := context.Background()
 	repository := mocks.NewRepository(t)
@@ -146,7 +158,7 @@ func TestReservarPecaUseCaseExecutar_ErroAoBuscarReservaExistente_RetornaErro(t 
 
 	repository.EXPECT().BuscarPorIDComBloqueio(mock.Anything, uint64(1)).Return(p, nil).Once()
 	reservaRepository.EXPECT().SomarQuantidadeReservada(mock.Anything, uint64(1)).Return(2, nil).Once()
-	reservaRepository.EXPECT().BuscarPorOrdemEPeca(mock.Anything, uint64(10), uint64(1)).Return(nil, erroBanco).Once()
+	reservaRepository.EXPECT().BuscarPorOrdemEPecaComBloqueio(mock.Anything, uint64(10), uint64(1)).Return(nil, erroBanco).Once()
 
 	output, err := useCase.Executar(ctx, ReservarPecaInput{PecaID: 1, OrdemServicoID: 10, Quantidade: 3})
 
@@ -165,7 +177,7 @@ func TestReservarPecaUseCaseExecutar_ErroAoSalvar_RetornaErro(t *testing.T) {
 
 	repository.EXPECT().BuscarPorIDComBloqueio(mock.Anything, uint64(1)).Return(p, nil).Once()
 	reservaRepository.EXPECT().SomarQuantidadeReservada(mock.Anything, uint64(1)).Return(2, nil).Once()
-	reservaRepository.EXPECT().BuscarPorOrdemEPeca(mock.Anything, uint64(10), uint64(1)).Return(nil, domainreservapeca.ErrReservaNaoEncontrada).Once()
+	reservaRepository.EXPECT().BuscarPorOrdemEPecaComBloqueio(mock.Anything, uint64(10), uint64(1)).Return(nil, domainreservapeca.ErrReservaNaoEncontrada).Once()
 	reservaRepository.EXPECT().Salvar(mock.Anything, mock.AnythingOfType("*reservapeca.ReservaPeca")).Return(erroBanco).Once()
 
 	output, err := useCase.Executar(ctx, ReservarPecaInput{PecaID: 1, OrdemServicoID: 10, Quantidade: 3})

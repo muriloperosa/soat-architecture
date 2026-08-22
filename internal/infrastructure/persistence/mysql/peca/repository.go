@@ -8,7 +8,6 @@ import (
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql"
 
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type Repository struct {
@@ -72,9 +71,9 @@ func (r *Repository) BuscarPorCodigo(ctx context.Context, codigo string) (*domai
 func (r *Repository) BuscarPorIDComBloqueio(ctx context.Context, id uint64) (*domain.Peca, error) {
 	var model PecaModel
 
-	db := mysql.DBFromContext(ctx, r.db)
+	db := mysql.ComBloqueio(mysql.DBFromContext(ctx, r.db))
 
-	err := db.WithContext(ctx).Clauses(clause.Locking{Strength: "UPDATE"}).First(&model, id).Error
+	err := db.WithContext(ctx).First(&model, id).Error
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

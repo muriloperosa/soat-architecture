@@ -76,6 +76,25 @@ func (r *Repository) BuscarPorOrdemEPeca(ctx context.Context, ordemServicoID, pe
 	return toDomain(model), nil
 }
 
+// BuscarPorOrdemEPecaComBloqueio implements [reservapeca.Repository].
+func (r *Repository) BuscarPorOrdemEPecaComBloqueio(ctx context.Context, ordemServicoID, pecaID uint64) (*domain.ReservaPeca, error) {
+	var model ReservaPecaModel
+
+	err := mysql.ComBloqueio(mysql.DBFromContext(ctx, r.db)).WithContext(ctx).
+		Where("ordem_servico_id = ? AND peca_id = ?", ordemServicoID, pecaID).
+		First(&model).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrReservaNaoEncontrada
+		}
+
+		return nil, err
+	}
+
+	return toDomain(model), nil
+}
+
 // BuscarPorOrdemServico implements [reservapeca.Repository].
 func (r *Repository) BuscarPorOrdemServico(ctx context.Context, ordemServicoID uint64) ([]*domain.ReservaPeca, error) {
 	var models []ReservaPecaModel

@@ -216,6 +216,55 @@ func TestRepositoryBuscarPorOrdemEPecaDeveRetornarErroDoBanco(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestRepositoryBuscarPorOrdemEPecaComBloqueio(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewRepository(db)
+
+	mock.ExpectQuery("SELECT .* FROM .* FOR UPDATE").WillReturnRows(reservaRows())
+
+	r, err := repository.BuscarPorOrdemEPecaComBloqueio(context.Background(), 1, 2)
+
+	require.NoError(t, err)
+	require.NotNil(t, r)
+	require.Equal(t, uint64(1), r.ID())
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestRepositoryBuscarPorOrdemEPecaComBloqueioDeveRetornarReservaNaoEncontrada(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewRepository(db)
+
+	mock.ExpectQuery("SELECT .* FROM .* FOR UPDATE").WillReturnError(gorm.ErrRecordNotFound)
+
+	r, err := repository.BuscarPorOrdemEPecaComBloqueio(context.Background(), 1, 999)
+
+	require.Nil(t, r)
+	require.ErrorIs(t, err, domain.ErrReservaNaoEncontrada)
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestRepositoryBuscarPorOrdemEPecaComBloqueio_ParticipaDaTransacaoDoContexto(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewRepository(db)
+	runner := mysql.NewTransactionRunner(db)
+
+	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT .* FROM .* FOR UPDATE").WillReturnRows(reservaRows())
+	mock.ExpectCommit()
+
+	err := runner.Executar(context.Background(), func(ctx context.Context) error {
+		r, err := repository.BuscarPorOrdemEPecaComBloqueio(ctx, 1, 2)
+		require.NoError(t, err)
+		require.NotNil(t, r)
+		return nil
+	})
+
+	require.NoError(t, err)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestRepositoryBuscarPorOrdemServico(t *testing.T) {
 	db, mock := newRepositoryTestDB(t)
 	repository := NewRepository(db)

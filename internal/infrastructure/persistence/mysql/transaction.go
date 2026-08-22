@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 )
@@ -20,6 +21,14 @@ func DBFromContext(ctx context.Context, db *gorm.DB) *gorm.DB {
 		return tx
 	}
 	return db
+}
+
+// ComBloqueio adiciona SELECT ... FOR UPDATE à query. Só tem efeito de
+// verdade dentro de uma transação (fora dela, o lock é liberado no fim do
+// autocommit da própria SELECT) — use sempre com db vindo de
+// DBFromContext dentro de um shared.TransactionRunner.Executar.
+func ComBloqueio(db *gorm.DB) *gorm.DB {
+	return db.Clauses(clause.Locking{Strength: "UPDATE"})
 }
 
 // TransactionRunner implementa [shared.TransactionRunner] sobre GORM/MySQL.
