@@ -16,10 +16,11 @@ func toCadastrarInput(criadoPor uint64, req CadastrarVeiculoRequest) appveiculo.
 
 func toAtualizarInput(id uint64, req AtualizarVeiculoRequest) appveiculo.AtualizarVeiculoInput {
 	return appveiculo.AtualizarVeiculoInput{
-		ID:     id,
-		Marca:  req.Marca,
-		Modelo: req.Modelo,
-		Cor:    req.Cor,
+		ID:                 id,
+		Marca:              req.Marca,
+		Modelo:             req.Modelo,
+		Cor:                req.Cor,
+		QuilometragemAtual: req.QuilometragemAtual,
 	}
 }
 

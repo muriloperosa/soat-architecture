@@ -13,10 +13,11 @@ type CadastrarVeiculoInput struct {
 }
 
 type AtualizarVeiculoInput struct {
-	ID     uint64
-	Marca  string
-	Modelo string
-	Cor    string
+	ID                 uint64
+	Marca              string
+	Modelo             string
+	Cor                string
+	QuilometragemAtual uint32
 }
 
 type VeiculoOutput struct {

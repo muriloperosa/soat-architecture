@@ -41,13 +41,20 @@ func TestVeiculoLifecycle_TodosOsEndpoints(t *testing.T) {
 
 	var atualizado httpveiculo.VeiculoResponse
 	rec = doRequest(t, http.MethodPut, fmt.Sprintf("/v1/veiculos/%d", criado.ID), loginAdmin.AccessToken,
-		httpveiculo.AtualizarVeiculoRequest{Marca: "Volkswagen", Modelo: "Gol", Cor: "Preto"},
+		httpveiculo.AtualizarVeiculoRequest{Marca: "Volkswagen", Modelo: "Gol", Cor: "Preto", QuilometragemAtual: 16000},
 		&atualizado)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("Atualizar: status %d, body %q", rec.Code, rec.Body.String())
 	}
-	if atualizado.Marca != "Volkswagen" || atualizado.Modelo != "Gol" || atualizado.Cor != "Preto" || atualizado.Placa != "ABC1D23" {
+	if atualizado.Marca != "Volkswagen" || atualizado.Modelo != "Gol" || atualizado.Cor != "Preto" || atualizado.Placa != "ABC1D23" || atualizado.QuilometragemAtual != 16000 {
 		t.Fatalf("Atualizar: dados não bateram: %+v", atualizado)
+	}
+
+	rec = doRequest(t, http.MethodPut, fmt.Sprintf("/v1/veiculos/%d", criado.ID), loginAdmin.AccessToken,
+		httpveiculo.AtualizarVeiculoRequest{Marca: "Volkswagen", Modelo: "Gol", Cor: "Preto", QuilometragemAtual: 10000},
+		nil)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("Atualizar com quilometragem menor que a atual deveria ser 400, veio %d, body %q", rec.Code, rec.Body.String())
 	}
 
 	rec = doRequest(t, http.MethodPatch, fmt.Sprintf("/v1/veiculos/%d/inativar", criado.ID), loginAdmin.AccessToken, nil, nil)

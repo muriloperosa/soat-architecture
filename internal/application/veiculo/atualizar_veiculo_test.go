@@ -39,10 +39,11 @@ func TestAtualizarVeiculoUseCaseExecutarComSucesso(t *testing.T) {
 	v := atualizarVeiculoValido(t)
 
 	input := AtualizarVeiculoInput{
-		ID:     1,
-		Marca:  "Volkswagen",
-		Modelo: "Gol",
-		Cor:    "Preto",
+		ID:                 1,
+		Marca:              "Volkswagen",
+		Modelo:             "Gol",
+		Cor:                "Preto",
+		QuilometragemAtual: 16000,
 	}
 
 	repository.
@@ -60,7 +61,8 @@ func TestAtualizarVeiculoUseCaseExecutarComSucesso(t *testing.T) {
 					v.ID() == 1 &&
 					v.Marca() == "Volkswagen" &&
 					v.Modelo() == "Gol" &&
-					v.Cor().String() == "Preto"
+					v.Cor().String() == "Preto" &&
+					v.QuilometragemAtual() == 16000
 			}),
 		).
 		Return(nil).
@@ -75,7 +77,7 @@ func TestAtualizarVeiculoUseCaseExecutarComSucesso(t *testing.T) {
 	require.Equal(t, "Gol", output.Modelo)
 	require.Equal(t, "Preto", output.Cor)
 	require.Equal(t, "ABC1D23", output.Placa)
-	require.Equal(t, uint32(15000), output.QuilometragemAtual)
+	require.Equal(t, uint32(16000), output.QuilometragemAtual)
 }
 
 func TestAtualizarVeiculoUseCaseExecutarDeveRetornarErroAoBuscarVeiculo(t *testing.T) {
@@ -83,7 +85,7 @@ func TestAtualizarVeiculoUseCaseExecutarDeveRetornarErroAoBuscarVeiculo(t *testi
 	repository := mocks.NewRepository(t)
 	useCase := NewAtualizarVeiculoUseCase(repository)
 
-	input := AtualizarVeiculoInput{ID: 999, Marca: "Volkswagen", Modelo: "Gol", Cor: "Preto"}
+	input := AtualizarVeiculoInput{ID: 999, Marca: "Volkswagen", Modelo: "Gol", Cor: "Preto", QuilometragemAtual: 16000}
 
 	repository.
 		EXPECT().
@@ -104,7 +106,7 @@ func TestAtualizarVeiculoUseCaseExecutarDeveRetornarErroDeValidacao(t *testing.T
 
 	v := atualizarVeiculoValido(t)
 
-	input := AtualizarVeiculoInput{ID: 1, Marca: "", Modelo: "Gol", Cor: "Preto"}
+	input := AtualizarVeiculoInput{ID: 1, Marca: "", Modelo: "Gol", Cor: "Preto", QuilometragemAtual: 16000}
 
 	repository.
 		EXPECT().
@@ -118,6 +120,29 @@ func TestAtualizarVeiculoUseCaseExecutarDeveRetornarErroDeValidacao(t *testing.T
 	require.ErrorIs(t, err, domain.ErrMarcaObrigatoria)
 }
 
+func TestAtualizarVeiculoUseCaseExecutarDeveRetornarErroDeQuilometragemInvalida(t *testing.T) {
+	ctx := context.Background()
+	repository := mocks.NewRepository(t)
+	useCase := NewAtualizarVeiculoUseCase(repository)
+
+	v := atualizarVeiculoValido(t)
+
+	input := AtualizarVeiculoInput{ID: 1, Marca: "Volkswagen", Modelo: "Gol", Cor: "Preto", QuilometragemAtual: 14000}
+
+	repository.
+		EXPECT().
+		BuscarPorID(ctx, input.ID).
+		Return(v, nil).
+		Once()
+
+	output, err := useCase.Executar(ctx, input)
+
+	require.Equal(t, VeiculoOutput{}, output)
+	require.ErrorIs(t, err, domain.ErrQuilometragemInvalida)
+	require.Equal(t, "Volkswagen", v.Marca())
+	require.Equal(t, uint32(15000), v.QuilometragemAtual())
+}
+
 func TestAtualizarVeiculoUseCaseExecutarDeveRetornarErroAoAtualizarRepository(t *testing.T) {
 	ctx := context.Background()
 	repository := mocks.NewRepository(t)
@@ -125,7 +150,7 @@ func TestAtualizarVeiculoUseCaseExecutarDeveRetornarErroAoAtualizarRepository(t 
 
 	v := atualizarVeiculoValido(t)
 
-	input := AtualizarVeiculoInput{ID: 1, Marca: "Volkswagen", Modelo: "Gol", Cor: "Preto"}
+	input := AtualizarVeiculoInput{ID: 1, Marca: "Volkswagen", Modelo: "Gol", Cor: "Preto", QuilometragemAtual: 16000}
 
 	erroRepository := errors.New("erro ao atualizar veiculo")
 

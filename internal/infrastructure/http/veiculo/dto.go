@@ -10,9 +10,10 @@ type CadastrarVeiculoRequest struct {
 }
 
 type AtualizarVeiculoRequest struct {
-	Marca  string `json:"marca" binding:"required" example:"Fiat"`
-	Modelo string `json:"modelo" binding:"required" example:"Uno"`
-	Cor    string `json:"cor" binding:"required" example:"Prata"`
+	Marca              string `json:"marca" binding:"required" example:"Fiat"`
+	Modelo             string `json:"modelo" binding:"required" example:"Uno"`
+	Cor                string `json:"cor" binding:"required" example:"Prata"`
+	QuilometragemAtual uint32 `json:"quilometragem_atual" example:"15500"`
 }
 
 type VeiculoResponse struct {

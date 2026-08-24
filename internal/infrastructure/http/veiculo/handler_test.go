@@ -132,7 +132,7 @@ func TestHandler_Atualizar_RequestValido_Retorna200(t *testing.T) {
 	engine := gin.New()
 	engine.PUT("/v1/veiculos/:id", h.Atualizar)
 
-	body, _ := json.Marshal(httpveiculo.AtualizarVeiculoRequest{Marca: "Volkswagen", Modelo: "Gol", Cor: "Preto"})
+	body, _ := json.Marshal(httpveiculo.AtualizarVeiculoRequest{Marca: "Volkswagen", Modelo: "Gol", Cor: "Preto", QuilometragemAtual: 16000})
 	req := httptest.NewRequest(http.MethodPut, "/v1/veiculos/1", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -143,6 +143,7 @@ func TestHandler_Atualizar_RequestValido_Retorna200(t *testing.T) {
 	var resp httpveiculo.VeiculoResponse
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 	require.Equal(t, "Volkswagen", resp.Marca)
+	require.Equal(t, uint32(16000), resp.QuilometragemAtual)
 }
 
 func TestHandler_Atualizar_VeiculoNaoEncontrado_Retorna404(t *testing.T) {
@@ -154,13 +155,31 @@ func TestHandler_Atualizar_VeiculoNaoEncontrado_Retorna404(t *testing.T) {
 	engine := gin.New()
 	engine.PUT("/v1/veiculos/:id", h.Atualizar)
 
-	body, _ := json.Marshal(httpveiculo.AtualizarVeiculoRequest{Marca: "Volkswagen", Modelo: "Gol", Cor: "Preto"})
+	body, _ := json.Marshal(httpveiculo.AtualizarVeiculoRequest{Marca: "Volkswagen", Modelo: "Gol", Cor: "Preto", QuilometragemAtual: 16000})
 	req := httptest.NewRequest(http.MethodPut, "/v1/veiculos/999", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	engine.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusNotFound, rec.Code)
+}
+
+func TestHandler_Atualizar_QuilometragemMenorQueAtual_Retorna400(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := mocks.NewRepository(t)
+	repo.EXPECT().BuscarPorID(mock.Anything, uint64(1)).Return(veiculoExistente(t), nil)
+
+	h := httpveiculo.NewHandler(nil, appveiculo.NewAtualizarVeiculoUseCase(repo), nil, nil, nil, nil)
+	engine := gin.New()
+	engine.PUT("/v1/veiculos/:id", h.Atualizar)
+
+	body, _ := json.Marshal(httpveiculo.AtualizarVeiculoRequest{Marca: "Volkswagen", Modelo: "Gol", Cor: "Preto", QuilometragemAtual: 14000})
+	req := httptest.NewRequest(http.MethodPut, "/v1/veiculos/1", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	engine.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
 }
 
 func TestHandler_Ativar_ComSucesso_Retorna204(t *testing.T) {

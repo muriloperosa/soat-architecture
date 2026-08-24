@@ -72,7 +72,7 @@ func (h *Handler) Cadastrar(c *gin.Context) {
 }
 
 // @Summary Atualiza veículo
-// @Description Atualiza dados cadastrais de um veículo. Restrito a admin.
+// @Description Atualiza dados cadastrais e quilometragem de um veículo. Quilometragem não pode regredir. Restrito a admin.
 // @Tags Veiculos
 // @Accept json
 // @Produce json

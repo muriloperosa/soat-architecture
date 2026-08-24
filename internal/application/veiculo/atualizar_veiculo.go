@@ -24,6 +24,10 @@ func (uc *AtualizarVeiculoUseCase) Executar(ctx context.Context, input Atualizar
 		return VeiculoOutput{}, err
 	}
 
+	if err := veiculo.AtualizarQuilometragem(input.QuilometragemAtual); err != nil {
+		return VeiculoOutput{}, err
+	}
+
 	if err := uc.repository.Atualizar(ctx, veiculo); err != nil {
 		return VeiculoOutput{}, err
 	}

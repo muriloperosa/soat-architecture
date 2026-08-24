@@ -71,11 +71,12 @@ func (r *Repository) Atualizar(ctx context.Context, veiculo *domain.Veiculo) err
 		Model(&VeiculoModel{}).
 		Where("id = ?", model.ID).
 		Updates(map[string]any{
-			"marca":            model.Marca,
-			"modelo":           model.Modelo,
-			"cor":              model.Cor,
-			"ativo":            model.Ativo,
-			"data_atualizacao": model.DataAtualizacao,
+			"marca":               model.Marca,
+			"modelo":              model.Modelo,
+			"cor":                 model.Cor,
+			"quilometragem_atual": model.QuilometragemAtual,
+			"ativo":               model.Ativo,
+			"data_atualizacao":    model.DataAtualizacao,
 		})
 
 	if result.Error != nil {
