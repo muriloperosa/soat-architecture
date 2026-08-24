@@ -312,6 +312,79 @@ definitions:
         example: true
         type: boolean
     type: object
+  veiculo.AtualizarVeiculoRequest:
+    properties:
+      cor:
+        example: Prata
+        type: string
+      marca:
+        example: Fiat
+        type: string
+      modelo:
+        example: Uno
+        type: string
+    required:
+    - cor
+    - marca
+    - modelo
+    type: object
+  veiculo.CadastrarVeiculoRequest:
+    properties:
+      ano:
+        example: 2020
+        type: integer
+      cor:
+        example: Prata
+        type: string
+      marca:
+        example: Fiat
+        type: string
+      modelo:
+        example: Uno
+        type: string
+      placa:
+        example: ABC1D23
+        type: string
+      quilometragem_atual:
+        example: 15000
+        type: integer
+    required:
+    - ano
+    - cor
+    - marca
+    - modelo
+    - placa
+    type: object
+  veiculo.VeiculoResponse:
+    properties:
+      ano:
+        example: 2020
+        type: integer
+      ativo:
+        example: true
+        type: boolean
+      cor:
+        example: Prata
+        type: string
+      criado_por:
+        example: 1
+        type: integer
+      id:
+        example: 1
+        type: integer
+      marca:
+        example: Fiat
+        type: string
+      modelo:
+        example: Uno
+        type: string
+      placa:
+        example: ABC1D23
+        type: string
+      quilometragem_atual:
+        example: 15000
+        type: integer
+    type: object
 host: localhost:8080
 info:
   contact: {}
@@ -1214,6 +1287,222 @@ paths:
       summary: Troca a própria senha
       tags:
       - Usuarios
+  /v1/veiculos:
+    post:
+      consumes:
+      - application/json
+      description: Cadastra um veículo. Restrito a admin.
+      parameters:
+      - description: Dados do veículo
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/veiculo.CadastrarVeiculoRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/veiculo.VeiculoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Cadastra veículo
+      tags:
+      - Veiculos
+  /v1/veiculos/{id}:
+    get:
+      description: Retorna os dados de um veículo pelo ID.
+      parameters:
+      - description: ID do veículo
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/veiculo.VeiculoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Consulta veículo por ID
+      tags:
+      - Veiculos
+    put:
+      consumes:
+      - application/json
+      description: Atualiza dados cadastrais de um veículo. Restrito a admin.
+      parameters:
+      - description: ID do veículo
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Dados atualizados
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/veiculo.AtualizarVeiculoRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/veiculo.VeiculoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualiza veículo
+      tags:
+      - Veiculos
+  /v1/veiculos/{id}/ativar:
+    patch:
+      description: Reabilita um veículo. Restrito a admin.
+      parameters:
+      - description: ID do veículo
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Sem conteúdo
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Ativa veículo
+      tags:
+      - Veiculos
+  /v1/veiculos/{id}/inativar:
+    patch:
+      description: Bloqueia um veículo. Restrito a admin.
+      parameters:
+      - description: ID do veículo
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Sem conteúdo
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Inativa veículo
+      tags:
+      - Veiculos
+  /v1/veiculos/placa/{placa}:
+    get:
+      description: Retorna os dados de um veículo pela placa.
+      parameters:
+      - description: Placa do veículo
+        in: path
+        name: placa
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/veiculo.VeiculoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Consulta veículo por placa
+      tags:
+      - Veiculos
 schemes:
 - http
 securityDefinitions:
