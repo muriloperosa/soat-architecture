@@ -11,10 +11,10 @@ import (
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/health"
 	httppeca "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/peca"
 	httpusuario "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/usuario"
+	httpveiculo "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/veiculo"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/wiring"
 )
 
-// NewRouter monta o *gin.Engine e delega o registro de rotas por domínio.
 func NewRouter(c *wiring.Container) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Logger())
@@ -28,6 +28,7 @@ func NewRouter(c *wiring.Container) *gin.Engine {
 	httpusuario.RegisterUsuarioRoutes(v1, c)
 	httpcliente.RegisterClienteRoutes(v1, c)
 	httppeca.RegisterPecaRoutes(v1, c)
+	httpveiculo.RegisterVeiculoRoutes(v1, c)
 
 	return router
 }
