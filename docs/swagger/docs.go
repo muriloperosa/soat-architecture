@@ -1567,7 +1567,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Atualiza dados cadastrais de um veículo. Restrito a admin.",
+                "description": "Atualiza dados cadastrais e quilometragem de um veículo. Quilometragem não pode regredir. Restrito a admin.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2199,6 +2199,10 @@ const docTemplate = `{
                 "modelo": {
                     "type": "string",
                     "example": "Uno"
+                },
+                "quilometragem_atual": {
+                    "type": "integer",
+                    "example": 15500
                 }
             }
         },

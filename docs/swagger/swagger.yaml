@@ -323,6 +323,9 @@ definitions:
       modelo:
         example: Uno
         type: string
+      quilometragem_atual:
+        example: 15500
+        type: integer
     required:
     - cor
     - marca
@@ -1359,7 +1362,8 @@ paths:
     put:
       consumes:
       - application/json
-      description: Atualiza dados cadastrais de um veículo. Restrito a admin.
+      description: Atualiza dados cadastrais e quilometragem de um veículo. Quilometragem
+        não pode regredir. Restrito a admin.
       parameters:
       - description: ID do veículo
         in: path
