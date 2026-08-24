@@ -231,6 +231,70 @@ definitions:
     required:
     - quantidade
     type: object
+  servico.AtualizarServicoRequest:
+    properties:
+      descricao:
+        example: Alinhamento e balanceamento
+        type: string
+      nome:
+        example: Alinhamento
+        type: string
+      preco_base:
+        example: 200.75
+        type: number
+      tempo_estimado_minutos:
+        example: 90
+        type: integer
+    required:
+    - descricao
+    - nome
+    - preco_base
+    - tempo_estimado_minutos
+    type: object
+  servico.CriarServicoRequest:
+    properties:
+      descricao:
+        example: Troca de óleo e filtro
+        type: string
+      nome:
+        example: Troca de óleo
+        type: string
+      preco_base:
+        example: 150.5
+        type: number
+      tempo_estimado_minutos:
+        example: 60
+        type: integer
+    required:
+    - descricao
+    - nome
+    - preco_base
+    - tempo_estimado_minutos
+    type: object
+  servico.ServicoResponse:
+    properties:
+      ativo:
+        example: true
+        type: boolean
+      criado_por:
+        example: 1
+        type: integer
+      descricao:
+        example: Troca de óleo e filtro
+        type: string
+      id:
+        example: 1
+        type: integer
+      nome:
+        example: Troca de óleo
+        type: string
+      preco_base:
+        example: 150.5
+        type: number
+      tempo_estimado_minutos:
+        example: 60
+        type: integer
+    type: object
   shared.PapelUsuario:
     enum:
     - ADMINISTRADOR
@@ -1002,6 +1066,221 @@ paths:
       summary: Repõe estoque de peça
       tags:
       - Pecas
+  /v1/servicos:
+    get:
+      description: Lista o catálogo completo de serviços. Restrito a usuário interno.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/servico.ServicoResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Lista serviços
+      tags:
+      - Servicos
+    post:
+      consumes:
+      - application/json
+      description: Cadastra um item no catálogo de serviços da oficina. Restrito a
+        usuário interno. criado_por sai do JWT.
+      parameters:
+      - description: Dados do serviço
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/servico.CriarServicoRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/servico.ServicoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Cria serviço
+      tags:
+      - Servicos
+  /v1/servicos/{id}:
+    get:
+      description: Retorna um serviço do catálogo pelo ID. Restrito a usuário interno.
+      parameters:
+      - description: ID do serviço
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/servico.ServicoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Busca serviço
+      tags:
+      - Servicos
+    put:
+      consumes:
+      - application/json
+      description: Atualiza nome, descrição, preço base e tempo estimado. Não altera
+        criado_por nem ativo. Restrito a usuário interno.
+      parameters:
+      - description: ID do serviço
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Dados atualizados
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/servico.AtualizarServicoRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/servico.ServicoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualiza serviço
+      tags:
+      - Servicos
+  /v1/servicos/{id}/ativar:
+    patch:
+      description: Reabilita um serviço para uso em Ordens de Serviço. Restrito a
+        usuário interno.
+      parameters:
+      - description: ID do serviço
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Sem conteúdo
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Ativa serviço
+      tags:
+      - Servicos
+  /v1/servicos/{id}/inativar:
+    patch:
+      description: Bloqueia um serviço de ser usado em novas Ordens de Serviço. Restrito
+        a usuário interno.
+      parameters:
+      - description: ID do serviço
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Sem conteúdo
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Inativa serviço
+      tags:
+      - Servicos
   /v1/usuarios:
     post:
       consumes:
