@@ -1,4 +1,15 @@
 package ordemservico
 
-// Erros de domínio da Ordem de Serviço (ErrNaoEncontrada, ErrStatusInvalido...).
-// Implementação pendente.
+import "github.com/muriloperosa/soat-architecture/internal/domain/shared"
+
+var (
+	ErrClienteObrigatorio              = shared.NewValidationError("cliente é obrigatório")
+	ErrVeiculoObrigatorio              = shared.NewValidationError("veículo é obrigatório")
+	ErrNumeroObrigatorio               = shared.NewValidationError("número da ordem de serviço é obrigatório")
+	ErrNumeroInvalido                  = shared.NewValidationError("número da ordem de serviço é inválido")
+	ErrQuilometragemEntradaInvalida    = shared.NewValidationError("quilometragem de entrada é inválida")
+	ErrStatusInvalido                  = shared.NewValidationError("status da ordem de serviço é inválido")
+	ErrCriadoPorObrigatorio            = shared.NewValidationError("usuário responsável pela criação é obrigatório")
+	ErrResponsavelHistoricoObrigatorio = shared.NewValidationError("usuário responsável pela alteração de status é obrigatório")
+	ErrOrdemServicoNaoEncontrada       = shared.NewNotFoundError("ordem de serviço não encontrada")
+)
