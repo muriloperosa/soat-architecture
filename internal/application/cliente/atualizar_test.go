@@ -31,7 +31,7 @@ func atualizarClienteValido(t *testing.T) *domain.Cliente {
 }
 
 func TestNewAtualizarClienteUseCase(t *testing.T) {
-	repository := mocks.NewRepository(t)
+	repository := mocks.NewClienteRepository(t)
 
 	useCase := NewAtualizarClienteUseCase(repository)
 
@@ -41,7 +41,7 @@ func TestNewAtualizarClienteUseCase(t *testing.T) {
 
 func TestAtualizarClienteUseCaseExecutarComSucesso(t *testing.T) {
 	ctx := context.Background()
-	repository := mocks.NewRepository(t)
+	repository := mocks.NewClienteRepository(t)
 	useCase := NewAtualizarClienteUseCase(repository)
 
 	cliente := atualizarClienteValido(t)
@@ -90,7 +90,7 @@ func TestAtualizarClienteUseCaseExecutarComSucesso(t *testing.T) {
 
 func TestAtualizarClienteUseCaseExecutarDeveRetornarErroAoBuscarCliente(t *testing.T) {
 	ctx := context.Background()
-	repository := mocks.NewRepository(t)
+	repository := mocks.NewClienteRepository(t)
 	useCase := NewAtualizarClienteUseCase(repository)
 
 	input := AtualizarClienteInput{
@@ -114,7 +114,7 @@ func TestAtualizarClienteUseCaseExecutarDeveRetornarErroAoBuscarCliente(t *testi
 
 func TestAtualizarClienteUseCaseExecutarDeveRetornarErroDeValidacao(t *testing.T) {
 	ctx := context.Background()
-	repository := mocks.NewRepository(t)
+	repository := mocks.NewClienteRepository(t)
 	useCase := NewAtualizarClienteUseCase(repository)
 
 	cliente := atualizarClienteValido(t)
@@ -140,7 +140,7 @@ func TestAtualizarClienteUseCaseExecutarDeveRetornarErroDeValidacao(t *testing.T
 
 func TestAtualizarClienteUseCaseExecutarDeveRetornarErroAoAtualizarRepository(t *testing.T) {
 	ctx := context.Background()
-	repository := mocks.NewRepository(t)
+	repository := mocks.NewClienteRepository(t)
 	useCase := NewAtualizarClienteUseCase(repository)
 
 	cliente := atualizarClienteValido(t)

@@ -39,6 +39,8 @@ class Cliente:::root {
     -telefone: Telefone
     -senha: SenhaHash
     -ativo: bool
+    -requerAlterarSenha: bool
+    -criadoPor: uint64
     -dataCadastro: DateTime
     -dataAtualizacao: DateTime
     +NewCliente(...) (Cliente, error)
@@ -338,6 +340,14 @@ Os IDs internos serão `uint64` no domínio e `BIGINT UNSIGNED AUTO_INCREMENT` n
 
 Cliente possui credencial própria e reutiliza o Value Object `SenhaHash`. A senha em texto puro nunca é persistida; no banco é armazenado apenas `senha_hash VARCHAR(255)`.
 
+Todo cliente é cadastrado com senha provisória e `requerAlterarSenha = true`. Após a primeira troca de senha, essa marcação passa para `false`. A autenticação do cliente é independente da autenticação dos usuários internos.
+
+### Auditoria e persistência do Cliente
+
+`Cliente.criadoPor` identifica o usuário interno autenticado que realizou o cadastro. O valor é obrigatório, deve ser diferente de zero e percorre todas as camadas, do domínio até a persistência.
+
+O domínio expõe uma única porta de persistência para o agregado: `ClienteRepository`. Essa interface concentra as operações de salvar, atualizar e buscar cliente por ID, documento ou e-mail. Os testes usam exclusivamente o mock gerado `mocks.ClienteRepository`; não existe uma interface ou mock genérico chamado `Repository` no domínio de clientes.
+
 ### Cliente e Veículo
 
 Cliente e Veículo são Aggregate Roots independentes e não possuem vínculo direto. O relacionamento histórico entre eles ocorre exclusivamente através da Ordem de Serviço.
@@ -500,7 +510,7 @@ O domínio também mantém seus próprios tipos, protegendo regras e transiçõe
 
 ## Principais invariantes
 
-**Cliente:** Documento válido, TipoPessoa compatível, Email válido, Telefone válido e SenhaHash válida.
+**Cliente:** Documento válido, TipoPessoa compatível, Email válido, Telefone válido, SenhaHash válida, `criadoPor` obrigatório e troca da senha provisória sinalizada por `requerAlterarSenha`.
 
 **Veículo:** Placa válida, ano válido, quilometragem não negativa e sem regressão.
 

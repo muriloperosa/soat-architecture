@@ -6,7 +6,6 @@ import (
 	context "context"
 
 	peca "github.com/muriloperosa/soat-architecture/internal/domain/peca"
-
 	mock "github.com/stretchr/testify/mock"
 )
 

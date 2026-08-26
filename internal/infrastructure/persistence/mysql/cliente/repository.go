@@ -24,7 +24,7 @@ func NewRepository(db *gorm.DB) domain.ClienteRepository {
 	return NewClienteRepository(db)
 }
 
-// Salvar implements [cliente.Repository].
+// Salvar implements [cliente.ClienteRepository].
 func (r *Repository) Salvar(ctx context.Context, cliente *domain.Cliente) error {
 	model := toModel(*cliente)
 
@@ -37,7 +37,7 @@ func (r *Repository) Salvar(ctx context.Context, cliente *domain.Cliente) error 
 	return nil
 }
 
-// BuscarPorID implements [cliente.Repository].
+// BuscarPorID implements [cliente.ClienteRepository].
 func (r *Repository) BuscarPorID(ctx context.Context, id uint64) (*domain.Cliente, error) {
 	var model Model
 
@@ -54,7 +54,7 @@ func (r *Repository) BuscarPorID(ctx context.Context, id uint64) (*domain.Client
 	return toEntity(model)
 }
 
-// BuscarPorDocumento implements [cliente.Repository].
+// BuscarPorDocumento implements [cliente.ClienteRepository].
 func (r *Repository) BuscarPorDocumento(ctx context.Context, documento string) (*domain.Cliente, error) {
 	var model Model
 
@@ -83,7 +83,7 @@ func (r *Repository) BuscarPorEmail(ctx context.Context, email string) (*domain.
 	return toEntity(model)
 }
 
-// Atualizar implements [cliente.Repository].
+// Atualizar implements [cliente.ClienteRepository].
 func (r *Repository) Atualizar(ctx context.Context, cliente *domain.Cliente) error {
 	model := toModel(*cliente)
 
