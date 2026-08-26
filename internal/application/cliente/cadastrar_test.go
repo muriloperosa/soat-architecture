@@ -42,7 +42,7 @@ func clienteValidoMatcher() interface{} {
 }
 
 func TestNewCriarClienteUseCase(t *testing.T) {
-	repository := mocks.NewRepository(t)
+	repository := mocks.NewClienteRepository(t)
 
 	useCase := NewCriarClienteUseCase(repository)
 
@@ -52,7 +52,7 @@ func TestNewCriarClienteUseCase(t *testing.T) {
 
 func TestCriarClienteUseCaseExecutarComSucesso(t *testing.T) {
 	ctx := context.Background()
-	repository := mocks.NewRepository(t)
+	repository := mocks.NewClienteRepository(t)
 	useCase := NewCriarClienteUseCase(repository)
 
 	input := criarClienteInputValido()
@@ -89,7 +89,7 @@ func TestCriarClienteUseCaseExecutarComSucesso(t *testing.T) {
 
 func TestCriarClienteUseCaseExecutarDeveRetornarErroAoBuscarCliente(t *testing.T) {
 	ctx := context.Background()
-	repository := mocks.NewRepository(t)
+	repository := mocks.NewClienteRepository(t)
 	useCase := NewCriarClienteUseCase(repository)
 
 	input := criarClienteInputValido()
@@ -110,7 +110,7 @@ func TestCriarClienteUseCaseExecutarDeveRetornarErroAoBuscarCliente(t *testing.T
 
 func TestCriarClienteUseCaseExecutarDeveRetornarErroQuandoClienteJaExistir(t *testing.T) {
 	ctx := context.Background()
-	repository := mocks.NewRepository(t)
+	repository := mocks.NewClienteRepository(t)
 	useCase := NewCriarClienteUseCase(repository)
 
 	input := criarClienteInputValido()
@@ -140,7 +140,7 @@ func TestCriarClienteUseCaseExecutarDeveRetornarErroQuandoClienteJaExistir(t *te
 
 func TestCriarClienteUseCaseExecutarDeveRetornarErroQuandoClienteForInvalido(t *testing.T) {
 	ctx := context.Background()
-	repository := mocks.NewRepository(t)
+	repository := mocks.NewClienteRepository(t)
 	useCase := NewCriarClienteUseCase(repository)
 
 	input := criarClienteInputValido()
@@ -160,7 +160,7 @@ func TestCriarClienteUseCaseExecutarDeveRetornarErroQuandoClienteForInvalido(t *
 
 func TestCriarClienteUseCaseExecutarDeveRetornarErroAoSalvar(t *testing.T) {
 	ctx := context.Background()
-	repository := mocks.NewRepository(t)
+	repository := mocks.NewClienteRepository(t)
 	useCase := NewCriarClienteUseCase(repository)
 
 	input := criarClienteInputValido()
