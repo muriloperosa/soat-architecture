@@ -8,11 +8,13 @@ import (
 	appauth "github.com/muriloperosa/soat-architecture/internal/application/auth"
 	appcliente "github.com/muriloperosa/soat-architecture/internal/application/cliente"
 	apppeca "github.com/muriloperosa/soat-architecture/internal/application/peca"
+	appservico "github.com/muriloperosa/soat-architecture/internal/application/servico"
 	appusuario "github.com/muriloperosa/soat-architecture/internal/application/usuario"
 	appveiculo "github.com/muriloperosa/soat-architecture/internal/application/veiculo"
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 	domaincliente "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
 	domainpeca "github.com/muriloperosa/soat-architecture/internal/domain/peca"
+	domainservico "github.com/muriloperosa/soat-architecture/internal/domain/servico"
 	domainusuario "github.com/muriloperosa/soat-architecture/internal/domain/usuario"
 	domainveiculo "github.com/muriloperosa/soat-architecture/internal/domain/veiculo"
 	infraauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/auth"
@@ -20,6 +22,7 @@ import (
 	mysqlauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/auth"
 	mysqlcliente "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/cliente"
 	mysqlpeca "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/peca"
+	mysqlservico "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/servico"
 	mysqlusuario "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/usuario"
 	mysqlveiculo "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/veiculo"
 )
@@ -36,6 +39,7 @@ type Container struct {
 	ClienteStatusRepo domainauth.UsuarioStatusRepository
 	PecaRepo          domainpeca.Repository
 	VeiculoRepo       domainveiculo.Repository
+	ServicoRepo       domainservico.ServicoRepository
 
 	LoginInternoUC *appauth.LoginUseCase
 	LoginClienteUC *appauth.LoginUseCase
@@ -70,6 +74,13 @@ type Container struct {
 	InativarVeiculoUC          *appveiculo.InativarVeiculoUseCase
 	ConsultarVeiculoPorIDUC    *appveiculo.ConsultarVeiculoPorIDUseCase
 	ConsultarVeiculoPorPlacaUC *appveiculo.ConsultarVeiculoPorPlacaUseCase
+
+	CriarServicoUC     *appservico.CriarServicoUseCase
+	AtualizarServicoUC *appservico.AtualizarServicoUseCase
+	ListarServicosUC   *appservico.ListarServicosUseCase
+	BuscarServicoUC    *appservico.BuscarServicoUseCase
+	AtivarServicoUC    *appservico.AtivarServicoUseCase
+	InativarServicoUC  *appservico.InativarServicoUseCase
 }
 
 func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
@@ -79,6 +90,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.ClienteRepository = mysqlcliente.NewClienteRepository(db)
 	c.PecaRepo = mysqlpeca.NewRepository(db)
 	c.VeiculoRepo = mysqlveiculo.NewRepository(db)
+	c.ServicoRepo = mysqlservico.NewServicoRepository(db)
 	if cfg == nil {
 		return c
 	}
@@ -124,6 +136,13 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.InativarVeiculoUC = appveiculo.NewInativarVeiculoUseCase(c.VeiculoRepo)
 	c.ConsultarVeiculoPorIDUC = appveiculo.NewConsultarVeiculoPorIDUseCase(c.VeiculoRepo)
 	c.ConsultarVeiculoPorPlacaUC = appveiculo.NewConsultarVeiculoPorPlacaUseCase(c.VeiculoRepo)
+
+	c.CriarServicoUC = appservico.NewCriarServicoUseCase(c.ServicoRepo)
+	c.AtualizarServicoUC = appservico.NewAtualizarServicoUseCase(c.ServicoRepo)
+	c.ListarServicosUC = appservico.NewListarServicosUseCase(c.ServicoRepo)
+	c.BuscarServicoUC = appservico.NewBuscarServicoUseCase(c.ServicoRepo)
+	c.AtivarServicoUC = appservico.NewAtivarServicoUseCase(c.ServicoRepo)
+	c.InativarServicoUC = appservico.NewInativarServicoUseCase(c.ServicoRepo)
 
 	return c
 }

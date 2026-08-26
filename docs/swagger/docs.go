@@ -1073,6 +1073,337 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/servicos": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lista o catálogo completo de serviços. Restrito a usuário interno.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Servicos"
+                ],
+                "summary": "Lista serviços",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/servico.ServicoResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cadastra um item no catálogo de serviços da oficina. Restrito a usuário interno. criado_por sai do JWT.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Servicos"
+                ],
+                "summary": "Cria serviço",
+                "parameters": [
+                    {
+                        "description": "Dados do serviço",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/servico.CriarServicoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/servico.ServicoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/servicos/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna um serviço do catálogo pelo ID. Restrito a usuário interno.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Servicos"
+                ],
+                "summary": "Busca serviço",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do serviço",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/servico.ServicoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Atualiza nome, descrição, preço base e tempo estimado. Não altera criado_por nem ativo. Restrito a usuário interno.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Servicos"
+                ],
+                "summary": "Atualiza serviço",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do serviço",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados atualizados",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/servico.AtualizarServicoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/servico.ServicoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/servicos/{id}/ativar": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Reabilita um serviço para uso em Ordens de Serviço. Restrito a usuário interno.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Servicos"
+                ],
+                "summary": "Ativa serviço",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do serviço",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Sem conteúdo"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/servicos/{id}/inativar": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Bloqueia um serviço de ser usado em novas Ordens de Serviço. Restrito a usuário interno.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Servicos"
+                ],
+                "summary": "Inativa serviço",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do serviço",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Sem conteúdo"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/usuarios": {
             "post": {
                 "security": [
@@ -2059,6 +2390,93 @@ const docTemplate = `{
                 "quantidade": {
                     "type": "integer",
                     "example": 10
+                }
+            }
+        },
+        "servico.AtualizarServicoRequest": {
+            "type": "object",
+            "required": [
+                "descricao",
+                "nome",
+                "preco_base",
+                "tempo_estimado_minutos"
+            ],
+            "properties": {
+                "descricao": {
+                    "type": "string",
+                    "example": "Alinhamento e balanceamento"
+                },
+                "nome": {
+                    "type": "string",
+                    "example": "Alinhamento"
+                },
+                "preco_base": {
+                    "type": "number",
+                    "example": 200.75
+                },
+                "tempo_estimado_minutos": {
+                    "type": "integer",
+                    "example": 90
+                }
+            }
+        },
+        "servico.CriarServicoRequest": {
+            "type": "object",
+            "required": [
+                "descricao",
+                "nome",
+                "preco_base",
+                "tempo_estimado_minutos"
+            ],
+            "properties": {
+                "descricao": {
+                    "type": "string",
+                    "example": "Troca de óleo e filtro"
+                },
+                "nome": {
+                    "type": "string",
+                    "example": "Troca de óleo"
+                },
+                "preco_base": {
+                    "type": "number",
+                    "example": 150.5
+                },
+                "tempo_estimado_minutos": {
+                    "type": "integer",
+                    "example": 60
+                }
+            }
+        },
+        "servico.ServicoResponse": {
+            "type": "object",
+            "properties": {
+                "ativo": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "criado_por": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "descricao": {
+                    "type": "string",
+                    "example": "Troca de óleo e filtro"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "nome": {
+                    "type": "string",
+                    "example": "Troca de óleo"
+                },
+                "preco_base": {
+                    "type": "number",
+                    "example": 150.5
+                },
+                "tempo_estimado_minutos": {
+                    "type": "integer",
+                    "example": 60
                 }
             }
         },
