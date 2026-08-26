@@ -18,6 +18,12 @@ func resetDB(t *testing.T) {
 		}
 	}
 	require(testDB.Exec("DELETE FROM refresh_tokens").Error)
+	require(testDB.Exec("DELETE FROM reservas_pecas").Error)
+	require(testDB.Exec("DELETE FROM orcamentos_pecas").Error)
+	require(testDB.Exec("DELETE FROM orcamentos_servicos").Error)
+	require(testDB.Exec("DELETE FROM orcamentos").Error)
+	require(testDB.Exec("DELETE FROM historicos_status").Error)
+	require(testDB.Exec("DELETE FROM ordens_servico").Error)
 	require(testDB.Exec("DELETE FROM clientes").Error)
 	require(testDB.Exec("DELETE FROM pecas").Error)
 	require(testDB.Exec("DELETE FROM veiculos").Error)
