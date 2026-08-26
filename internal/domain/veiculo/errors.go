@@ -8,4 +8,5 @@ var (
 	ErrAnoInvalido           = shared.NewValidationError("ano inválido")
 	ErrCriadoPorObrigatorio  = shared.NewValidationError("usuário responsável pelo cadastro é obrigatório")
 	ErrQuilometragemInvalida = shared.NewValidationError("quilometragem não pode ser menor que a atual")
+	ErrVeiculoNaoEncontrado  = shared.NewNotFoundError("veículo não encontrado")
 )
