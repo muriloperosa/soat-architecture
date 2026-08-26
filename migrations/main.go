@@ -52,6 +52,10 @@ func main() {
 	migrationsPath := fmt.Sprintf("file://migrations/%s", cfg.DBDriver)
 
 	m, err := migrate.NewWithDatabaseInstance(migrationsPath, driverType.String(), driver)
+	if err != nil {
+		log.Fatalf("erro ao criar instância de migration: %v", err)
+	}
+
 	defer func() {
 		sourceErr, databaseErr := m.Close()
 
