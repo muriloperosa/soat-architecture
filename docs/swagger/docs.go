@@ -1731,6 +1731,345 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/v1/veiculos": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cadastra um veículo. Restrito a admin.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Veiculos"
+                ],
+                "summary": "Cadastra veículo",
+                "parameters": [
+                    {
+                        "description": "Dados do veículo",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/veiculo.CadastrarVeiculoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/veiculo.VeiculoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/veiculos/placa/{placa}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna os dados de um veículo pela placa.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Veiculos"
+                ],
+                "summary": "Consulta veículo por placa",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Placa do veículo",
+                        "name": "placa",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/veiculo.VeiculoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/veiculos/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna os dados de um veículo pelo ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Veiculos"
+                ],
+                "summary": "Consulta veículo por ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do veículo",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/veiculo.VeiculoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Atualiza dados cadastrais e quilometragem de um veículo. Quilometragem não pode regredir. Restrito a admin.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Veiculos"
+                ],
+                "summary": "Atualiza veículo",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do veículo",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados atualizados",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/veiculo.AtualizarVeiculoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/veiculo.VeiculoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/veiculos/{id}/ativar": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Reabilita um veículo. Restrito a admin.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Veiculos"
+                ],
+                "summary": "Ativa veículo",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do veículo",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Sem conteúdo"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/veiculos/{id}/inativar": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Bloqueia um veículo. Restrito a admin.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Veiculos"
+                ],
+                "summary": "Inativa veículo",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do veículo",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Sem conteúdo"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -2256,6 +2595,109 @@ const docTemplate = `{
                 "requer_alterar_senha": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "veiculo.AtualizarVeiculoRequest": {
+            "type": "object",
+            "required": [
+                "cor",
+                "marca",
+                "modelo"
+            ],
+            "properties": {
+                "cor": {
+                    "type": "string",
+                    "example": "Prata"
+                },
+                "marca": {
+                    "type": "string",
+                    "example": "Fiat"
+                },
+                "modelo": {
+                    "type": "string",
+                    "example": "Uno"
+                },
+                "quilometragem_atual": {
+                    "type": "integer",
+                    "example": 15500
+                }
+            }
+        },
+        "veiculo.CadastrarVeiculoRequest": {
+            "type": "object",
+            "required": [
+                "ano",
+                "cor",
+                "marca",
+                "modelo",
+                "placa"
+            ],
+            "properties": {
+                "ano": {
+                    "type": "integer",
+                    "example": 2020
+                },
+                "cor": {
+                    "type": "string",
+                    "example": "Prata"
+                },
+                "marca": {
+                    "type": "string",
+                    "example": "Fiat"
+                },
+                "modelo": {
+                    "type": "string",
+                    "example": "Uno"
+                },
+                "placa": {
+                    "type": "string",
+                    "example": "ABC1D23"
+                },
+                "quilometragem_atual": {
+                    "type": "integer",
+                    "example": 15000
+                }
+            }
+        },
+        "veiculo.VeiculoResponse": {
+            "type": "object",
+            "properties": {
+                "ano": {
+                    "type": "integer",
+                    "example": 2020
+                },
+                "ativo": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "cor": {
+                    "type": "string",
+                    "example": "Prata"
+                },
+                "criado_por": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "marca": {
+                    "type": "string",
+                    "example": "Fiat"
+                },
+                "modelo": {
+                    "type": "string",
+                    "example": "Uno"
+                },
+                "placa": {
+                    "type": "string",
+                    "example": "ABC1D23"
+                },
+                "quilometragem_atual": {
+                    "type": "integer",
+                    "example": 15000
                 }
             }
         }

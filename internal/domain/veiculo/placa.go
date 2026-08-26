@@ -9,8 +9,9 @@ import (
 )
 
 var (
-	ErrPlacaObrigatoria = shared.NewValidationError("placa é obrigatória")
-	ErrPlacaInvalida    = shared.NewValidationError("placa inválida")
+	ErrPlacaObrigatoria  = shared.NewValidationError("placa é obrigatória")
+	ErrPlacaInvalida     = shared.NewValidationError("placa inválida")
+	ErrPlacaJaCadastrada = shared.NewConflictError("placa já cadastrada")
 
 	placaAntigaRegex   = regexp.MustCompile(`^[A-Z]{3}[0-9]{4}$`)
 	placaMercosulRegex = regexp.MustCompile(`^[A-Z]{3}[0-9][A-Z][0-9]{2}$`)
