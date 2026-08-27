@@ -716,6 +716,75 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/ordens-servico": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cria uma Ordem de Serviço no status RECEBIDA e registra o histórico inicial. Restrito a usuário interno autenticado.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ordens de Serviço"
+                ],
+                "summary": "Abre uma Ordem de Serviço",
+                "parameters": [
+                    {
+                        "description": "Dados da Ordem de Serviço",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ordemservico.AbrirOrdemServicoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/ordemservico.OrdemServicoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/pecas": {
             "post": {
                 "security": [
@@ -2267,6 +2336,68 @@ const docTemplate = `{
                 "type": {
                     "type": "string",
                     "example": "validation"
+                }
+            }
+        },
+        "ordemservico.AbrirOrdemServicoRequest": {
+            "type": "object",
+            "required": [
+                "cliente_id",
+                "veiculo_id"
+            ],
+            "properties": {
+                "cliente_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "observacoes": {
+                    "type": "string",
+                    "example": "Cliente relatou ruído no motor"
+                },
+                "quilometragem_entrada": {
+                    "type": "integer",
+                    "example": 52300
+                },
+                "veiculo_id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "ordemservico.OrdemServicoResponse": {
+            "type": "object",
+            "properties": {
+                "cliente_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "diagnostico": {
+                    "type": "string",
+                    "example": ""
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "numero": {
+                    "type": "string",
+                    "example": "OS-20260826-a1b2c3d4e5f6"
+                },
+                "observacoes": {
+                    "type": "string",
+                    "example": "Cliente relatou ruído no motor"
+                },
+                "quilometragem_entrada": {
+                    "type": "integer",
+                    "example": 52300
+                },
+                "status": {
+                    "type": "string",
+                    "example": "RECEBIDA"
+                },
+                "veiculo_id": {
+                    "type": "integer",
+                    "example": 1
                 }
             }
         },

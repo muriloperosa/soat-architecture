@@ -141,6 +141,51 @@ definitions:
         example: validation
         type: string
     type: object
+  ordemservico.AbrirOrdemServicoRequest:
+    properties:
+      cliente_id:
+        example: 1
+        type: integer
+      observacoes:
+        example: Cliente relatou ruído no motor
+        type: string
+      quilometragem_entrada:
+        example: 52300
+        type: integer
+      veiculo_id:
+        example: 1
+        type: integer
+    required:
+    - cliente_id
+    - veiculo_id
+    type: object
+  ordemservico.OrdemServicoResponse:
+    properties:
+      cliente_id:
+        example: 1
+        type: integer
+      diagnostico:
+        example: ""
+        type: string
+      id:
+        example: 1
+        type: integer
+      numero:
+        example: OS-20260826-a1b2c3d4e5f6
+        type: string
+      observacoes:
+        example: Cliente relatou ruído no motor
+        type: string
+      quilometragem_entrada:
+        example: 52300
+        type: integer
+      status:
+        example: RECEBIDA
+        type: string
+      veiculo_id:
+        example: 1
+        type: integer
+    type: object
   peca.AtualizarPecaRequest:
     properties:
       descricao:
@@ -911,6 +956,51 @@ paths:
       summary: Verifica saúde da API
       tags:
       - Health
+  /v1/ordens-servico:
+    post:
+      consumes:
+      - application/json
+      description: Cria uma Ordem de Serviço no status RECEBIDA e registra o histórico
+        inicial. Restrito a usuário interno autenticado.
+      parameters:
+      - description: Dados da Ordem de Serviço
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ordemservico.AbrirOrdemServicoRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/ordemservico.OrdemServicoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Abre uma Ordem de Serviço
+      tags:
+      - Ordens de Serviço
   /v1/pecas:
     post:
       consumes:
