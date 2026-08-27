@@ -75,6 +75,9 @@ func TestDiagnosticoOrdemServico_PersisteEstadoHistoricoETexto(t *testing.T) {
 	if iniciada.Status != "EM_DIAGNOSTICO" {
 		t.Fatalf("status inesperado: %s", iniciada.Status)
 	}
+	if iniciada.Diagnostico != "" {
+		t.Fatalf("diagnóstico deve iniciar vazio, recebido %q", iniciada.Diagnostico)
+	}
 
 	var quantidadeHistoricos int64
 	if err := testDB.Table("historicos_status").
@@ -96,7 +99,7 @@ func TestDiagnosticoOrdemServico_PersisteEstadoHistoricoETexto(t *testing.T) {
 		Take(&historico).Error; err != nil {
 		t.Fatalf("erro ao consultar histórico de diagnóstico: %v", err)
 	}
-	if historico.AlteradoPor != mecanico.ID || historico.Motivo == "" {
+	if historico.AlteradoPor != mecanico.ID || historico.Motivo != "" {
 		t.Fatalf("histórico inesperado: %+v", historico)
 	}
 

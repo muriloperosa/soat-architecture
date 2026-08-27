@@ -166,31 +166,32 @@ func TestNewHistoricoStatusValidaDados(t *testing.T) {
 }
 
 func TestIniciarDiagnostico_ComSucesso(t *testing.T) {
-	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
+	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 100, "diagnóstico anterior", "", 3)
 	require.NoError(t, err)
 	os.AtribuirID(42)
 	antes := os.DataAtualizacao()
 
-	err = os.IniciarDiagnostico(7, "Veículo encaminhado ao mecânico")
+	err = os.IniciarDiagnostico(7)
 
 	require.NoError(t, err)
 	require.Equal(t, ordemservico.StatusEmDiagnostico, os.Status())
+	require.Empty(t, os.Diagnostico())
 	require.False(t, os.DataAtualizacao().Before(antes))
 	historico := os.HistoricoStatus()
 	require.Len(t, historico, 2)
 	require.Equal(t, ordemservico.StatusEmDiagnostico, historico[1].Status())
 	require.Equal(t, uint64(42), historico[1].OrdemServicoID())
 	require.Equal(t, uint64(7), historico[1].AlteradoPor())
-	require.Equal(t, "Veículo encaminhado ao mecânico", historico[1].Motivo())
+	require.Empty(t, historico[1].Motivo())
 	require.Equal(t, os.DataAtualizacao(), historico[1].AlteradoEm())
 }
 
 func TestIniciarDiagnostico_SomenteOSRecebida(t *testing.T) {
 	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
 	require.NoError(t, err)
-	require.NoError(t, os.IniciarDiagnostico(7, "Início do diagnóstico"))
+	require.NoError(t, os.IniciarDiagnostico(7))
 
-	err = os.IniciarDiagnostico(7, "Nova tentativa")
+	err = os.IniciarDiagnostico(7)
 
 	require.ErrorIs(t, err, ordemservico.ErrTransicaoStatusInvalida)
 	require.Equal(t, ordemservico.StatusEmDiagnostico, os.Status())
@@ -201,7 +202,7 @@ func TestIniciarDiagnostico_ResponsavelObrigatorio(t *testing.T) {
 	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
 	require.NoError(t, err)
 
-	err = os.IniciarDiagnostico(0, "Início do diagnóstico")
+	err = os.IniciarDiagnostico(0)
 
 	require.ErrorIs(t, err, ordemservico.ErrResponsavelHistoricoObrigatorio)
 	require.Equal(t, ordemservico.StatusRecebida, os.Status())
@@ -211,7 +212,7 @@ func TestIniciarDiagnostico_ResponsavelObrigatorio(t *testing.T) {
 func TestInformarDiagnostico_ComSucesso(t *testing.T) {
 	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
 	require.NoError(t, err)
-	require.NoError(t, os.IniciarDiagnostico(7, "Início do diagnóstico"))
+	require.NoError(t, os.IniciarDiagnostico(7))
 	quantidadeHistoricos := len(os.HistoricoStatus())
 
 	err = os.InformarDiagnostico("  Falha na bomba de combustível  ")
@@ -228,10 +229,22 @@ func TestInformarDiagnostico_ValidaEstadoEConteudo(t *testing.T) {
 	err = os.InformarDiagnostico("Falha na bomba")
 	require.ErrorIs(t, err, ordemservico.ErrDiagnosticoStatusInvalido)
 
-	require.NoError(t, os.IniciarDiagnostico(7, "Início do diagnóstico"))
+	require.NoError(t, os.IniciarDiagnostico(7))
 	err = os.InformarDiagnostico("   ")
 	require.ErrorIs(t, err, ordemservico.ErrDiagnosticoObrigatorio)
 	require.Empty(t, os.Diagnostico())
+}
+
+func TestValidarTransicaoParaAguardandoAprovacao_ExigeDiagnostico(t *testing.T) {
+	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
+	require.NoError(t, err)
+	require.NoError(t, os.IniciarDiagnostico(7))
+
+	err = os.ValidarTransicaoPara(ordemservico.StatusAguardandoAprovacao)
+	require.ErrorIs(t, err, ordemservico.ErrDiagnosticoObrigatorio)
+
+	require.NoError(t, os.InformarDiagnostico("Falha na bomba de combustível"))
+	require.NoError(t, os.ValidarTransicaoPara(ordemservico.StatusAguardandoAprovacao))
 }
 
 func TestStatusOrdemServicoDefineTransicoesPermitidas(t *testing.T) {

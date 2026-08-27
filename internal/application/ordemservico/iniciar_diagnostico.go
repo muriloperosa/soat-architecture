@@ -8,8 +8,6 @@ import (
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 )
 
-const motivoInicioDiagnostico = "Diagnóstico iniciado"
-
 type IniciarDiagnosticoUseCase struct {
 	repository domain.OrdemServicoRepository
 }
@@ -33,7 +31,7 @@ func (uc *IniciarDiagnosticoUseCase) Executar(
 		return OrdemServicoOutput{}, domain.ErrOrdemServicoNaoEncontrada
 	}
 
-	if err := os.IniciarDiagnostico(input.UsuarioID, motivoInicioDiagnostico); err != nil {
+	if err := os.IniciarDiagnostico(input.UsuarioID); err != nil {
 		return OrdemServicoOutput{}, err
 	}
 

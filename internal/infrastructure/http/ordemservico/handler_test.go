@@ -160,7 +160,7 @@ func TestHandlerInformarDiagnosticoRetorna200(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repository := ordemservicomocks.NewOrdemServicoRepository(t)
 	os := ordemServicoRecebidaHTTP(t)
-	require.NoError(t, os.IniciarDiagnostico(30, "Diagnóstico iniciado"))
+	require.NoError(t, os.IniciarDiagnostico(30))
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 	repository.EXPECT().Atualizar(mock.Anything, os).Return(nil)
 
@@ -183,7 +183,7 @@ func TestHandlerInformarDiagnosticoVazioRetorna400(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repository := ordemservicomocks.NewOrdemServicoRepository(t)
 	os := ordemServicoRecebidaHTTP(t)
-	require.NoError(t, os.IniciarDiagnostico(30, "Diagnóstico iniciado"))
+	require.NoError(t, os.IniciarDiagnostico(30))
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 
 	handler := httpordemservico.NewHandler(nil, nil, app.NewInformarDiagnosticoUseCase(repository))

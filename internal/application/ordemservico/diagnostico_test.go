@@ -20,9 +20,10 @@ func TestIniciarDiagnosticoUseCase_ComSucesso(t *testing.T) {
 	repository.EXPECT().Atualizar(mock.Anything, os).
 		Run(func(_ context.Context, atualizada *domain.OrdemServico) {
 			require.Equal(t, domain.StatusEmDiagnostico, atualizada.Status())
+			require.Empty(t, atualizada.Diagnostico())
 			require.Len(t, atualizada.HistoricoStatus(), 2)
 			require.Equal(t, uint64(7), atualizada.HistoricoStatus()[1].AlteradoPor())
-			require.Equal(t, "Diagnóstico iniciado", atualizada.HistoricoStatus()[1].Motivo())
+			require.Empty(t, atualizada.HistoricoStatus()[1].Motivo())
 		}).
 		Return(nil)
 
@@ -50,7 +51,7 @@ func TestIniciarDiagnosticoUseCase_OSInexistente(t *testing.T) {
 func TestIniciarDiagnosticoUseCase_TransicaoInvalida(t *testing.T) {
 	repository := ordemservicomocks.NewOrdemServicoRepository(t)
 	os := ordemServicoRecebida(t)
-	require.NoError(t, os.IniciarDiagnostico(7, "Diagnóstico iniciado"))
+	require.NoError(t, os.IniciarDiagnostico(7))
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 
 	uc := app.NewIniciarDiagnosticoUseCase(repository)
@@ -129,6 +130,6 @@ func ordemServicoRecebida(t *testing.T) *domain.OrdemServico {
 func ordemServicoEmDiagnostico(t *testing.T) *domain.OrdemServico {
 	t.Helper()
 	os := ordemServicoRecebida(t)
-	require.NoError(t, os.IniciarDiagnostico(7, "Diagnóstico iniciado"))
+	require.NoError(t, os.IniciarDiagnostico(7))
 	return os
 }

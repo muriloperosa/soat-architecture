@@ -111,20 +111,37 @@ func (o *OrdemServico) AtribuirID(id uint64) {
 	}
 }
 
-// IniciarDiagnostico move uma OS recebida para diagnóstico e registra quem
-// realizou a transição. O histórico armazena apenas o novo status.
-func (o *OrdemServico) IniciarDiagnostico(alteradoPor uint64, motivo string) error {
-	if !o.status.PermiteTransicaoPara(StatusEmDiagnostico) {
+// ValidarTransicaoPara centraliza as invariantes necessárias para uma mudança
+// de status. Assim, os próximos fluxos da OS reutilizam as mesmas regras.
+func (o *OrdemServico) ValidarTransicaoPara(novo StatusOrdemServico) error {
+	if !o.status.PermiteTransicaoPara(novo) {
 		return ErrTransicaoStatusInvalida
 	}
 
-	historico, err := NewHistoricoStatus(StatusEmDiagnostico, alteradoPor, motivo)
+	if o.status == StatusEmDiagnostico &&
+		novo == StatusAguardandoAprovacao &&
+		strings.TrimSpace(o.diagnostico) == "" {
+		return ErrDiagnosticoObrigatorio
+	}
+
+	return nil
+}
+
+// IniciarDiagnostico move uma OS recebida para diagnóstico sem preencher o
+// diagnóstico e registra quem realizou a transição.
+func (o *OrdemServico) IniciarDiagnostico(alteradoPor uint64) error {
+	if err := o.ValidarTransicaoPara(StatusEmDiagnostico); err != nil {
+		return err
+	}
+
+	historico, err := NewHistoricoStatus(StatusEmDiagnostico, alteradoPor, "")
 	if err != nil {
 		return err
 	}
 	historico.atribuirOrdemServicoID(o.id)
 
 	o.status = StatusEmDiagnostico
+	o.diagnostico = ""
 	o.dataAtualizacao = historico.AlteradoEm()
 	o.historicoStatus = append(o.historicoStatus, historico)
 	return nil

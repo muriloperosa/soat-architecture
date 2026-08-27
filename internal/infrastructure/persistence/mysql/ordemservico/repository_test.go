@@ -76,7 +76,7 @@ func TestRepositoryAtualizarPersisteEstadoENovoHistoricoNaMesmaTransacao(t *test
 	db, mockDB := newRepositoryTestDB(t)
 	repository := NewOrdemServicoRepository(db)
 	os := ordemServicoPersistida(t)
-	require.NoError(t, os.IniciarDiagnostico(7, "Diagnóstico iniciado"))
+	require.NoError(t, os.IniciarDiagnostico(7))
 
 	mockDB.ExpectBegin()
 	mockDB.ExpectExec("UPDATE `ordens_servico`").WillReturnResult(sqlmock.NewResult(0, 1))
@@ -93,7 +93,7 @@ func TestRepositoryAtualizarFazRollbackQuandoNovoHistoricoFalha(t *testing.T) {
 	db, mockDB := newRepositoryTestDB(t)
 	repository := NewOrdemServicoRepository(db)
 	os := ordemServicoPersistida(t)
-	require.NoError(t, os.IniciarDiagnostico(7, "Diagnóstico iniciado"))
+	require.NoError(t, os.IniciarDiagnostico(7))
 	erroBanco := errors.New("erro ao inserir novo histórico")
 
 	mockDB.ExpectBegin()
