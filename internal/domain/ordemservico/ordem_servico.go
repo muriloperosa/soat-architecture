@@ -111,6 +111,41 @@ func (o *OrdemServico) AtribuirID(id uint64) {
 	}
 }
 
+// IniciarDiagnostico move uma OS recebida para diagnóstico e registra quem
+// realizou a transição. O histórico armazena apenas o novo status.
+func (o *OrdemServico) IniciarDiagnostico(alteradoPor uint64, motivo string) error {
+	if !o.status.PermiteTransicaoPara(StatusEmDiagnostico) {
+		return ErrTransicaoStatusInvalida
+	}
+
+	historico, err := NewHistoricoStatus(StatusEmDiagnostico, alteradoPor, motivo)
+	if err != nil {
+		return err
+	}
+	historico.atribuirOrdemServicoID(o.id)
+
+	o.status = StatusEmDiagnostico
+	o.dataAtualizacao = historico.AlteradoEm()
+	o.historicoStatus = append(o.historicoStatus, historico)
+	return nil
+}
+
+// InformarDiagnostico registra o diagnóstico enquanto a OS está em análise.
+func (o *OrdemServico) InformarDiagnostico(texto string) error {
+	if o.status != StatusEmDiagnostico {
+		return ErrDiagnosticoStatusInvalido
+	}
+
+	diagnostico := strings.TrimSpace(texto)
+	if diagnostico == "" {
+		return ErrDiagnosticoObrigatorio
+	}
+
+	o.diagnostico = diagnostico
+	o.dataAtualizacao = time.Now()
+	return nil
+}
+
 func (o *OrdemServico) ID() uint64                 { return o.id }
 func (o *OrdemServico) Numero() NumeroOrdemServico { return o.numero }
 func (o *OrdemServico) ClienteID() uint64          { return o.clienteID }

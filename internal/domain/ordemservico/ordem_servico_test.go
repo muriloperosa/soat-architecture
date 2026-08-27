@@ -164,3 +164,93 @@ func TestNewHistoricoStatusValidaDados(t *testing.T) {
 	_, err = ordemservico.NewHistoricoStatus(ordemservico.StatusRecebida, 0, "")
 	require.ErrorIs(t, err, ordemservico.ErrResponsavelHistoricoObrigatorio)
 }
+
+func TestIniciarDiagnostico_ComSucesso(t *testing.T) {
+	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
+	require.NoError(t, err)
+	os.AtribuirID(42)
+	antes := os.DataAtualizacao()
+
+	err = os.IniciarDiagnostico(7, "Veículo encaminhado ao mecânico")
+
+	require.NoError(t, err)
+	require.Equal(t, ordemservico.StatusEmDiagnostico, os.Status())
+	require.False(t, os.DataAtualizacao().Before(antes))
+	historico := os.HistoricoStatus()
+	require.Len(t, historico, 2)
+	require.Equal(t, ordemservico.StatusEmDiagnostico, historico[1].Status())
+	require.Equal(t, uint64(42), historico[1].OrdemServicoID())
+	require.Equal(t, uint64(7), historico[1].AlteradoPor())
+	require.Equal(t, "Veículo encaminhado ao mecânico", historico[1].Motivo())
+	require.Equal(t, os.DataAtualizacao(), historico[1].AlteradoEm())
+}
+
+func TestIniciarDiagnostico_SomenteOSRecebida(t *testing.T) {
+	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
+	require.NoError(t, err)
+	require.NoError(t, os.IniciarDiagnostico(7, "Início do diagnóstico"))
+
+	err = os.IniciarDiagnostico(7, "Nova tentativa")
+
+	require.ErrorIs(t, err, ordemservico.ErrTransicaoStatusInvalida)
+	require.Equal(t, ordemservico.StatusEmDiagnostico, os.Status())
+	require.Len(t, os.HistoricoStatus(), 2)
+}
+
+func TestIniciarDiagnostico_ResponsavelObrigatorio(t *testing.T) {
+	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
+	require.NoError(t, err)
+
+	err = os.IniciarDiagnostico(0, "Início do diagnóstico")
+
+	require.ErrorIs(t, err, ordemservico.ErrResponsavelHistoricoObrigatorio)
+	require.Equal(t, ordemservico.StatusRecebida, os.Status())
+	require.Len(t, os.HistoricoStatus(), 1)
+}
+
+func TestInformarDiagnostico_ComSucesso(t *testing.T) {
+	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
+	require.NoError(t, err)
+	require.NoError(t, os.IniciarDiagnostico(7, "Início do diagnóstico"))
+	quantidadeHistoricos := len(os.HistoricoStatus())
+
+	err = os.InformarDiagnostico("  Falha na bomba de combustível  ")
+
+	require.NoError(t, err)
+	require.Equal(t, "Falha na bomba de combustível", os.Diagnostico())
+	require.Len(t, os.HistoricoStatus(), quantidadeHistoricos)
+}
+
+func TestInformarDiagnostico_ValidaEstadoEConteudo(t *testing.T) {
+	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
+	require.NoError(t, err)
+
+	err = os.InformarDiagnostico("Falha na bomba")
+	require.ErrorIs(t, err, ordemservico.ErrDiagnosticoStatusInvalido)
+
+	require.NoError(t, os.IniciarDiagnostico(7, "Início do diagnóstico"))
+	err = os.InformarDiagnostico("   ")
+	require.ErrorIs(t, err, ordemservico.ErrDiagnosticoObrigatorio)
+	require.Empty(t, os.Diagnostico())
+}
+
+func TestStatusOrdemServicoDefineTransicoesPermitidas(t *testing.T) {
+	permitidas := map[ordemservico.StatusOrdemServico][]ordemservico.StatusOrdemServico{
+		ordemservico.StatusRecebida:            {ordemservico.StatusEmDiagnostico},
+		ordemservico.StatusEmDiagnostico:       {ordemservico.StatusAguardandoAprovacao},
+		ordemservico.StatusAguardandoAprovacao: {ordemservico.StatusAprovada, ordemservico.StatusRejeitada},
+		ordemservico.StatusRejeitada:           {ordemservico.StatusAguardandoAprovacao},
+		ordemservico.StatusAprovada:            {ordemservico.StatusEmExecucao},
+		ordemservico.StatusEmExecucao:          {ordemservico.StatusFinalizada},
+		ordemservico.StatusFinalizada:          {ordemservico.StatusEntregue},
+	}
+
+	for atual, proximos := range permitidas {
+		for _, proximo := range proximos {
+			require.True(t, atual.PermiteTransicaoPara(proximo), "%s deveria permitir %s", atual, proximo)
+		}
+	}
+
+	require.False(t, ordemservico.StatusRecebida.PermiteTransicaoPara(ordemservico.StatusFinalizada))
+	require.False(t, ordemservico.StatusEntregue.PermiteTransicaoPara(ordemservico.StatusRecebida))
+}

@@ -11,5 +11,8 @@ var (
 	ErrStatusInvalido                  = shared.NewValidationError("status da ordem de serviço é inválido")
 	ErrCriadoPorObrigatorio            = shared.NewValidationError("usuário responsável pela criação é obrigatório")
 	ErrResponsavelHistoricoObrigatorio = shared.NewValidationError("usuário responsável pela alteração de status é obrigatório")
+	ErrTransicaoStatusInvalida         = shared.NewValidationError("transição de status da ordem de serviço não permitida")
+	ErrDiagnosticoObrigatorio          = shared.NewValidationError("diagnóstico é obrigatório")
+	ErrDiagnosticoStatusInvalido       = shared.NewValidationError("diagnóstico só pode ser informado quando a ordem de serviço estiver em diagnóstico")
 	ErrOrdemServicoNaoEncontrada       = shared.NewNotFoundError("ordem de serviço não encontrada")
 )
