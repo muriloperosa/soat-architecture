@@ -13,7 +13,7 @@ import (
 func RegisterPecaRoutes(rg *gin.RouterGroup, c *wiring.Container) {
 	h := NewHandler(c.CadastrarPecaUC, c.AtualizarPecaUC, c.AtivarPecaUC, c.InativarPecaUC, c.ConsultarPecaPorIDUC, c.ReporEstoquePecaUC)
 
-	autenticado := rg.Group("/pecas", middleware.AuthenticationMiddleware(c.JWTAuth, c.RefreshTokensRepo, c.UsuarioStatusRepo))
+	autenticado := rg.Group("/pecas", middleware.AuthenticationMiddleware(c.JWTAuth, c.RefreshTokensRepo, c.UsuarioStatusRepo, c.ClienteStatusRepo))
 
 	gestao := autenticado.Group("", middleware.AuthorizationMiddleware(domainauth.TipoInterno, shared.PapelAdmin))
 	gestao.POST("", h.Cadastrar)

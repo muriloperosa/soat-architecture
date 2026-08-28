@@ -15,10 +15,17 @@ const ClaimsContextKey = "auth.claims"
 // AuthenticationMiddleware valida assinatura e expiração do JWT recebido no
 // header Authorization (Bearer), rejeita se o access token foi revogado em
 // par (logout ou rotação do refresh token correspondente), rejeita se o
-// usuário foi inativado desde a emissão do token (checado a cada request,
-// não só no login) e injeta
-// os claims tipados no contexto.
-func AuthenticationMiddleware(jwtAuth domainauth.JWTProvider, refreshTokens domainauth.RefreshTokenRepository, usuarios domainauth.UsuarioStatusRepository) gin.HandlerFunc {
+// usuário/cliente foi inativado desde a emissão do token (checado a cada
+// request, não só no login) e injeta os claims tipados no contexto.
+//
+// A checagem de "ativo" consulta usuarios ou clientes de acordo com
+// claims.Tipo (extraído do próprio token, não da rota) — por isso recebe os
+// dois repositórios, e não só o esperado pra essa rota: se dependesse do
+// tipo esperado da rota, um token do tipo errado seria checado contra a
+// tabela errada antes de AuthorizationMiddleware barrar o Tipo, retornando
+// 401 por coincidência (ou pior, achando um registro não relacionado com o
+// mesmo ID) em vez do 403 correto.
+func AuthenticationMiddleware(jwtAuth domainauth.JWTProvider, refreshTokens domainauth.RefreshTokenRepository, usuarios, clientes domainauth.UsuarioStatusRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		header := c.GetHeader("Authorization")
 		tokenBruto, ok := strings.CutPrefix(header, "Bearer ")
@@ -49,7 +56,12 @@ func AuthenticationMiddleware(jwtAuth domainauth.JWTProvider, refreshTokens doma
 			return
 		}
 
-		ativo, err := usuarios.EstaAtivo(c.Request.Context(), subjectID)
+		status := usuarios
+		if claims.Tipo == domainauth.TipoCliente {
+			status = clientes
+		}
+
+		ativo, err := status.EstaAtivo(c.Request.Context(), subjectID)
 		if err != nil || !ativo {
 			httperror.RespondUnauthorizedError(c, "Requisição não autorizada.")
 			c.Abort()

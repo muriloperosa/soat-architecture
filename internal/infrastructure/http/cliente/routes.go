@@ -24,7 +24,7 @@ func RegisterClienteRoutes(
 
 	clientes := rg.Group(
 		"/clientes",
-		middleware.AuthenticationMiddleware(container.JWTAuth, container.RefreshTokensRepo, container.UsuarioStatusRepo),
+		middleware.AuthenticationMiddleware(container.JWTAuth, container.RefreshTokensRepo, container.UsuarioStatusRepo, container.ClienteStatusRepo),
 		middleware.AuthorizationMiddleware(domainauth.TipoInterno),
 	)
 
@@ -42,7 +42,7 @@ func RegisterClienteRoutes(
 
 	self := rg.Group(
 		"/clientes",
-		middleware.AuthenticationMiddleware(container.JWTAuth, container.RefreshTokensRepo, container.ClienteStatusRepo),
+		middleware.AuthenticationMiddleware(container.JWTAuth, container.RefreshTokensRepo, container.UsuarioStatusRepo, container.ClienteStatusRepo),
 		middleware.AuthorizationMiddleware(domainauth.TipoCliente),
 	)
 	self.PUT("/me/senha", handler.AlterarSenha)
