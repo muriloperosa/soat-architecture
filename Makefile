@@ -1,4 +1,4 @@
-.PHONY: help run build test test-integration coverage lint up down db-up db-down tidy vendor setup dev debug mocks swagger hooks-install hooks-uninstall create-user sonar-up sonar-down sonar-scan sec-sca sec-sast
+.PHONY: help run build test test-integration coverage lint up down db-up db-down tidy vendor setup dev debug mocks swagger hooks-install hooks-uninstall create-user sonar-up sonar-down sonar-scan sec-sca sec-sast sec-dast
 
 GREEN := $(shell tput setaf 2)
 RESET := $(shell tput sgr0)
@@ -42,6 +42,7 @@ help:
 	@echo "  $(GREEN)sonar-scan$(RESET):    Run coverage + sonar-scanner (needs SONAR_TOKEN)"
 	@echo "  $(GREEN)sec-sca$(RESET):       Run govulncheck (SCA) into security/reports/govulncheck.json"
 	@echo "  $(GREEN)sec-sast$(RESET):      Run gosec (SAST) into security/reports/gosec.json"
+	@echo "  $(GREEN)sec-dast$(RESET):      Run authenticated OWASP ZAP API scan into security/reports/zap-report.*"
 
 run:
 	go run ./cmd/api
@@ -158,3 +159,6 @@ sec-sast:
 	@mkdir -p security/reports
 	$(GOBIN)/gosec -fmt=json -out=security/reports/gosec.json ./... || true
 	@echo "$(GREEN)Relatório gerado em security/reports/gosec.json$(RESET)"
+
+sec-dast:
+	@bash security/zap-scan.sh
