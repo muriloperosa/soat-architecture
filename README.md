@@ -31,6 +31,9 @@ cp .env.example .env
 | `DB_MAX_OPEN_CONNS` | Máximo de conexões abertas no pool | `25` |
 | `DB_MAX_IDLE_CONNS` | Máximo de conexões ociosas mantidas no pool | `5` |
 | `DB_CONN_MAX_LIFETIME_MINUTES` | Tempo máximo, em minutos, que uma conexão pode ficar aberta antes de ser reciclada | `5` |
+| `SONAR_HOST_PORT` | Porta exposta no host para o SonarQube (só usada pelo `compose.yml`) | `9000` |
+| `SONAR_TOKEN` | Token de autenticação do SonarQube, usado pelo serviço `sonar-scanner` (gerado na UI, ver seção SonarQube abaixo) | *(vazio)* |
+| `SONAR_HOST_URL` | URL do SonarQube usada pelo `sonar-scanner` (nome do serviço na rede docker; só muda se você apontar pra um SonarQube externo) | `http://sonarqube:9000` |
 
 ## Comandos disponíveis
 
@@ -187,13 +190,21 @@ Em ambiente Linux, se o SonarQube não subir por causa de `vm.max_map_count`, aj
 sudo sysctl -w vm.max_map_count=524288
 ```
 
-Rode a análise (gera cobertura via `make coverage` e escaneia com `sonar-scanner-cli` em container, contra o servidor local):
+Cole o token gerado no `.env` (nunca no `.env.example`):
 
 ```bash
-make sonar-scan SONAR_TOKEN=<seu_token>
+SONAR_TOKEN=<seu_token>
 ```
 
-Configuração do projeto fica em `sonar-project.properties` (project key, paths, exclusões, path do `coverage.out`).
+Rode a análise (gera cobertura via `make coverage` e escaneia via serviço `sonar-scanner` do `compose.yml`, na mesma rede docker do `sonarqube`):
+
+```bash
+make sonar-scan
+```
+
+Tanto `sonarqube` quanto `sonar-scanner` carregam variáveis do `.env` (`env_file`, mesmo padrão dos serviços `app`/`mysql`); não precisa passar nada na linha de comando além do `.env` configurado.
+
+Configuração do projeto de análise fica em `sonar-project.properties` (project key, paths, exclusões, path do `coverage.out`).
 
 Pra parar o servidor:
 

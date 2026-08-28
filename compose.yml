@@ -28,6 +28,8 @@ services:
 
   sonarqube:
     image: sonarqube:community
+    env_file:
+      - .env
     ports:
       - "${SONAR_HOST_PORT:-9000}:9000"
     environment:
@@ -36,6 +38,25 @@ services:
       - sonar_data:/opt/sonarqube/data
       - sonar_extensions:/opt/sonarqube/extensions
       - sonar_logs:/opt/sonarqube/logs
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/api/system/status | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  sonar-scanner:
+    image: sonarsource/sonar-scanner-cli
+    profiles:
+      - tools
+    env_file:
+      - .env
+    environment:
+      SONAR_HOST_URL: "${SONAR_HOST_URL:-http://sonarqube:9000}"
+    volumes:
+      - .:/usr/src
+    depends_on:
+      sonarqube:
+        condition: service_healthy
 
 volumes:
   mysql_data:

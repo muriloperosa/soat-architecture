@@ -140,12 +140,7 @@ sonar-down:
 
 sonar-scan: coverage
 	@if [ -z "$(SONAR_TOKEN)" ]; then \
-		echo "SONAR_TOKEN not set. Export it or run: make sonar-scan SONAR_TOKEN=xxx"; \
+		echo "SONAR_TOKEN not set. Add SONAR_TOKEN=<seu_token> ao .env"; \
 		exit 1; \
 	fi
-	docker run --rm \
-		--add-host=host.docker.internal:host-gateway \
-		-e SONAR_HOST_URL="http://host.docker.internal:$(if $(SONAR_HOST_PORT),$(SONAR_HOST_PORT),9000)" \
-		-e SONAR_TOKEN="$(SONAR_TOKEN)" \
-		-v "$(PWD):/usr/src" \
-		sonarsource/sonar-scanner-cli
+	docker compose --profile tools run --rm sonar-scanner
