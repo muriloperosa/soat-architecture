@@ -8,6 +8,8 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	domain "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
+	"github.com/muriloperosa/soat-architecture/internal/domain/query"
+	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	"github.com/stretchr/testify/require"
 	gormmysql "gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -66,6 +68,7 @@ func clienteRows() *sqlmock.Rows {
 		"email",
 		"senha_hash",
 		"requer_alterar_senha",
+		"criado_por",
 		"telefone",
 		"ativo",
 		"data_cadastro",
@@ -78,11 +81,78 @@ func clienteRows() *sqlmock.Rows {
 		"joao@email.com",
 		"senha123",
 		true,
+		uint64(7),
 		"44999991234",
 		true,
 		agora,
 		agora,
 	)
+}
+
+func TestRepositoryListarComPaginacaoOrdenacaoEFiltros(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewRepository(db)
+	params := query.Params{
+		Offset:    1,
+		Limit:     1,
+		Order:     "nome",
+		Direction: query.DirectionDESC,
+		Filters: []query.Filter{
+			{Field: "nome", Operator: query.OperatorLike, Value: "João"},
+			{Field: "ativo", Operator: query.OperatorEqual, Value: "true"},
+		},
+	}
+
+	mock.ExpectQuery("SELECT count\\(\\*\\) FROM .*").
+		WithArgs("%João%", true).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(2))
+	mock.ExpectQuery("SELECT \\* FROM .* ORDER BY nome DESC LIMIT .* OFFSET .*").
+		WillReturnRows(clienteRows())
+
+	page, err := repository.Listar(context.Background(), params)
+
+	require.NoError(t, err)
+	require.Len(t, page.Items, 1)
+	require.Equal(t, int64(2), page.Total)
+	require.Equal(t, 1, page.Offset)
+	require.Equal(t, 1, page.Limit)
+	require.Equal(t, "nome", page.Order)
+	require.Equal(t, query.DirectionDESC, page.Direction)
+	require.Equal(t, uint64(7), page.Items[0].CriadoPor())
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestRepositoryListarUsaPadroes(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewRepository(db)
+
+	mock.ExpectQuery("SELECT count\\(\\*\\) FROM .*").
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
+	mock.ExpectQuery("SELECT \\* FROM .* ORDER BY id ASC LIMIT .*").
+		WillReturnRows(clienteRows())
+
+	page, err := repository.Listar(context.Background(), query.Params{})
+
+	require.NoError(t, err)
+	require.Equal(t, 20, page.Limit)
+	require.Equal(t, "id", page.Order)
+	require.Equal(t, query.DirectionASC, page.Direction)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestRepositoryListarRejeitaCampoDeFiltroNaoPermitido(t *testing.T) {
+	db, _ := newRepositoryTestDB(t)
+	repository := NewRepository(db)
+
+	_, err := repository.Listar(context.Background(), query.Params{
+		Filters: []query.Filter{{
+			Field: "senha_hash", Operator: query.OperatorEqual, Value: "segredo",
+		}},
+	})
+
+	var appErr *shared.AppError
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindValidation, appErr.Kind)
 }
 
 func TestNewRepository(t *testing.T) {

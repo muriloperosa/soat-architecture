@@ -64,6 +64,7 @@ type Container struct {
 	AtivarClienteUseCase                *appcliente.AtivarClienteUseCase
 	InativarClienteUseCase              *appcliente.InativarClienteUseCase
 	AlterarSenhaClienteUseCase          *appcliente.AlterarSenhaClienteUseCase
+	ListarClientesUseCase               *appcliente.ListarClientesUseCase
 
 	CadastrarPecaUC      *apppeca.CadastrarPecaUseCase
 	AtualizarPecaUC      *apppeca.AtualizarPecaUseCase
@@ -93,7 +94,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c := &Container{Config: cfg, DB: db}
 	c.RefreshTokensRepo = mysqlauth.NewRefreshTokenRepository(db)
 	c.UsuarioRepo = mysqlusuario.NewUsuarioRepository(db)
-	c.ClienteRepository = mysqlcliente.NewClienteRepository(db)
+	c.ClienteRepository = mysqlcliente.NewClienteRepository(db, mysqlcliente.NewQueryBuilder())
 	c.PecaRepo = mysqlpeca.NewRepository(db)
 	c.VeiculoRepo = mysqlveiculo.NewRepository(db)
 	c.ServicoRepo = mysqlservico.NewServicoRepository(db)
@@ -129,6 +130,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.AtivarClienteUseCase = appcliente.NewAtivarClienteUseCase(c.ClienteRepository)
 	c.InativarClienteUseCase = appcliente.NewInativarClienteUseCase(c.ClienteRepository)
 	c.AlterarSenhaClienteUseCase = appcliente.NewAlterarSenhaClienteUseCase(c.ClienteRepository)
+	c.ListarClientesUseCase = appcliente.NewListarClientesUseCase(c.ClienteRepository)
 
 	c.CadastrarPecaUC = apppeca.NewCadastrarPecaUseCase(c.PecaRepo)
 	c.AtualizarPecaUC = apppeca.NewAtualizarPecaUseCase(c.PecaRepo)

@@ -13,6 +13,8 @@ import (
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 	domaincliente "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
 	"github.com/muriloperosa/soat-architecture/internal/domain/cliente/mocks"
+	"github.com/muriloperosa/soat-architecture/internal/domain/query"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httpquery"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/middleware"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -51,7 +53,9 @@ func TestNewHandler(t *testing.T) {
 	ativar := appcliente.NewAtivarClienteUseCase(repo)
 	inativar := appcliente.NewInativarClienteUseCase(repo)
 	alterarSenha := appcliente.NewAlterarSenhaClienteUseCase(repo)
-	handler := NewHandler(criar, atualizar, consultarPorID, consultarPorDocumento, ativar, inativar, alterarSenha)
+	listar := appcliente.NewListarClientesUseCase(repo)
+	parser := httpquery.NewParser()
+	handler := NewHandler(criar, atualizar, consultarPorID, consultarPorDocumento, ativar, inativar, alterarSenha, listar, parser)
 	require.Same(t, criar, handler.criar)
 	require.Same(t, atualizar, handler.atualizar)
 	require.Same(t, consultarPorID, handler.consultarPorID)
@@ -59,6 +63,59 @@ func TestNewHandler(t *testing.T) {
 	require.Same(t, ativar, handler.ativar)
 	require.Same(t, inativar, handler.inativar)
 	require.Same(t, alterarSenha, handler.alterarSenha)
+	require.Same(t, listar, handler.listar)
+	require.Same(t, parser, handler.queryParser)
+}
+
+func TestHandlerListarComPaginacaoEFiltros(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := mocks.NewClienteRepository(t)
+	params := query.Params{
+		Offset: 5, Limit: 10, Order: "nome", Direction: query.DirectionDESC,
+		Filters: []query.Filter{
+			{Field: "ativo", Operator: query.OperatorAuto, Value: "true"},
+			{Field: "nome", Operator: query.OperatorAuto, Value: "Maria"},
+		},
+	}
+	repo.EXPECT().Listar(mock.Anything, params).Return(query.Page[*domaincliente.Cliente]{
+		Items: []*domaincliente.Cliente{clienteValido(t, 1)},
+		Total: 21, Offset: 5, Limit: 10, Order: "nome", Direction: query.DirectionDESC,
+	}, nil)
+	handler := NewHandler(
+		nil, nil, nil, nil, nil, nil, nil,
+		appcliente.NewListarClientesUseCase(repo), httpquery.NewParser(),
+	)
+	router := gin.New()
+	router.GET("/v1/clientes", handler.Listar)
+
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(
+		http.MethodGet,
+		"/v1/clientes?offset=5&limit=10&order=nome&direction=desc&nome=Maria&ativo=true",
+		nil,
+	))
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+	var response ListarClientesResponse
+	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &response))
+	require.Len(t, response.Items, 1)
+	require.Equal(t, int64(21), response.Total)
+	require.Equal(t, 5, response.Offset)
+	require.Equal(t, 10, response.Limit)
+	require.Equal(t, "nome", response.Order)
+	require.Equal(t, "DESC", response.Direction)
+}
+
+func TestHandlerListarRejeitaQueryInvalida(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := NewHandler(nil, nil, nil, nil, nil, nil, nil, nil, httpquery.NewParser())
+	router := gin.New()
+	router.GET("/v1/clientes", handler.Listar)
+
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/v1/clientes?limit=invalido", nil))
+
+	require.Equal(t, http.StatusBadRequest, recorder.Code)
 }
 
 func TestHandlerCriarComSucesso(t *testing.T) {
@@ -69,7 +126,7 @@ func TestHandlerCriarComSucesso(t *testing.T) {
 		require.Equal(t, uint64(7), cliente.CriadoPor())
 		cliente.DefinirID(1)
 	}).Return(nil)
-	handler := NewHandler(appcliente.NewCriarClienteUseCase(repo), nil, nil, nil, nil, nil, nil)
+	handler := NewHandler(appcliente.NewCriarClienteUseCase(repo), nil, nil, nil, nil, nil, nil, nil, nil)
 	router := gin.New()
 	router.POST("/v1/clientes", withSubject("7"), handler.Criar)
 	req := requestJSON(t, http.MethodPost, "/v1/clientes", CriarClienteRequest{Documento: "529.982.247-25", TipoPessoa: "PF", Nome: "João da Silva", Email: "joao@email.com", Telefone: "(44) 99999-1234", Senha: "senha123"})
@@ -84,7 +141,7 @@ func TestHandlerCriarComSucesso(t *testing.T) {
 
 func TestHandlerCriarComBodyInvalido(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	handler := NewHandler(nil, nil, nil, nil, nil, nil, nil)
+	handler := NewHandler(nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	router := gin.New()
 	router.POST("/v1/clientes", withSubject("1"), handler.Criar)
 	req := httptest.NewRequest(http.MethodPost, "/v1/clientes", bytes.NewBufferString("{"))
@@ -98,7 +155,7 @@ func TestHandlerCriarClienteDuplicado(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := mocks.NewClienteRepository(t)
 	repo.EXPECT().BuscarPorDocumento(mock.Anything, "529.982.247-25").Return(clienteValido(t, 1), nil)
-	handler := NewHandler(appcliente.NewCriarClienteUseCase(repo), nil, nil, nil, nil, nil, nil)
+	handler := NewHandler(appcliente.NewCriarClienteUseCase(repo), nil, nil, nil, nil, nil, nil, nil, nil)
 	router := gin.New()
 	router.POST("/v1/clientes", withSubject("1"), handler.Criar)
 	req := requestJSON(t, http.MethodPost, "/v1/clientes", CriarClienteRequest{Documento: "529.982.247-25", TipoPessoa: "PF", Nome: "João da Silva", Email: "joao@email.com", Telefone: "(44) 99999-1234", Senha: "senha123"})
@@ -112,7 +169,7 @@ func TestHandlerAtualizarComSucesso(t *testing.T) {
 	repo := mocks.NewClienteRepository(t)
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(1)).Return(clienteValido(t, 1), nil)
 	repo.EXPECT().Atualizar(mock.Anything, mock.AnythingOfType("*cliente.Cliente")).Return(nil)
-	handler := NewHandler(nil, appcliente.NewAtualizarClienteUseCase(repo), nil, nil, nil, nil, nil)
+	handler := NewHandler(nil, appcliente.NewAtualizarClienteUseCase(repo), nil, nil, nil, nil, nil, nil, nil)
 	router := gin.New()
 	router.PUT("/v1/clientes/:id", handler.Atualizar)
 	req := requestJSON(t, http.MethodPut, "/v1/clientes/1", AtualizarClienteRequest{Nome: "João Souza", Email: "joao.souza@email.com", Telefone: "11999998888"})
@@ -123,7 +180,7 @@ func TestHandlerAtualizarComSucesso(t *testing.T) {
 
 func TestHandlerAtualizarComIDInvalido(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	handler := NewHandler(nil, nil, nil, nil, nil, nil, nil)
+	handler := NewHandler(nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	router := gin.New()
 	router.PUT("/v1/clientes/:id", handler.Atualizar)
 	req := requestJSON(t, http.MethodPut, "/v1/clientes/invalido", AtualizarClienteRequest{Nome: "João Souza", Email: "joao.souza@email.com", Telefone: "11999998888"})
@@ -136,7 +193,7 @@ func TestHandlerBuscarPorID(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := mocks.NewClienteRepository(t)
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(1)).Return(clienteValido(t, 1), nil)
-	handler := NewHandler(nil, nil, appcliente.NewConsultarClientePorIDUseCase(repo), nil, nil, nil, nil)
+	handler := NewHandler(nil, nil, appcliente.NewConsultarClientePorIDUseCase(repo), nil, nil, nil, nil, nil, nil)
 	router := gin.New()
 	router.GET("/v1/clientes/:id", handler.BuscarPorID)
 	recorder := httptest.NewRecorder()
@@ -148,7 +205,7 @@ func TestHandlerBuscarPorDocumento(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := mocks.NewClienteRepository(t)
 	repo.EXPECT().BuscarPorDocumento(mock.Anything, "52998224725").Return(clienteValido(t, 1), nil)
-	handler := NewHandler(nil, nil, nil, appcliente.NewConsultarClientePorDocumentoUseCase(repo), nil, nil, nil)
+	handler := NewHandler(nil, nil, nil, appcliente.NewConsultarClientePorDocumentoUseCase(repo), nil, nil, nil, nil, nil)
 	router := gin.New()
 	router.GET("/v1/clientes/documento/:documento", handler.BuscarPorDocumento)
 	recorder := httptest.NewRecorder()
@@ -163,7 +220,7 @@ func TestHandlerAtivar(t *testing.T) {
 	repo := mocks.NewClienteRepository(t)
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(1)).Return(cliente, nil)
 	repo.EXPECT().Atualizar(mock.Anything, cliente).Return(nil)
-	handler := NewHandler(nil, nil, nil, nil, appcliente.NewAtivarClienteUseCase(repo), nil, nil)
+	handler := NewHandler(nil, nil, nil, nil, appcliente.NewAtivarClienteUseCase(repo), nil, nil, nil, nil)
 	router := gin.New()
 	router.PATCH("/v1/clientes/:id/ativar", handler.Ativar)
 	recorder := httptest.NewRecorder()
@@ -177,7 +234,7 @@ func TestHandlerInativar(t *testing.T) {
 	repo := mocks.NewClienteRepository(t)
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(1)).Return(cliente, nil)
 	repo.EXPECT().Atualizar(mock.Anything, cliente).Return(nil)
-	handler := NewHandler(nil, nil, nil, nil, nil, appcliente.NewInativarClienteUseCase(repo), nil)
+	handler := NewHandler(nil, nil, nil, nil, nil, appcliente.NewInativarClienteUseCase(repo), nil, nil, nil)
 	router := gin.New()
 	router.PATCH("/v1/clientes/:id/inativar", handler.Inativar)
 	recorder := httptest.NewRecorder()
@@ -191,7 +248,7 @@ func TestHandlerAlterarSenhaDoClienteLogado(t *testing.T) {
 	repo := mocks.NewClienteRepository(t)
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(1)).Return(cliente, nil)
 	repo.EXPECT().Atualizar(mock.Anything, cliente).Return(nil)
-	handler := NewHandler(nil, nil, nil, nil, nil, nil, appcliente.NewAlterarSenhaClienteUseCase(repo))
+	handler := NewHandler(nil, nil, nil, nil, nil, nil, appcliente.NewAlterarSenhaClienteUseCase(repo), nil, nil)
 	router := gin.New()
 	router.PUT("/v1/clientes/me/senha", withSubject("1"), handler.AlterarSenha)
 	req := requestJSON(t, http.MethodPut, "/v1/clientes/me/senha", AlterarSenhaRequest{SenhaNova: "novaSenha123"})
@@ -205,7 +262,7 @@ func TestHandlerRetorna404QuandoClienteNaoExiste(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := mocks.NewClienteRepository(t)
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(99)).Return(nil, domaincliente.ErrClienteNaoEncontrado)
-	handler := NewHandler(nil, nil, appcliente.NewConsultarClientePorIDUseCase(repo), nil, nil, nil, nil)
+	handler := NewHandler(nil, nil, appcliente.NewConsultarClientePorIDUseCase(repo), nil, nil, nil, nil, nil, nil)
 	router := gin.New()
 	router.GET("/v1/clientes/:id", handler.BuscarPorID)
 	recorder := httptest.NewRecorder()

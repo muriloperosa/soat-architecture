@@ -185,6 +185,144 @@ A UI fica em `/swagger/index.html`. Com a API no ar (`make up` ou `make dev`), a
 http://localhost:8080/swagger/index.html
 ```
 
+## Paginação, ordenação e filtros
+
+A primeira rota que utiliza a consulta paginada é a listagem de clientes:
+
+```http
+GET /v1/clientes
+Authorization: Bearer <access_token>
+```
+
+A rota é protegida e aceita somente usuários internos autenticados. Os parâmetros são enviados pela query string:
+
+| Parâmetro | Descrição | Padrão | Regra |
+|---|---|---|---|
+| `offset` | Quantidade de registros ignorados antes do primeiro resultado | `0` | Deve ser maior ou igual a zero |
+| `limit` | Quantidade máxima de registros retornados | `20` | Deve estar entre 1 e 100 |
+| `order` | Campo usado na ordenação | `id` | Precisa ser um campo autorizado |
+| `direction` | Direção da ordenação | `ASC` | Aceita `ASC` ou `DESC` |
+
+O `offset` representa uma quantidade de registros, não o número da página. Para calcular o offset a partir de uma página:
+
+```text
+offset = (pagina - 1) * limit
+```
+
+Por exemplo, usando `limit=20`:
+
+| Página | Offset |
+|---|---|
+| 1 | `0` |
+| 2 | `20` |
+| 3 | `40` |
+
+### Exemplos de paginação e ordenação
+
+Primeira página, com 10 clientes ordenados pelo nome:
+
+```bash
+curl "http://localhost:8080/v1/clientes?offset=0&limit=10&order=nome&direction=ASC" -H "Authorization: Bearer $TOKEN"
+```
+
+Segunda página da mesma consulta:
+
+```bash
+curl "http://localhost:8080/v1/clientes?offset=10&limit=10&order=nome&direction=ASC" -H "Authorization: Bearer $TOKEN"
+```
+
+A resposta contém os itens da página e o total encontrado antes da aplicação de `offset` e `limit`:
+
+```json
+{
+  "items": [
+    {
+      "id": 15,
+      "nome": "Maria Silva",
+      "email": "maria@oficina.com",
+      "documento": "52998224725",
+      "tipo_pessoa": "PF",
+      "telefone": "11999998888",
+      "ativo": true,
+      "requer_alterar_senha": true,
+      "criado_por": 1
+    }
+  ],
+  "total": 42,
+  "offset": 0,
+  "limit": 10,
+  "order": "nome",
+  "direction": "ASC"
+}
+```
+
+Nesse exemplo existem 42 clientes que atendem aos filtros, mas somente os primeiros 10 foram retornados.
+
+### Filtros diretos por campo
+
+Não é necessário informar um operador. Qualquer parâmetro diferente de `offset`, `limit`, `order` e `direction` é interpretado como um filtro:
+
+```text
+campo=valor
+```
+
+O tipo configurado para o campo define automaticamente como o filtro será aplicado:
+
+| Tipo | Um valor | Vários valores separados por vírgula |
+|---|---|---|
+| Texto | `LIKE %valor%` | `IN` |
+| Número inteiro | Igualdade | `IN` |
+| Booleano | Igualdade | Não permitido |
+| Data | Todo o dia ou instante exato | Intervalo entre duas datas |
+
+Exemplos:
+
+```bash
+# nome contém "caio"
+curl "http://localhost:8080/v1/clientes?nome=caio" -H "Authorization: Bearer $TOKEN"
+
+# cliente ativo e nome contendo "caio"
+curl "http://localhost:8080/v1/clientes?nome=caio&ativo=true" -H "Authorization: Bearer $TOKEN"
+
+# IDs 1, 2 ou 3
+curl "http://localhost:8080/v1/clientes?id=1,2,3" -H "Authorization: Bearer $TOKEN"
+```
+
+Para negar um filtro, use o sufixo `_not`. Em texto ele aplica `NOT LIKE`; em números e booleanos, aplica diferença:
+
+```bash
+curl "http://localhost:8080/v1/clientes?nome_not=teste" -H "Authorization: Bearer $TOKEN"
+```
+
+Para datas, use o padrão ISO 8601. Uma única data filtra o dia inteiro; duas datas separadas por vírgula formam um intervalo:
+
+```bash
+# clientes cadastrados em 20 de agosto de 2026
+curl "http://localhost:8080/v1/clientes?data_cadastro=2026-08-20" -H "Authorization: Bearer $TOKEN"
+
+# clientes cadastrados entre 20 e 22 de agosto de 2026, incluindo os dois dias
+curl "http://localhost:8080/v1/clientes?data_cadastro=2026-08-20,2026-08-22" -H "Authorization: Bearer $TOKEN"
+```
+
+Também é aceito um instante completo em RFC 3339, como `2026-08-20T10:30:00-03:00`.
+
+Campos disponíveis na listagem:
+
+| Tipo | Campos |
+|---|---|
+| Número inteiro | `id`, `criado_por` |
+| Texto | `documento`, `tipo`, `nome`, `email`, `telefone` |
+| Booleano | `ativo`, `requer_alterar_senha` |
+| Data | `data_cadastro`, `data_atualizacao` |
+
+Todos esses campos também podem ser usados em `order`. Um exemplo completo:
+
+```bash
+curl "http://localhost:8080/v1/clientes?offset=0&limit=5&order=data_cadastro&direction=DESC&nome=caio&ativo=true" -H "Authorization: Bearer $TOKEN"
+```
+
+Campos ou valores inválidos retornam `400 Bad Request`. Apenas campos previamente autorizados na configuração chegam ao GORM, e todos os valores são enviados como parâmetros da consulta.
+
 ## Erros de domínio
 
 Erros de negócio (não encontrado, validação, conflito) trafegam da camada de domínio/aplicação até o HTTP como `*shared.AppError` (`internal/domain/shared/errors.go`):

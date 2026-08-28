@@ -122,6 +122,28 @@ definitions:
     - telefone
     - tipo_pessoa
     type: object
+  cliente.ListarClientesResponse:
+    properties:
+      direction:
+        example: ASC
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/cliente.ClienteResponse'
+        type: array
+      limit:
+        example: 20
+        type: integer
+      offset:
+        example: 0
+        type: integer
+      order:
+        example: nome
+        type: string
+      total:
+        example: 42
+        type: integer
+    type: object
   health.HealthCheckResponse:
     properties:
       status:
@@ -674,6 +696,133 @@ paths:
       tags:
       - Auth Interno
   /v1/clientes:
+    get:
+      description: Lista clientes com paginação, ordenação e filtros diretos por campo.
+        Texto usa LIKE, listas separadas por vírgula usam IN, booleanos usam igualdade
+        e duas datas ISO 8601 formam um intervalo. Use o sufixo _not para negar filtros
+        textuais.
+      parameters:
+      - default: 0
+        description: Quantidade de registros ignorados
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      - default: 20
+        description: Quantidade de registros retornados
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - default: id
+        description: Campo de ordenação
+        enum:
+        - id
+        - documento
+        - tipo
+        - nome
+        - email
+        - telefone
+        - ativo
+        - requer_alterar_senha
+        - criado_por
+        - data_cadastro
+        - data_atualizacao
+        in: query
+        name: order
+        type: string
+      - default: ASC
+        description: Direção da ordenação
+        enum:
+        - ASC
+        - DESC
+        in: query
+        name: direction
+        type: string
+      - description: ID ou lista de IDs separada por vírgula
+        example: 1,2,3
+        in: query
+        name: id
+        type: string
+      - description: Documento contendo o valor
+        in: query
+        name: documento
+        type: string
+      - description: Tipo de pessoa contendo o valor
+        enum:
+        - PF
+        - PJ
+        in: query
+        name: tipo
+        type: string
+      - description: Nome contendo o valor
+        example: Maria
+        in: query
+        name: nome
+        type: string
+      - description: Nome que não deve conter o valor
+        example: Teste
+        in: query
+        name: nome_not
+        type: string
+      - description: E-mail contendo o valor
+        in: query
+        name: email
+        type: string
+      - description: Telefone contendo o valor
+        in: query
+        name: telefone
+        type: string
+      - description: Situação ativa do cliente
+        in: query
+        name: ativo
+        type: boolean
+      - description: Exigência de alteração de senha
+        in: query
+        name: requer_alterar_senha
+        type: boolean
+      - description: ID ou lista de IDs dos criadores
+        in: query
+        name: criado_por
+        type: string
+      - description: Data ISO 8601 ou intervalo separado por vírgula
+        example: 2026-08-20,2026-08-22
+        in: query
+        name: data_cadastro
+        type: string
+      - description: Data ISO 8601 ou intervalo separado por vírgula
+        in: query
+        name: data_atualizacao
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/cliente.ListarClientesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Lista clientes
+      tags:
+      - Clientes
     post:
       consumes:
       - application/json

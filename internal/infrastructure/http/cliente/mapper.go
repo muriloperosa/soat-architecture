@@ -3,6 +3,7 @@ package cliente
 import (
 	app "github.com/muriloperosa/soat-architecture/internal/application/cliente"
 	domain "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
+	"github.com/muriloperosa/soat-architecture/internal/domain/query"
 )
 
 func toCriarInput(criadoPor uint64, req CriarClienteRequest) app.CriarClienteInput {
@@ -44,5 +45,21 @@ func toResponse(output app.ClienteOutput) ClienteResponse {
 		Ativo:              output.Ativo,
 		RequerAlterarSenha: output.RequerAlterarSenha,
 		CriadoPor:          output.CriadoPor,
+	}
+}
+
+func toListResponse(output query.Page[app.ClienteOutput]) ListarClientesResponse {
+	items := make([]ClienteResponse, 0, len(output.Items))
+	for _, cliente := range output.Items {
+		items = append(items, toResponse(cliente))
+	}
+
+	return ListarClientesResponse{
+		Items:     items,
+		Total:     output.Total,
+		Offset:    output.Offset,
+		Limit:     output.Limit,
+		Order:     output.Order,
+		Direction: string(output.Direction),
 	}
 }

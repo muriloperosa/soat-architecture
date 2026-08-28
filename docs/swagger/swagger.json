@@ -271,6 +271,183 @@
             }
         },
         "/v1/clientes": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lista clientes com paginação, ordenação e filtros diretos por campo. Texto usa LIKE, listas separadas por vírgula usam IN, booleanos usam igualdade e duas datas ISO 8601 formam um intervalo. Use o sufixo _not para negar filtros textuais.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clientes"
+                ],
+                "summary": "Lista clientes",
+                "parameters": [
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Quantidade de registros ignorados",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Quantidade de registros retornados",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "id",
+                            "documento",
+                            "tipo",
+                            "nome",
+                            "email",
+                            "telefone",
+                            "ativo",
+                            "requer_alterar_senha",
+                            "criado_por",
+                            "data_cadastro",
+                            "data_atualizacao"
+                        ],
+                        "type": "string",
+                        "default": "id",
+                        "description": "Campo de ordenação",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "ASC",
+                            "DESC"
+                        ],
+                        "type": "string",
+                        "default": "ASC",
+                        "description": "Direção da ordenação",
+                        "name": "direction",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "1,2,3",
+                        "description": "ID ou lista de IDs separada por vírgula",
+                        "name": "id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Documento contendo o valor",
+                        "name": "documento",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "PF",
+                            "PJ"
+                        ],
+                        "type": "string",
+                        "description": "Tipo de pessoa contendo o valor",
+                        "name": "tipo",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "Maria",
+                        "description": "Nome contendo o valor",
+                        "name": "nome",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "Teste",
+                        "description": "Nome que não deve conter o valor",
+                        "name": "nome_not",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "E-mail contendo o valor",
+                        "name": "email",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Telefone contendo o valor",
+                        "name": "telefone",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Situação ativa do cliente",
+                        "name": "ativo",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Exigência de alteração de senha",
+                        "name": "requer_alterar_senha",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID ou lista de IDs dos criadores",
+                        "name": "criado_por",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "2026-08-20,2026-08-22",
+                        "description": "Data ISO 8601 ou intervalo separado por vírgula",
+                        "name": "data_cadastro",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Data ISO 8601 ou intervalo separado por vírgula",
+                        "name": "data_atualizacao",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/cliente.ListarClientesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -2305,6 +2482,37 @@
                 "tipo_pessoa": {
                     "type": "string",
                     "example": "PF"
+                }
+            }
+        },
+        "cliente.ListarClientesResponse": {
+            "type": "object",
+            "properties": {
+                "direction": {
+                    "type": "string",
+                    "example": "ASC"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/cliente.ClienteResponse"
+                    }
+                },
+                "limit": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "offset": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "order": {
+                    "type": "string",
+                    "example": "nome"
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 42
                 }
             }
         },
