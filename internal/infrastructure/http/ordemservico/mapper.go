@@ -12,6 +12,23 @@ func toInput(usuarioID uint64, request AbrirOrdemServicoRequest) app.AbrirOrdemS
 	}
 }
 
+func toIniciarDiagnosticoInput(ordemServicoID, usuarioID uint64) app.IniciarDiagnosticoInput {
+	return app.IniciarDiagnosticoInput{
+		OrdemServicoID: ordemServicoID,
+		UsuarioID:      usuarioID,
+	}
+}
+
+func toInformarDiagnosticoInput(
+	ordemServicoID uint64,
+	request InformarDiagnosticoRequest,
+) app.InformarDiagnosticoInput {
+	return app.InformarDiagnosticoInput{
+		OrdemServicoID: ordemServicoID,
+		Diagnostico:    request.Diagnostico,
+	}
+}
+
 func toResponse(output app.OrdemServicoOutput) OrdemServicoResponse {
 	return OrdemServicoResponse{
 		ID:                   output.ID,

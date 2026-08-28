@@ -7,6 +7,10 @@ type AbrirOrdemServicoRequest struct {
 	Observacoes          string `json:"observacoes" example:"Cliente relatou ruído no motor"`
 }
 
+type InformarDiagnosticoRequest struct {
+	Diagnostico string `json:"diagnostico" example:"Falha na bomba de combustível"`
+}
+
 type OrdemServicoResponse struct {
 	ID                   uint64 `json:"id" example:"1"`
 	Numero               string `json:"numero" example:"OS-20260826-a1b2c3d4e5f6"`

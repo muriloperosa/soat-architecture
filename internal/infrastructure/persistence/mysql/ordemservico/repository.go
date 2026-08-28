@@ -68,23 +68,38 @@ func (r *Repository) BuscarPorNumero(ctx context.Context, numero string) (*domai
 
 func (r *Repository) Atualizar(ctx context.Context, os *domain.OrdemServico) error {
 	model := toModel(os)
-	result := r.db.WithContext(ctx).
-		Model(&OrdemServicoModel{}).
-		Where("id = ?", model.ID).
-		Updates(map[string]any{
-			"status":           model.Status,
-			"diagnostico":      model.Diagnostico,
-			"observacoes":      model.Observacoes,
-			"data_atualizacao": model.DataAtualizacao,
-		})
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return domain.ErrOrdemServicoNaoEncontrada
-	}
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		result := tx.
+			Model(&OrdemServicoModel{}).
+			Where("id = ?", model.ID).
+			Updates(map[string]any{
+				"status":           model.Status,
+				"diagnostico":      model.Diagnostico,
+				"observacoes":      model.Observacoes,
+				"data_atualizacao": model.DataAtualizacao,
+			})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return domain.ErrOrdemServicoNaoEncontrada
+		}
 
-	return nil
+		novosHistoricos := make([]HistoricoStatusModel, 0)
+		for _, historico := range os.HistoricoStatus() {
+			if historico.ID() == 0 {
+				novosHistoricos = append(novosHistoricos, toHistoricoModel(historico, model.ID))
+			}
+		}
+
+		if len(novosHistoricos) > 0 {
+			if err := tx.Create(&novosHistoricos).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
 }
 
 func (r *Repository) consultaComHistorico(ctx context.Context) *gorm.DB {
