@@ -8,6 +8,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	domain "github.com/muriloperosa/soat-architecture/internal/domain/peca"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql"
 	"github.com/stretchr/testify/require"
 	gormmysql "gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -169,6 +170,71 @@ func TestRepositoryBuscarPorIDDeveRetornarErroDoBanco(t *testing.T) {
 	require.Nil(t, p)
 	require.ErrorIs(t, err, erroBanco)
 
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestRepositoryBuscarPorIDComBloqueio(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewRepository(db)
+
+	mock.ExpectQuery("SELECT .* FROM .* FOR UPDATE").WillReturnRows(pecaRows())
+
+	p, err := repository.BuscarPorIDComBloqueio(context.Background(), 1)
+
+	require.NoError(t, err)
+	require.NotNil(t, p)
+	require.Equal(t, uint64(1), p.ID())
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestRepositoryBuscarPorIDComBloqueioDeveRetornarPecaNaoEncontrada(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewRepository(db)
+
+	mock.ExpectQuery("SELECT .* FROM .* FOR UPDATE").WillReturnError(gorm.ErrRecordNotFound)
+
+	p, err := repository.BuscarPorIDComBloqueio(context.Background(), 999)
+
+	require.Nil(t, p)
+	require.ErrorIs(t, err, domain.ErrPecaNaoEncontrada)
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestRepositoryBuscarPorIDComBloqueioDeveRetornarErroDoBanco(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewRepository(db)
+
+	erroBanco := errors.New("erro ao consultar banco")
+
+	mock.ExpectQuery("SELECT .* FROM .* FOR UPDATE").WillReturnError(erroBanco)
+
+	p, err := repository.BuscarPorIDComBloqueio(context.Background(), 1)
+
+	require.Nil(t, p)
+	require.ErrorIs(t, err, erroBanco)
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestRepositoryBuscarPorIDComBloqueio_ParticipaDaTransacaoDoContexto(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewRepository(db)
+	runner := mysql.NewTransactionRunner(db)
+
+	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT .* FROM .* FOR UPDATE").WillReturnRows(pecaRows())
+	mock.ExpectCommit()
+
+	err := runner.Executar(context.Background(), func(ctx context.Context) error {
+		p, err := repository.BuscarPorIDComBloqueio(ctx, 1)
+		require.NoError(t, err)
+		require.NotNil(t, p)
+		return nil
+	})
+
+	require.NoError(t, err)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 

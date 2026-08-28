@@ -134,7 +134,7 @@ func (o *OrdemServico) IniciarDiagnostico(alteradoPor uint64) error {
 		return err
 	}
 
-	historico, err := NewHistoricoStatus(StatusEmDiagnostico, alteradoPor, "")
+	historico, err := NewHistoricoStatus(StatusEmDiagnostico, alteradoPor, "", time.Now())
 	if err != nil {
 		return err
 	}
