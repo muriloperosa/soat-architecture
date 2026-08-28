@@ -171,6 +171,36 @@ open coverage.html
 make lint
 ```
 
+## SonarQube (análise estática)
+
+Sobe um SonarQube local (banco embarcado H2, só pra análise local mesmo) via `compose.yml`:
+
+```bash
+make sonar-up
+```
+
+Acesse `http://localhost:9000` (login inicial `admin`/`admin`, troca de senha obrigatória no primeiro acesso). Crie um projeto com key `soat-architecture` e gere um token em **My Account → Security → Generate Token**.
+
+Em ambiente Linux, se o SonarQube não subir por causa de `vm.max_map_count`, ajuste no host:
+
+```bash
+sudo sysctl -w vm.max_map_count=524288
+```
+
+Rode a análise (gera cobertura via `make coverage` e escaneia com `sonar-scanner-cli` em container, contra o servidor local):
+
+```bash
+make sonar-scan SONAR_TOKEN=<seu_token>
+```
+
+Configuração do projeto fica em `sonar-project.properties` (project key, paths, exclusões, path do `coverage.out`).
+
+Pra parar o servidor:
+
+```bash
+make sonar-down
+```
+
 ## Swagger
 
 ```bash

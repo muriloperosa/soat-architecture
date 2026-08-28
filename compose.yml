@@ -26,5 +26,19 @@ services:
       timeout: 5s
       retries: 10
 
+  sonarqube:
+    image: sonarqube:community
+    ports:
+      - "${SONAR_HOST_PORT:-9000}:9000"
+    environment:
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+    volumes:
+      - sonar_data:/opt/sonarqube/data
+      - sonar_extensions:/opt/sonarqube/extensions
+      - sonar_logs:/opt/sonarqube/logs
+
 volumes:
   mysql_data:
+  sonar_data:
+  sonar_extensions:
+  sonar_logs:

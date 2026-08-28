@@ -1,4 +1,4 @@
-.PHONY: help run build test test-integration coverage lint up down db-up db-down tidy vendor setup dev debug mocks swagger hooks-install hooks-uninstall create-user
+.PHONY: help run build test test-integration coverage lint up down db-up db-down tidy vendor setup dev debug mocks swagger hooks-install hooks-uninstall create-user sonar-up sonar-down sonar-scan
 
 GREEN := $(shell tput setaf 2)
 RESET := $(shell tput sgr0)
@@ -37,6 +37,9 @@ help:
 	@echo "  $(GREEN)migrate-version$(RESET): Run database migrations version (migrate)"
 	@echo "  $(GREEN)db-setup$(RESET):         Start MySQL and run migrations up"
 	@echo "  $(GREEN)create-user$(RESET):   Create an internal user (NOME, EMAIL, SENHA, PAPEL optional=admin)"
+	@echo "  $(GREEN)sonar-up$(RESET):      Start SonarQube server via docker compose"
+	@echo "  $(GREEN)sonar-down$(RESET):    Stop the SonarQube container"
+	@echo "  $(GREEN)sonar-scan$(RESET):    Run coverage + sonar-scanner (needs SONAR_TOKEN)"
 
 run:
 	go run ./cmd/api
@@ -128,3 +131,21 @@ hooks-uninstall:
 	@echo "Uninstalling Git hooks..."
 	@rm -f .git/hooks/pre-push
 	@echo "$(GREEN)Git hooks uninstalled successfully!$(RESET)"
+
+sonar-up:
+	docker compose up -d --wait sonarqube
+
+sonar-down:
+	docker compose stop sonarqube
+
+sonar-scan: coverage
+	@if [ -z "$(SONAR_TOKEN)" ]; then \
+		echo "SONAR_TOKEN not set. Export it or run: make sonar-scan SONAR_TOKEN=xxx"; \
+		exit 1; \
+	fi
+	docker run --rm \
+		--add-host=host.docker.internal:host-gateway \
+		-e SONAR_HOST_URL="http://host.docker.internal:$(if $(SONAR_HOST_PORT),$(SONAR_HOST_PORT),9000)" \
+		-e SONAR_TOKEN="$(SONAR_TOKEN)" \
+		-v "$(PWD):/usr/src" \
+		sonarsource/sonar-scanner-cli
