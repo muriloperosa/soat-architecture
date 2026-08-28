@@ -1,4 +1,39 @@
+# Stack sob demanda (profile "tools"), separada de compose.yml (stack de
+# dev): SonarQube/sonar-scanner (make sonar-*) e a stack isolada de DAST
+# app-dast+mysql-dast+zap (make sec-dast). Nunca sobe junto com "make up".
 services:
+  sonarqube:
+    image: sonarqube:community
+    env_file:
+      - .env
+    ports:
+      - "${SONAR_HOST_PORT:-9000}:9000"
+    environment:
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+    volumes:
+      - sonar_data:/opt/sonarqube/data
+      - sonar_extensions:/opt/sonarqube/extensions
+      - sonar_logs:/opt/sonarqube/logs
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/api/system/status | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  sonar-scanner:
+    image: sonarsource/sonar-scanner-cli
+    profiles:
+      - tools
+    env_file:
+      - .env
+    environment:
+      SONAR_HOST_URL: "${SONAR_HOST_URL:-http://sonarqube:9000}"
+    volumes:
+      - .:/usr/src
+    depends_on:
+      sonarqube:
+        condition: service_healthy
+
   mysql-dast:
     image: mysql:8
     environment:
@@ -15,9 +50,9 @@ services:
       retries: 10
 
   app-dast:
-    build: ..
+    build: .
     env_file:
-      - ../.env
+      - .env
     ports:
       - "${DAST_APP_HOST_PORT:-8081}:${APP_PORT:-8080}"
     environment:
@@ -31,8 +66,8 @@ services:
     profiles:
       - tools
     volumes:
-      - ./reports:/zap/wrk:rw
-      - ./zap-rules.tsv:/zap/wrk/zap-rules.tsv:ro
+      - ./security/reports:/zap/wrk:rw
+      - ./security/zap-rules.tsv:/zap/wrk/zap-rules.tsv:ro
     entrypoint: ["sh", "-c"]
     command:
       - >
@@ -45,3 +80,8 @@ services:
         -config replacer.full_list(0).matchstr=Authorization
         -config replacer.full_list(0).regex=false
         -config replacer.full_list(0).replacement=Bearer\ ${ZAP_TOKEN}"
+
+volumes:
+  sonar_data:
+  sonar_extensions:
+  sonar_logs:

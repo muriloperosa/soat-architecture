@@ -17,7 +17,7 @@ fi
 # (nao referencia compose.yml), portas de host próprias (nao colidem com
 # app/mysql de dev mesmo se estiverem rodando) pra "down -v" no fim nunca
 # encostar no ambiente de desenvolvimento nem reaproveitar dados entre scans.
-COMPOSE="docker compose -p soat-architecture-dast -f security/compose.dast.yml"
+COMPOSE="docker compose -p soat-architecture-dast -f compose.tools.yml"
 DAST_DB_HOST_PORT="${DAST_DB_HOST_PORT:-3307}"
 DAST_APP_HOST_PORT="${DAST_APP_HOST_PORT:-8081}"
 BASE_URL="http://localhost:${DAST_APP_HOST_PORT}/v1"
@@ -86,7 +86,7 @@ CLIENTE_TOKEN=$(curl -s -X POST "${BASE_URL}/auth/cliente/login" \
 
 mkdir -p security/reports
 
-# zap-rules.tsv (via -c no security/compose.dast.yml) só afeta o veredito/console do ZAP
+# zap-rules.tsv (via -c no compose.tools.yml) só afeta o veredito/console do ZAP
 # (WARN/IGNORE/FAIL), não remove os alertas dos relatórios HTML/JSON. Os
 # achados de docs/swagger/doc.json (90022, 10023, 100001) são falsos
 # positivos confirmados (ver zap-rules.tsv), então tiramos eles do JSON aqui.

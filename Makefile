@@ -139,17 +139,17 @@ hooks-uninstall:
 	@echo "$(GREEN)Git hooks uninstalled successfully!$(RESET)"
 
 sonar-up:
-	docker compose -f compose.yml -f quality/compose.quality.yml up -d --wait sonarqube
+	docker compose -f compose.yml -f compose.tools.yml up -d --wait sonarqube
 
 sonar-down:
-	docker compose -f compose.yml -f quality/compose.quality.yml stop sonarqube
+	docker compose -f compose.yml -f compose.tools.yml stop sonarqube
 
 sonar-scan: coverage
 	@if [ -z "$(SONAR_TOKEN)" ]; then \
 		echo "SONAR_TOKEN not set. Add SONAR_TOKEN=<seu_token> ao .env"; \
 		exit 1; \
 	fi
-	docker compose -f compose.yml -f quality/compose.quality.yml --profile tools run --rm sonar-scanner
+	docker compose -f compose.yml -f compose.tools.yml --profile tools run --rm sonar-scanner
 
 sec-sca:
 	@mkdir -p security/reports

@@ -44,7 +44,7 @@ Pré-requisito: API rodando contra dados de teste (nunca produção). Se a rota 
 
 ### Execução: `make sec-dast`
 
-`security/zap-scan.sh` orquestra o scan e sobe uma stack Docker isolada, definida em `security/compose.dast.yml` (serviços `app-dast` + `mysql-dast`, projeto compose separado do dev via `-p soat-architecture-dast`). Motivo: o scan autenticado escreve dados reais (ordens de serviço, veículos, peças) via requisições ativas do ZAP, então rodar contra o `mysql`/`app` de desenvolvimento (`compose.yml`) sujaria o banco local. `mysql-dast` usa `tmpfs`, e a stack inteira é derrubada (`down -v`) ao fim do script — nada persiste, o banco de dev nunca é tocado.
+`security/zap-scan.sh` orquestra o scan e sobe uma stack Docker isolada, definida em `compose.tools.yml` (serviços `app-dast` + `mysql-dast`, projeto compose separado do dev via `-p soat-architecture-dast`). Motivo: o scan autenticado escreve dados reais (ordens de serviço, veículos, peças) via requisições ativas do ZAP, então rodar contra o `mysql`/`app` de desenvolvimento (`compose.yml`) sujaria o banco local. `mysql-dast` usa `tmpfs`, e a stack inteira é derrubada (`down -v`) ao fim do script — nada persiste, o banco de dev nunca é tocado.
 
 O script roda o scan autenticado **uma vez por papel** (`admin`, `atendente`, `mecanico`, `cliente`), cada um com seu próprio token JWT injetado via `replacer` do ZAP. Isso não é só cobertura de rota: prova que RBAC bloqueia de fato um papel tentando acessar rota de outro (autorização negativa), não só que as rotas respondem quando autenticado. Relatórios saem em `security/reports/zap-report-{admin,atendente,mecanico,cliente}.{html,json}`.
 
