@@ -66,7 +66,7 @@ lint:
 	go vet ./...
 
 up:
-	docker compose up --build -d
+	docker compose up -d
 
 down:
 	docker compose down
