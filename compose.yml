@@ -64,11 +64,13 @@ services:
       - tools
     volumes:
       - ./security/reports:/zap/wrk:rw
+      - ./security/zap-rules.tsv:/zap/wrk/zap-rules.tsv:ro
     entrypoint: ["sh", "-c"]
     command:
       - >
         zap-api-scan.py -t http://app:${APP_PORT:-8080}/swagger/doc.json -f openapi
         -r ${ZAP_REPORT_PREFIX:-zap-report}.html -J ${ZAP_REPORT_PREFIX:-zap-report}.json
+        -c zap-rules.tsv
         -z "-config replacer.full_list(0).description=auth
         -config replacer.full_list(0).enabled=true
         -config replacer.full_list(0).matchtype=REQ_HEADER

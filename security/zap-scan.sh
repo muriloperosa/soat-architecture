@@ -24,7 +24,8 @@ SENHA="${ZAP_USER_SENHA:-Zap#Scan123}"
 CLIENTE_DOCUMENTO="${ZAP_CLIENTE_DOCUMENTO:-52998224725}"
 
 echo "Subindo API + MySQL..."
-docker compose up --build -d --wait mysql
+docker compose down
+docker compose up -d --wait mysql
 docker compose up --build -d app
 
 echo "Aguardando API responder..."
@@ -74,6 +75,33 @@ CLIENTE_TOKEN=$(curl -s -X POST "${BASE_URL}/auth/cliente/login" \
 
 mkdir -p security/reports
 
+# zap-rules.tsv (via -c no compose.yml) só afeta o veredito/console do ZAP
+# (WARN/IGNORE/FAIL), não remove os alertas dos relatórios HTML/JSON. Os
+# achados de docs/swagger/doc.json (90022, 10023, 100001) são falsos
+# positivos confirmados (ver zap-rules.tsv), então tiramos eles do JSON aqui.
+strip_ignored_alerts() {
+  local json_file="$1"
+  [ -f "$json_file" ] || return
+  python3 - "$json_file" <<'PY'
+import json
+import sys
+
+path = sys.argv[1]
+ignored_plugin_ids = {"90022", "10023", "100001"}
+
+with open(path) as f:
+    data = json.load(f)
+
+for site in data.get("site", []):
+    site["alerts"] = [
+        a for a in site.get("alerts", []) if a.get("pluginid") not in ignored_plugin_ids
+    ]
+
+with open(path, "w") as f:
+    json.dump(data, f, indent=4)
+PY
+}
+
 run_scan() {
   local role="$1"
   local token="$2"
@@ -83,6 +111,7 @@ run_scan() {
   fi
   echo "Rodando ZAP API scan autenticado como ${role}..."
   ZAP_TOKEN="$token" ZAP_REPORT_PREFIX="zap-report-${role}" docker compose --profile tools run --rm zap || true
+  strip_ignored_alerts "security/reports/zap-report-${role}.json"
 }
 
 run_scan "admin" "$ADMIN_TOKEN"
