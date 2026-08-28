@@ -52,6 +52,10 @@ func main() {
 	migrationsPath := fmt.Sprintf("file://migrations/%s", cfg.DBDriver)
 
 	m, err := migrate.NewWithDatabaseInstance(migrationsPath, driverType.String(), driver)
+	if err != nil {
+		log.Fatalf("erro ao criar instância de migration: %v", err)
+	}
+
 	defer func() {
 		sourceErr, databaseErr := m.Close()
 
@@ -78,7 +82,7 @@ func main() {
 		runForce(m)
 
 	default:
-		log.Fatalf("comando inválido: %s", os.Args[1])
+		log.Fatalf("comando inválido: %s", os.Args[1]) // #nosec G706 -- arg de CLI de quem já tem acesso de shell ao binário
 	}
 }
 

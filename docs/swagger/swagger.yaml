@@ -141,6 +141,57 @@ definitions:
         example: validation
         type: string
     type: object
+  ordemservico.AbrirOrdemServicoRequest:
+    properties:
+      cliente_id:
+        example: 1
+        type: integer
+      observacoes:
+        example: Cliente relatou ruído no motor
+        type: string
+      quilometragem_entrada:
+        example: 52300
+        type: integer
+      veiculo_id:
+        example: 1
+        type: integer
+    required:
+    - cliente_id
+    - veiculo_id
+    type: object
+  ordemservico.InformarDiagnosticoRequest:
+    properties:
+      diagnostico:
+        example: Falha na bomba de combustível
+        type: string
+    type: object
+  ordemservico.OrdemServicoResponse:
+    properties:
+      cliente_id:
+        example: 1
+        type: integer
+      diagnostico:
+        example: ""
+        type: string
+      id:
+        example: 1
+        type: integer
+      numero:
+        example: OS-20260826-a1b2c3d4e5f6
+        type: string
+      observacoes:
+        example: Cliente relatou ruído no motor
+        type: string
+      quilometragem_entrada:
+        example: 52300
+        type: integer
+      status:
+        example: RECEBIDA
+        type: string
+      veiculo_id:
+        example: 1
+        type: integer
+    type: object
   peca.AtualizarPecaRequest:
     properties:
       descricao:
@@ -231,6 +282,70 @@ definitions:
     required:
     - quantidade
     type: object
+  servico.AtualizarServicoRequest:
+    properties:
+      descricao:
+        example: Alinhamento e balanceamento
+        type: string
+      nome:
+        example: Alinhamento
+        type: string
+      preco_base:
+        example: 200.75
+        type: number
+      tempo_estimado_minutos:
+        example: 90
+        type: integer
+    required:
+    - descricao
+    - nome
+    - preco_base
+    - tempo_estimado_minutos
+    type: object
+  servico.CriarServicoRequest:
+    properties:
+      descricao:
+        example: Troca de óleo e filtro
+        type: string
+      nome:
+        example: Troca de óleo
+        type: string
+      preco_base:
+        example: 150.5
+        type: number
+      tempo_estimado_minutos:
+        example: 60
+        type: integer
+    required:
+    - descricao
+    - nome
+    - preco_base
+    - tempo_estimado_minutos
+    type: object
+  servico.ServicoResponse:
+    properties:
+      ativo:
+        example: true
+        type: boolean
+      criado_por:
+        example: 1
+        type: integer
+      descricao:
+        example: Troca de óleo e filtro
+        type: string
+      id:
+        example: 1
+        type: integer
+      nome:
+        example: Troca de óleo
+        type: string
+      preco_base:
+        example: 150.5
+        type: number
+      tempo_estimado_minutos:
+        example: 60
+        type: integer
+    type: object
   shared.PapelUsuario:
     enum:
     - ADMINISTRADOR
@@ -311,6 +426,82 @@ definitions:
       requer_alterar_senha:
         example: true
         type: boolean
+    type: object
+  veiculo.AtualizarVeiculoRequest:
+    properties:
+      cor:
+        example: Prata
+        type: string
+      marca:
+        example: Fiat
+        type: string
+      modelo:
+        example: Uno
+        type: string
+      quilometragem_atual:
+        example: 15500
+        type: integer
+    required:
+    - cor
+    - marca
+    - modelo
+    type: object
+  veiculo.CadastrarVeiculoRequest:
+    properties:
+      ano:
+        example: 2020
+        type: integer
+      cor:
+        example: Prata
+        type: string
+      marca:
+        example: Fiat
+        type: string
+      modelo:
+        example: Uno
+        type: string
+      placa:
+        example: ABC1D23
+        type: string
+      quilometragem_atual:
+        example: 15000
+        type: integer
+    required:
+    - ano
+    - cor
+    - marca
+    - modelo
+    - placa
+    type: object
+  veiculo.VeiculoResponse:
+    properties:
+      ano:
+        example: 2020
+        type: integer
+      ativo:
+        example: true
+        type: boolean
+      cor:
+        example: Prata
+        type: string
+      criado_por:
+        example: 1
+        type: integer
+      id:
+        example: 1
+        type: integer
+      marca:
+        example: Fiat
+        type: string
+      modelo:
+        example: Uno
+        type: string
+      placa:
+        example: ABC1D23
+        type: string
+      quilometragem_atual:
+        example: 15000
+        type: integer
     type: object
 host: localhost:8080
 info:
@@ -771,6 +962,143 @@ paths:
       summary: Verifica saúde da API
       tags:
       - Health
+  /v1/ordens-servico:
+    post:
+      consumes:
+      - application/json
+      description: Cria uma Ordem de Serviço no status RECEBIDA e registra o histórico
+        inicial. Restrito a usuário interno autenticado.
+      parameters:
+      - description: Dados da Ordem de Serviço
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ordemservico.AbrirOrdemServicoRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/ordemservico.OrdemServicoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Abre uma Ordem de Serviço
+      tags:
+      - Ordens de Serviço
+  /v1/ordens-servico/{id}/diagnostico:
+    put:
+      consumes:
+      - application/json
+      description: Registra o diagnóstico realizado enquanto a Ordem de Serviço está
+        EM_DIAGNOSTICO. Restrito a mecânico ou administrador.
+      parameters:
+      - description: ID da Ordem de Serviço
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Diagnóstico realizado
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ordemservico.InformarDiagnosticoRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ordemservico.OrdemServicoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Informa o diagnóstico de uma Ordem de Serviço
+      tags:
+      - Ordens de Serviço
+  /v1/ordens-servico/{id}/iniciar-diagnostico:
+    patch:
+      description: Altera uma Ordem de Serviço RECEBIDA para EM_DIAGNOSTICO e registra
+        o histórico. Restrito a mecânico ou administrador.
+      parameters:
+      - description: ID da Ordem de Serviço
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ordemservico.OrdemServicoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Inicia o diagnóstico de uma Ordem de Serviço
+      tags:
+      - Ordens de Serviço
   /v1/pecas:
     post:
       consumes:
@@ -1002,6 +1330,221 @@ paths:
       summary: Repõe estoque de peça
       tags:
       - Pecas
+  /v1/servicos:
+    get:
+      description: Lista o catálogo completo de serviços. Restrito a usuário interno.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/servico.ServicoResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Lista serviços
+      tags:
+      - Servicos
+    post:
+      consumes:
+      - application/json
+      description: Cadastra um item no catálogo de serviços da oficina. Restrito a
+        usuário interno. criado_por sai do JWT.
+      parameters:
+      - description: Dados do serviço
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/servico.CriarServicoRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/servico.ServicoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Cria serviço
+      tags:
+      - Servicos
+  /v1/servicos/{id}:
+    get:
+      description: Retorna um serviço do catálogo pelo ID. Restrito a usuário interno.
+      parameters:
+      - description: ID do serviço
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/servico.ServicoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Busca serviço
+      tags:
+      - Servicos
+    put:
+      consumes:
+      - application/json
+      description: Atualiza nome, descrição, preço base e tempo estimado. Não altera
+        criado_por nem ativo. Restrito a usuário interno.
+      parameters:
+      - description: ID do serviço
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Dados atualizados
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/servico.AtualizarServicoRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/servico.ServicoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualiza serviço
+      tags:
+      - Servicos
+  /v1/servicos/{id}/ativar:
+    patch:
+      description: Reabilita um serviço para uso em Ordens de Serviço. Restrito a
+        usuário interno.
+      parameters:
+      - description: ID do serviço
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Sem conteúdo
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Ativa serviço
+      tags:
+      - Servicos
+  /v1/servicos/{id}/inativar:
+    patch:
+      description: Bloqueia um serviço de ser usado em novas Ordens de Serviço. Restrito
+        a usuário interno.
+      parameters:
+      - description: ID do serviço
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Sem conteúdo
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Inativa serviço
+      tags:
+      - Servicos
   /v1/usuarios:
     post:
       consumes:
@@ -1214,6 +1757,223 @@ paths:
       summary: Troca a própria senha
       tags:
       - Usuarios
+  /v1/veiculos:
+    post:
+      consumes:
+      - application/json
+      description: Cadastra um veículo. Restrito a admin.
+      parameters:
+      - description: Dados do veículo
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/veiculo.CadastrarVeiculoRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/veiculo.VeiculoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Cadastra veículo
+      tags:
+      - Veiculos
+  /v1/veiculos/{id}:
+    get:
+      description: Retorna os dados de um veículo pelo ID.
+      parameters:
+      - description: ID do veículo
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/veiculo.VeiculoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Consulta veículo por ID
+      tags:
+      - Veiculos
+    put:
+      consumes:
+      - application/json
+      description: Atualiza dados cadastrais e quilometragem de um veículo. Quilometragem
+        não pode regredir. Restrito a admin.
+      parameters:
+      - description: ID do veículo
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Dados atualizados
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/veiculo.AtualizarVeiculoRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/veiculo.VeiculoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualiza veículo
+      tags:
+      - Veiculos
+  /v1/veiculos/{id}/ativar:
+    patch:
+      description: Reabilita um veículo. Restrito a admin.
+      parameters:
+      - description: ID do veículo
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Sem conteúdo
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Ativa veículo
+      tags:
+      - Veiculos
+  /v1/veiculos/{id}/inativar:
+    patch:
+      description: Bloqueia um veículo. Restrito a admin.
+      parameters:
+      - description: ID do veículo
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Sem conteúdo
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Inativa veículo
+      tags:
+      - Veiculos
+  /v1/veiculos/placa/{placa}:
+    get:
+      description: Retorna os dados de um veículo pela placa.
+      parameters:
+      - description: Placa do veículo
+        in: path
+        name: placa
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/veiculo.VeiculoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Consulta veículo por placa
+      tags:
+      - Veiculos
 schemes:
 - http
 securityDefinitions:

@@ -716,6 +716,215 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/ordens-servico": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cria uma Ordem de Serviço no status RECEBIDA e registra o histórico inicial. Restrito a usuário interno autenticado.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ordens de Serviço"
+                ],
+                "summary": "Abre uma Ordem de Serviço",
+                "parameters": [
+                    {
+                        "description": "Dados da Ordem de Serviço",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ordemservico.AbrirOrdemServicoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/ordemservico.OrdemServicoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/ordens-servico/{id}/diagnostico": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Registra o diagnóstico realizado enquanto a Ordem de Serviço está EM_DIAGNOSTICO. Restrito a mecânico ou administrador.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ordens de Serviço"
+                ],
+                "summary": "Informa o diagnóstico de uma Ordem de Serviço",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da Ordem de Serviço",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Diagnóstico realizado",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ordemservico.InformarDiagnosticoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ordemservico.OrdemServicoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/ordens-servico/{id}/iniciar-diagnostico": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Altera uma Ordem de Serviço RECEBIDA para EM_DIAGNOSTICO e registra o histórico. Restrito a mecânico ou administrador.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ordens de Serviço"
+                ],
+                "summary": "Inicia o diagnóstico de uma Ordem de Serviço",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da Ordem de Serviço",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ordemservico.OrdemServicoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/pecas": {
             "post": {
                 "security": [
@@ -1073,6 +1282,337 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/servicos": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lista o catálogo completo de serviços. Restrito a usuário interno.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Servicos"
+                ],
+                "summary": "Lista serviços",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/servico.ServicoResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cadastra um item no catálogo de serviços da oficina. Restrito a usuário interno. criado_por sai do JWT.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Servicos"
+                ],
+                "summary": "Cria serviço",
+                "parameters": [
+                    {
+                        "description": "Dados do serviço",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/servico.CriarServicoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/servico.ServicoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/servicos/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna um serviço do catálogo pelo ID. Restrito a usuário interno.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Servicos"
+                ],
+                "summary": "Busca serviço",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do serviço",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/servico.ServicoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Atualiza nome, descrição, preço base e tempo estimado. Não altera criado_por nem ativo. Restrito a usuário interno.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Servicos"
+                ],
+                "summary": "Atualiza serviço",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do serviço",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados atualizados",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/servico.AtualizarServicoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/servico.ServicoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/servicos/{id}/ativar": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Reabilita um serviço para uso em Ordens de Serviço. Restrito a usuário interno.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Servicos"
+                ],
+                "summary": "Ativa serviço",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do serviço",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Sem conteúdo"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/servicos/{id}/inativar": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Bloqueia um serviço de ser usado em novas Ordens de Serviço. Restrito a usuário interno.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Servicos"
+                ],
+                "summary": "Inativa serviço",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do serviço",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Sem conteúdo"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/usuarios": {
             "post": {
                 "security": [
@@ -1400,6 +1940,345 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/v1/veiculos": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cadastra um veículo. Restrito a admin.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Veiculos"
+                ],
+                "summary": "Cadastra veículo",
+                "parameters": [
+                    {
+                        "description": "Dados do veículo",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/veiculo.CadastrarVeiculoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/veiculo.VeiculoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/veiculos/placa/{placa}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna os dados de um veículo pela placa.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Veiculos"
+                ],
+                "summary": "Consulta veículo por placa",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Placa do veículo",
+                        "name": "placa",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/veiculo.VeiculoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/veiculos/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna os dados de um veículo pelo ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Veiculos"
+                ],
+                "summary": "Consulta veículo por ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do veículo",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/veiculo.VeiculoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Atualiza dados cadastrais e quilometragem de um veículo. Quilometragem não pode regredir. Restrito a admin.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Veiculos"
+                ],
+                "summary": "Atualiza veículo",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do veículo",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados atualizados",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/veiculo.AtualizarVeiculoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/veiculo.VeiculoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/veiculos/{id}/ativar": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Reabilita um veículo. Restrito a admin.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Veiculos"
+                ],
+                "summary": "Ativa veículo",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do veículo",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Sem conteúdo"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/veiculos/{id}/inativar": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Bloqueia um veículo. Restrito a admin.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Veiculos"
+                ],
+                "summary": "Inativa veículo",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do veículo",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Sem conteúdo"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -1600,6 +2479,77 @@ const docTemplate = `{
                 }
             }
         },
+        "ordemservico.AbrirOrdemServicoRequest": {
+            "type": "object",
+            "required": [
+                "cliente_id",
+                "veiculo_id"
+            ],
+            "properties": {
+                "cliente_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "observacoes": {
+                    "type": "string",
+                    "example": "Cliente relatou ruído no motor"
+                },
+                "quilometragem_entrada": {
+                    "type": "integer",
+                    "example": 52300
+                },
+                "veiculo_id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "ordemservico.InformarDiagnosticoRequest": {
+            "type": "object",
+            "properties": {
+                "diagnostico": {
+                    "type": "string",
+                    "example": "Falha na bomba de combustível"
+                }
+            }
+        },
+        "ordemservico.OrdemServicoResponse": {
+            "type": "object",
+            "properties": {
+                "cliente_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "diagnostico": {
+                    "type": "string",
+                    "example": ""
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "numero": {
+                    "type": "string",
+                    "example": "OS-20260826-a1b2c3d4e5f6"
+                },
+                "observacoes": {
+                    "type": "string",
+                    "example": "Cliente relatou ruído no motor"
+                },
+                "quilometragem_entrada": {
+                    "type": "integer",
+                    "example": 52300
+                },
+                "status": {
+                    "type": "string",
+                    "example": "RECEBIDA"
+                },
+                "veiculo_id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
         "peca.AtualizarPecaRequest": {
             "type": "object",
             "required": [
@@ -1723,6 +2673,93 @@ const docTemplate = `{
                 }
             }
         },
+        "servico.AtualizarServicoRequest": {
+            "type": "object",
+            "required": [
+                "descricao",
+                "nome",
+                "preco_base",
+                "tempo_estimado_minutos"
+            ],
+            "properties": {
+                "descricao": {
+                    "type": "string",
+                    "example": "Alinhamento e balanceamento"
+                },
+                "nome": {
+                    "type": "string",
+                    "example": "Alinhamento"
+                },
+                "preco_base": {
+                    "type": "number",
+                    "example": 200.75
+                },
+                "tempo_estimado_minutos": {
+                    "type": "integer",
+                    "example": 90
+                }
+            }
+        },
+        "servico.CriarServicoRequest": {
+            "type": "object",
+            "required": [
+                "descricao",
+                "nome",
+                "preco_base",
+                "tempo_estimado_minutos"
+            ],
+            "properties": {
+                "descricao": {
+                    "type": "string",
+                    "example": "Troca de óleo e filtro"
+                },
+                "nome": {
+                    "type": "string",
+                    "example": "Troca de óleo"
+                },
+                "preco_base": {
+                    "type": "number",
+                    "example": 150.5
+                },
+                "tempo_estimado_minutos": {
+                    "type": "integer",
+                    "example": 60
+                }
+            }
+        },
+        "servico.ServicoResponse": {
+            "type": "object",
+            "properties": {
+                "ativo": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "criado_por": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "descricao": {
+                    "type": "string",
+                    "example": "Troca de óleo e filtro"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "nome": {
+                    "type": "string",
+                    "example": "Troca de óleo"
+                },
+                "preco_base": {
+                    "type": "number",
+                    "example": 150.5
+                },
+                "tempo_estimado_minutos": {
+                    "type": "integer",
+                    "example": 60
+                }
+            }
+        },
         "shared.PapelUsuario": {
             "type": "string",
             "enum": [
@@ -1838,6 +2875,109 @@ const docTemplate = `{
                 "requer_alterar_senha": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "veiculo.AtualizarVeiculoRequest": {
+            "type": "object",
+            "required": [
+                "cor",
+                "marca",
+                "modelo"
+            ],
+            "properties": {
+                "cor": {
+                    "type": "string",
+                    "example": "Prata"
+                },
+                "marca": {
+                    "type": "string",
+                    "example": "Fiat"
+                },
+                "modelo": {
+                    "type": "string",
+                    "example": "Uno"
+                },
+                "quilometragem_atual": {
+                    "type": "integer",
+                    "example": 15500
+                }
+            }
+        },
+        "veiculo.CadastrarVeiculoRequest": {
+            "type": "object",
+            "required": [
+                "ano",
+                "cor",
+                "marca",
+                "modelo",
+                "placa"
+            ],
+            "properties": {
+                "ano": {
+                    "type": "integer",
+                    "example": 2020
+                },
+                "cor": {
+                    "type": "string",
+                    "example": "Prata"
+                },
+                "marca": {
+                    "type": "string",
+                    "example": "Fiat"
+                },
+                "modelo": {
+                    "type": "string",
+                    "example": "Uno"
+                },
+                "placa": {
+                    "type": "string",
+                    "example": "ABC1D23"
+                },
+                "quilometragem_atual": {
+                    "type": "integer",
+                    "example": 15000
+                }
+            }
+        },
+        "veiculo.VeiculoResponse": {
+            "type": "object",
+            "properties": {
+                "ano": {
+                    "type": "integer",
+                    "example": 2020
+                },
+                "ativo": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "cor": {
+                    "type": "string",
+                    "example": "Prata"
+                },
+                "criado_por": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "marca": {
+                    "type": "string",
+                    "example": "Fiat"
+                },
+                "modelo": {
+                    "type": "string",
+                    "example": "Uno"
+                },
+                "placa": {
+                    "type": "string",
+                    "example": "ABC1D23"
+                },
+                "quilometragem_atual": {
+                    "type": "integer",
+                    "example": 15000
                 }
             }
         }

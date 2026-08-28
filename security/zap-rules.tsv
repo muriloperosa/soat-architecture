@@ -1,0 +1,5 @@
+# Regras ignoradas no scan ZAP (falsos positivos confirmados).
+# Formato: <rule_id>\t<IGNORE|INFO|WARN|FAIL>\t<comentario>
+90022	IGNORE	Application Error Disclosure - dispara em /swagger/doc.json porque a string "Internal Server Error" aparece na descricao de uma resposta 500 documentada no OpenAPI spec, não é um erro real (confirmado: 0 respostas 500 nos logs da app durante o scan)
+10023	IGNORE	Information Disclosure - Debug Error Messages - mesmo falso positivo do 90022, mesma string na documentação do swagger
+100001	IGNORE	Unexpected Content-Type - dispara em /swagger porque a áagina do Swagger UI responde text/html, que é o esperado para essa rota

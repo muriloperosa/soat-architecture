@@ -12,7 +12,7 @@ import (
 )
 
 func TestNewAlterarSenhaClienteUseCase(t *testing.T) {
-	repository := mocks.NewRepository(t)
+	repository := mocks.NewClienteRepository(t)
 
 	useCase := NewAlterarSenhaClienteUseCase(repository)
 
@@ -22,7 +22,7 @@ func TestNewAlterarSenhaClienteUseCase(t *testing.T) {
 
 func TestAlterarSenhaClienteUseCaseExecutarComSucesso(t *testing.T) {
 	ctx := context.Background()
-	repository := mocks.NewRepository(t)
+	repository := mocks.NewClienteRepository(t)
 	useCase := NewAlterarSenhaClienteUseCase(repository)
 
 	cliente := novoClienteValido(t)
@@ -70,7 +70,7 @@ func TestAlterarSenhaClienteUseCaseExecutarComSucesso(t *testing.T) {
 
 func TestAlterarSenhaClienteUseCaseExecutarDeveRetornarErroAoBuscarCliente(t *testing.T) {
 	ctx := context.Background()
-	repository := mocks.NewRepository(t)
+	repository := mocks.NewClienteRepository(t)
 	useCase := NewAlterarSenhaClienteUseCase(repository)
 
 	input := AlterarSenhaInput{ClienteID: 999, SenhaNova: "novaSenha123"}
@@ -89,7 +89,7 @@ func TestAlterarSenhaClienteUseCaseExecutarDeveRetornarErroAoBuscarCliente(t *te
 
 func TestAlterarSenhaClienteUseCaseExecutarDeveRetornarErroParaSenhaFraca(t *testing.T) {
 	ctx := context.Background()
-	repository := mocks.NewRepository(t)
+	repository := mocks.NewClienteRepository(t)
 	useCase := NewAlterarSenhaClienteUseCase(repository)
 
 	cliente := novoClienteValido(t)
@@ -117,7 +117,7 @@ func TestAlterarSenhaClienteUseCaseExecutarDeveRetornarErroParaSenhaFraca(t *tes
 
 func TestAlterarSenhaClienteUseCaseExecutarDeveRetornarErroAoAtualizarRepository(t *testing.T) {
 	ctx := context.Background()
-	repository := mocks.NewRepository(t)
+	repository := mocks.NewClienteRepository(t)
 	useCase := NewAlterarSenhaClienteUseCase(repository)
 
 	cliente := novoClienteValido(t)

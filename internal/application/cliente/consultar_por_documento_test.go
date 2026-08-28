@@ -10,7 +10,7 @@ import (
 )
 
 func TestNewConsultarClientePorDocumentoUseCase(t *testing.T) {
-	repository := mocks.NewRepository(t)
+	repository := mocks.NewClienteRepository(t)
 
 	useCase := NewConsultarClientePorDocumentoUseCase(repository)
 
@@ -20,7 +20,7 @@ func TestNewConsultarClientePorDocumentoUseCase(t *testing.T) {
 
 func TestConsultarPorDocumentoUseCaseExecutarComSucesso(t *testing.T) {
 	ctx := context.Background()
-	repository := mocks.NewRepository(t)
+	repository := mocks.NewClienteRepository(t)
 	useCase := NewConsultarClientePorDocumentoUseCase(repository)
 
 	cliente, err := domain.NewCliente(
@@ -60,7 +60,7 @@ func TestConsultarPorDocumentoUseCaseExecutarComSucesso(t *testing.T) {
 
 func TestConsultarPorDocumentoUseCaseExecutarDeveRetornarErro(t *testing.T) {
 	ctx := context.Background()
-	repository := mocks.NewRepository(t)
+	repository := mocks.NewClienteRepository(t)
 	useCase := NewConsultarClientePorDocumentoUseCase(repository)
 
 	documento := "00000000000"

@@ -9,16 +9,20 @@ import (
 	httpauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/auth"
 	httpcliente "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/cliente"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/health"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/middleware"
+	httpordemservico "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/ordemservico"
 	httppeca "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/peca"
+	httpservico "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/servico"
 	httpusuario "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/usuario"
+	httpveiculo "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/veiculo"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/wiring"
 )
 
-// NewRouter monta o *gin.Engine e delega o registro de rotas por domínio.
 func NewRouter(c *wiring.Container) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Logger())
-	router.Use(gin.Recovery())
+	router.Use(middleware.RecoveryMiddleware())
+	router.Use(middleware.SecurityHeadersMiddleware())
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -28,6 +32,9 @@ func NewRouter(c *wiring.Container) *gin.Engine {
 	httpusuario.RegisterUsuarioRoutes(v1, c)
 	httpcliente.RegisterClienteRoutes(v1, c)
 	httppeca.RegisterPecaRoutes(v1, c)
+	httpveiculo.RegisterVeiculoRoutes(v1, c)
+	httpservico.RegisterServicoRoutes(v1, c)
+	httpordemservico.RegisterOrdemServicoRoutes(v1, c)
 
 	return router
 }

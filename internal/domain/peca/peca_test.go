@@ -100,6 +100,24 @@ func TestPeca_Atualizar_NomeVazio_RetornaErroENaoAltera(t *testing.T) {
 	require.Equal(t, "Peca 1", p.Nome())
 }
 
+func TestPeca_Atualizar_MarcaVazia_RetornaErroENaoAltera(t *testing.T) {
+	p, err := peca.NewPeca("Peca 1", "Marca 1", "Descricao 1", 100.0, 10, 5, 1)
+	require.NoError(t, err)
+
+	err = p.Atualizar("Peca 1", "", "Descricao 2", 200.0, 8)
+	require.ErrorIs(t, err, peca.ErrMarcaObrigatoria)
+	require.Equal(t, "Marca 1", p.Marca())
+}
+
+func TestPeca_Atualizar_DescricaoVazia_RetornaErroENaoAltera(t *testing.T) {
+	p, err := peca.NewPeca("Peca 1", "Marca 1", "Descricao 1", 100.0, 10, 5, 1)
+	require.NoError(t, err)
+
+	err = p.Atualizar("Peca 1", "Marca 1", "", 200.0, 8)
+	require.ErrorIs(t, err, peca.ErrDescricaoObrigatoria)
+	require.Equal(t, "Descricao 1", p.Descricao())
+}
+
 func TestPeca_Atualizar_PrecoNegativo_RetornaErro(t *testing.T) {
 	p, err := peca.NewPeca("Peca 1", "Marca 1", "Descricao 1", 100.0, 10, 5, 1)
 	require.NoError(t, err)

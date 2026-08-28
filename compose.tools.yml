@@ -1,0 +1,87 @@
+# Stack sob demanda (profile "tools"), separada de compose.yml (stack de
+# dev): SonarQube/sonar-scanner (make sonar-*) e a stack isolada de DAST
+# app-dast+mysql-dast+zap (make sec-dast). Nunca sobe junto com "make up".
+services:
+  sonarqube:
+    image: sonarqube:community
+    env_file:
+      - .env
+    ports:
+      - "${SONAR_HOST_PORT:-9000}:9000"
+    environment:
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+    volumes:
+      - sonar_data:/opt/sonarqube/data
+      - sonar_extensions:/opt/sonarqube/extensions
+      - sonar_logs:/opt/sonarqube/logs
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/api/system/status | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  sonar-scanner:
+    image: sonarsource/sonar-scanner-cli
+    profiles:
+      - tools
+    env_file:
+      - .env
+    environment:
+      SONAR_HOST_URL: "${SONAR_HOST_URL:-http://sonarqube:9000}"
+    volumes:
+      - .:/usr/src
+    depends_on:
+      sonarqube:
+        condition: service_healthy
+
+  mysql-dast:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DB_PASSWORD:-root}"
+      MYSQL_DATABASE: "${DB_NAME:-mecanica}"
+    ports:
+      - "${DAST_DB_HOST_PORT:-3307}:3306"
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app-dast:
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "${DAST_APP_HOST_PORT:-8081}:${APP_PORT:-8080}"
+    environment:
+      DB_HOST: mysql-dast
+    depends_on:
+      mysql-dast:
+        condition: service_healthy
+
+  zap:
+    image: zaproxy/zap-stable
+    profiles:
+      - tools
+    volumes:
+      - ./security/reports:/zap/wrk:rw
+      - ./security/zap-rules.tsv:/zap/wrk/zap-rules.tsv:ro
+    entrypoint: ["sh", "-c"]
+    command:
+      - >
+        zap-api-scan.py -t http://app-dast:${APP_PORT:-8080}/swagger/doc.json -f openapi
+        -r ${ZAP_REPORT_PREFIX:-zap-report}.html -J ${ZAP_REPORT_PREFIX:-zap-report}.json
+        -c zap-rules.tsv
+        -z "-config replacer.full_list(0).description=auth
+        -config replacer.full_list(0).enabled=true
+        -config replacer.full_list(0).matchtype=REQ_HEADER
+        -config replacer.full_list(0).matchstr=Authorization
+        -config replacer.full_list(0).regex=false
+        -config replacer.full_list(0).replacement=Bearer\ ${ZAP_TOKEN}"
+
+volumes:
+  sonar_data:
+  sonar_extensions:
+  sonar_logs:

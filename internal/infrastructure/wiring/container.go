@@ -7,26 +7,33 @@ import (
 
 	appauth "github.com/muriloperosa/soat-architecture/internal/application/auth"
 	appcliente "github.com/muriloperosa/soat-architecture/internal/application/cliente"
+	appordemservico "github.com/muriloperosa/soat-architecture/internal/application/ordemservico"
 	apppeca "github.com/muriloperosa/soat-architecture/internal/application/peca"
+	appservico "github.com/muriloperosa/soat-architecture/internal/application/servico"
 	appusuario "github.com/muriloperosa/soat-architecture/internal/application/usuario"
+	appveiculo "github.com/muriloperosa/soat-architecture/internal/application/veiculo"
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 	domaincliente "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
+	domainordemservico "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
 	domainpeca "github.com/muriloperosa/soat-architecture/internal/domain/peca"
 	domainreservapeca "github.com/muriloperosa/soat-architecture/internal/domain/reservapeca"
+	domainservico "github.com/muriloperosa/soat-architecture/internal/domain/servico"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	domainusuario "github.com/muriloperosa/soat-architecture/internal/domain/usuario"
+	domainveiculo "github.com/muriloperosa/soat-architecture/internal/domain/veiculo"
 	infraauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/auth"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/config"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql"
 	mysqlauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/auth"
 	mysqlcliente "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/cliente"
+	mysqlordemservico "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/ordemservico"
 	mysqlpeca "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/peca"
 	mysqlreservapeca "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/reservapeca"
+	mysqlservico "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/servico"
 	mysqlusuario "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/usuario"
+	mysqlveiculo "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/veiculo"
 )
 
-// Container compõe as dependências compartilhadas da aplicação
-// (config, conexão de banco e repositórios e use cases por domínio).
 type Container struct {
 	Config *config.Config
 	DB     *gorm.DB
@@ -40,6 +47,9 @@ type Container struct {
 	PecaRepo          domainpeca.Repository
 	ReservaPecaRepo   domainreservapeca.Repository
 	TransactionRunner shared.TransactionRunner
+	VeiculoRepo       domainveiculo.Repository
+	ServicoRepo       domainservico.ServicoRepository
+	OrdemServicoRepo  domainordemservico.OrdemServicoRepository
 
 	LoginInternoUC *appauth.LoginUseCase
 	LoginClienteUC *appauth.LoginUseCase
@@ -70,9 +80,26 @@ type Container struct {
 	ConsultarDisponibilidadeUC *apppeca.ConsultarDisponibilidadeUseCase
 	ReservarPecaUC             *apppeca.ReservarPecaUseCase
 	LiberarReservaPecaUC       *apppeca.LiberarReservaPecaUseCase
+
+	CadastrarVeiculoUC         *appveiculo.CadastrarVeiculoUseCase
+	AtualizarVeiculoUC         *appveiculo.AtualizarVeiculoUseCase
+	AtivarVeiculoUC            *appveiculo.AtivarVeiculoUseCase
+	InativarVeiculoUC          *appveiculo.InativarVeiculoUseCase
+	ConsultarVeiculoPorIDUC    *appveiculo.ConsultarVeiculoPorIDUseCase
+	ConsultarVeiculoPorPlacaUC *appveiculo.ConsultarVeiculoPorPlacaUseCase
+
+	CriarServicoUC     *appservico.CriarServicoUseCase
+	AtualizarServicoUC *appservico.AtualizarServicoUseCase
+	ListarServicosUC   *appservico.ListarServicosUseCase
+	BuscarServicoUC    *appservico.BuscarServicoUseCase
+	AtivarServicoUC    *appservico.AtivarServicoUseCase
+	InativarServicoUC  *appservico.InativarServicoUseCase
+
+	AbrirOrdemServicoUC   *appordemservico.AbrirOrdemServicoUseCase
+	IniciarDiagnosticoUC  *appordemservico.IniciarDiagnosticoUseCase
+	InformarDiagnosticoUC *appordemservico.InformarDiagnosticoUseCase
 }
 
-// NewContainer monta o grafo de dependências da aplicação.
 func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c := &Container{Config: cfg, DB: db}
 	c.RefreshTokensRepo = mysqlauth.NewRefreshTokenRepository(db)
@@ -81,6 +108,9 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.PecaRepo = mysqlpeca.NewRepository(db)
 	c.ReservaPecaRepo = mysqlreservapeca.NewRepository(db)
 	c.TransactionRunner = mysql.NewTransactionRunner(db)
+	c.VeiculoRepo = mysqlveiculo.NewRepository(db)
+	c.ServicoRepo = mysqlservico.NewServicoRepository(db)
+	c.OrdemServicoRepo = mysqlordemservico.NewOrdemServicoRepository(db)
 	if cfg == nil {
 		return c
 	}
@@ -122,6 +152,28 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.ConsultarDisponibilidadeUC = apppeca.NewConsultarDisponibilidadeUseCase(c.PecaRepo, c.ReservaPecaRepo)
 	c.ReservarPecaUC = apppeca.NewReservarPecaUseCase(c.PecaRepo, c.ReservaPecaRepo, c.TransactionRunner)
 	c.LiberarReservaPecaUC = apppeca.NewLiberarReservaPecaUseCase(c.ReservaPecaRepo, c.TransactionRunner)
+
+	c.CadastrarVeiculoUC = appveiculo.NewCadastrarVeiculoUseCase(c.VeiculoRepo)
+	c.AtualizarVeiculoUC = appveiculo.NewAtualizarVeiculoUseCase(c.VeiculoRepo)
+	c.AtivarVeiculoUC = appveiculo.NewAtivarVeiculoUseCase(c.VeiculoRepo)
+	c.InativarVeiculoUC = appveiculo.NewInativarVeiculoUseCase(c.VeiculoRepo)
+	c.ConsultarVeiculoPorIDUC = appveiculo.NewConsultarVeiculoPorIDUseCase(c.VeiculoRepo)
+	c.ConsultarVeiculoPorPlacaUC = appveiculo.NewConsultarVeiculoPorPlacaUseCase(c.VeiculoRepo)
+
+	c.CriarServicoUC = appservico.NewCriarServicoUseCase(c.ServicoRepo)
+	c.AtualizarServicoUC = appservico.NewAtualizarServicoUseCase(c.ServicoRepo)
+	c.ListarServicosUC = appservico.NewListarServicosUseCase(c.ServicoRepo)
+	c.BuscarServicoUC = appservico.NewBuscarServicoUseCase(c.ServicoRepo)
+	c.AtivarServicoUC = appservico.NewAtivarServicoUseCase(c.ServicoRepo)
+	c.InativarServicoUC = appservico.NewInativarServicoUseCase(c.ServicoRepo)
+
+	c.AbrirOrdemServicoUC = appordemservico.NewAbrirOrdemServicoUseCase(
+		c.OrdemServicoRepo,
+		c.ClienteRepository,
+		c.VeiculoRepo,
+	)
+	c.IniciarDiagnosticoUC = appordemservico.NewIniciarDiagnosticoUseCase(c.OrdemServicoRepo)
+	c.InformarDiagnosticoUC = appordemservico.NewInformarDiagnosticoUseCase(c.OrdemServicoRepo)
 
 	return c
 }
