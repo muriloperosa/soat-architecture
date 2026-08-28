@@ -1,4 +1,4 @@
-.PHONY: help run build test test-integration coverage lint up down db-up db-down tidy vendor setup dev debug mocks swagger hooks-install hooks-uninstall create-user sonar-up sonar-down sonar-scan
+.PHONY: help run build test test-integration coverage lint up down db-up db-down tidy vendor setup dev debug mocks swagger hooks-install hooks-uninstall create-user sonar-up sonar-down sonar-scan sec-sca
 
 GREEN := $(shell tput setaf 2)
 RESET := $(shell tput sgr0)
@@ -40,6 +40,7 @@ help:
 	@echo "  $(GREEN)sonar-up$(RESET):      Start SonarQube server via docker compose"
 	@echo "  $(GREEN)sonar-down$(RESET):    Stop the SonarQube container"
 	@echo "  $(GREEN)sonar-scan$(RESET):    Run coverage + sonar-scanner (needs SONAR_TOKEN)"
+	@echo "  $(GREEN)sec-sca$(RESET):       Run govulncheck (SCA) into security/reports/govulncheck.json"
 
 run:
 	go run ./cmd/api
@@ -108,6 +109,7 @@ setup:
 	go install github.com/air-verse/air@latest
 	go install github.com/go-delve/delve/cmd/dlv@latest
 	go install github.com/vektra/mockery/v2@latest
+	go install golang.org/x/vuln/cmd/govulncheck@latest
 
 mocks:
 	$(GOBIN)/mockery
@@ -144,3 +146,8 @@ sonar-scan: coverage
 		exit 1; \
 	fi
 	docker compose --profile tools run --rm sonar-scanner
+
+sec-sca:
+	@mkdir -p security/reports
+	$(GOBIN)/govulncheck -json ./... > security/reports/govulncheck.json
+	@echo "$(GREEN)Relatório gerado em security/reports/govulncheck.json$(RESET)"

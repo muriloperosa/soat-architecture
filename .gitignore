@@ -18,3 +18,7 @@ coverage.html
 # Go
 vendor/
 __debug_bin*
+
+# Relatórios de segurança (SCA/SAST/DAST)
+security/reports/*
+!security/reports/.gitkeep

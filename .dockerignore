@@ -20,6 +20,9 @@ test/
 *.out
 coverage.html
 
+# Relatórios de segurança (SCA/SAST/DAST)
+security/reports/
+
 # Local dev files
 .air.toml
 .mockery.yaml
