@@ -158,9 +158,9 @@ func TestAtribuirIDPropagaIdentidadeAoHistoricoInicial(t *testing.T) {
 }
 
 func TestNewHistoricoStatusValidaDados(t *testing.T) {
-	_, err := ordemservico.NewHistoricoStatus("INVALIDO", 1, "")
+	_, err := ordemservico.NewHistoricoStatus("INVALIDO", 1, "", time.Now())
 	require.ErrorIs(t, err, ordemservico.ErrStatusInvalido)
 
-	_, err = ordemservico.NewHistoricoStatus(ordemservico.StatusRecebida, 0, "")
+	_, err = ordemservico.NewHistoricoStatus(ordemservico.StatusRecebida, 0, "", time.Now())
 	require.ErrorIs(t, err, ordemservico.ErrResponsavelHistoricoObrigatorio)
 }
