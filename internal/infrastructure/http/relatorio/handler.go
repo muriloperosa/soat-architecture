@@ -26,7 +26,7 @@ func NewHandler(consultarTransicaoStatus *app.ConsultarTransicaoStatusUseCase) *
 // @Param final_date query string true "Data final (YYYY-MM-DD)"
 // @Param from_status query string true "Status de origem"
 // @Param to_status query string true "Status de destino"
-// @Param unit query string false "Unidade de tempo da resposta: h (padrão), m ou s"
+// @Param unit query string false "Unidade de tempo da resposta: h (horas - padrão), m (minutos) ou s (segundos)"
 // @Success 200 {object} TransicaoStatusResponse
 // @Failure 400 {object} httperror.ErrorResponse
 // @Failure 401 {object} httperror.ErrorResponse
