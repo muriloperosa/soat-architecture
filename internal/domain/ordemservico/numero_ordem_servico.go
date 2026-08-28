@@ -22,4 +22,3 @@ func NewNumeroOrdemServico(valor string) (NumeroOrdemServico, error) {
 }
 
 func (n NumeroOrdemServico) String() string { return n.valor }
-func (n NumeroOrdemServico) IsZero() bool   { return n.valor == "" }

@@ -13,7 +13,7 @@ import (
 func RegisterUsuarioRoutes(rg *gin.RouterGroup, c *wiring.Container) {
 	h := NewHandler(c.CriarUsuarioUC, c.AtualizarUsuarioUC, c.AlterarSenhaUC, c.AtivarUsuarioUC, c.InativarUsuarioUC, c.BuscarUsuarioLogadoUC)
 
-	autenticado := rg.Group("/usuarios", middleware.AuthenticationMiddleware(c.JWTAuth, c.RefreshTokensRepo, c.UsuarioStatusRepo))
+	autenticado := rg.Group("/usuarios", middleware.AuthenticationMiddleware(c.JWTAuth, c.RefreshTokensRepo, c.UsuarioStatusRepo, c.ClienteStatusRepo))
 
 	admin := autenticado.Group("", middleware.AuthorizationMiddleware(domainauth.TipoInterno, shared.PapelAdmin))
 	admin.POST("", h.Criar)
