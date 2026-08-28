@@ -63,4 +63,48 @@ func (s StatusOrdemServico) PermiteTransicaoPara(novo StatusOrdemServico) bool {
 	}
 }
 
+var todosStatus = []StatusOrdemServico{
+	StatusRecebida,
+	StatusEmDiagnostico,
+	StatusAguardandoAprovacao,
+	StatusAprovada,
+	StatusRejeitada,
+	StatusEmExecucao,
+	StatusFinalizada,
+	StatusEntregue,
+}
+
+// ExisteCaminhoValido informa se existe uma sequência de transições diretas
+// válidas (PermiteTransicaoPara) ligando s a destino. Usa busca em largura
+// sobre o grafo de transições, suportando o ciclo AguardandoAprovacao<->Rejeitada
+// sem entrar em loop infinito.
+func (s StatusOrdemServico) ExisteCaminhoValido(destino StatusOrdemServico) bool {
+	if s == destino {
+		return false
+	}
+
+	visitados := map[StatusOrdemServico]bool{s: true}
+	fila := []StatusOrdemServico{s}
+
+	for len(fila) > 0 {
+		atual := fila[0]
+		fila = fila[1:]
+
+		for _, proximo := range todosStatus {
+			if !atual.PermiteTransicaoPara(proximo) {
+				continue
+			}
+			if proximo == destino {
+				return true
+			}
+			if !visitados[proximo] {
+				visitados[proximo] = true
+				fila = append(fila, proximo)
+			}
+		}
+	}
+
+	return false
+}
+
 func (s StatusOrdemServico) String() string { return string(s) }

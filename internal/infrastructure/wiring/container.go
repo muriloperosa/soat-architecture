@@ -9,6 +9,7 @@ import (
 	appcliente "github.com/muriloperosa/soat-architecture/internal/application/cliente"
 	appordemservico "github.com/muriloperosa/soat-architecture/internal/application/ordemservico"
 	apppeca "github.com/muriloperosa/soat-architecture/internal/application/peca"
+	apprelatorio "github.com/muriloperosa/soat-architecture/internal/application/relatorio"
 	appservico "github.com/muriloperosa/soat-architecture/internal/application/servico"
 	appusuario "github.com/muriloperosa/soat-architecture/internal/application/usuario"
 	appveiculo "github.com/muriloperosa/soat-architecture/internal/application/veiculo"
@@ -16,6 +17,7 @@ import (
 	domaincliente "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
 	domainordemservico "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
 	domainpeca "github.com/muriloperosa/soat-architecture/internal/domain/peca"
+	domainrelatorio "github.com/muriloperosa/soat-architecture/internal/domain/relatorio"
 	domainservico "github.com/muriloperosa/soat-architecture/internal/domain/servico"
 	domainusuario "github.com/muriloperosa/soat-architecture/internal/domain/usuario"
 	domainveiculo "github.com/muriloperosa/soat-architecture/internal/domain/veiculo"
@@ -25,6 +27,7 @@ import (
 	mysqlcliente "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/cliente"
 	mysqlordemservico "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/ordemservico"
 	mysqlpeca "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/peca"
+	mysqlrelatorio "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/relatorio"
 	mysqlservico "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/servico"
 	mysqlusuario "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/usuario"
 	mysqlveiculo "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/veiculo"
@@ -44,6 +47,7 @@ type Container struct {
 	VeiculoRepo       domainveiculo.Repository
 	ServicoRepo       domainservico.ServicoRepository
 	OrdemServicoRepo  domainordemservico.OrdemServicoRepository
+	RelatorioRepo     domainrelatorio.RelatorioTransicaoStatusRepository
 
 	LoginInternoUC *appauth.LoginUseCase
 	LoginClienteUC *appauth.LoginUseCase
@@ -89,6 +93,8 @@ type Container struct {
 	AbrirOrdemServicoUC   *appordemservico.AbrirOrdemServicoUseCase
 	IniciarDiagnosticoUC  *appordemservico.IniciarDiagnosticoUseCase
 	InformarDiagnosticoUC *appordemservico.InformarDiagnosticoUseCase
+
+	ConsultarTransicaoStatusUC *apprelatorio.ConsultarTransicaoStatusUseCase
 }
 
 func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
@@ -100,6 +106,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.VeiculoRepo = mysqlveiculo.NewRepository(db)
 	c.ServicoRepo = mysqlservico.NewServicoRepository(db)
 	c.OrdemServicoRepo = mysqlordemservico.NewOrdemServicoRepository(db)
+	c.RelatorioRepo = mysqlrelatorio.NewRelatorioRepository(db)
 	if cfg == nil {
 		return c
 	}
@@ -160,6 +167,8 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	)
 	c.IniciarDiagnosticoUC = appordemservico.NewIniciarDiagnosticoUseCase(c.OrdemServicoRepo)
 	c.InformarDiagnosticoUC = appordemservico.NewInformarDiagnosticoUseCase(c.OrdemServicoRepo)
+
+	c.ConsultarTransicaoStatusUC = apprelatorio.NewConsultarTransicaoStatusUseCase(c.RelatorioRepo)
 
 	return c
 }

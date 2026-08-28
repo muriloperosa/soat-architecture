@@ -11,6 +11,7 @@ import (
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/health"
 	httpordemservico "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/ordemservico"
 	httppeca "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/peca"
+	httprelatorio "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/relatorio"
 	httpservico "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/servico"
 	httpusuario "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/usuario"
 	httpveiculo "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/veiculo"
@@ -33,6 +34,7 @@ func NewRouter(c *wiring.Container) *gin.Engine {
 	httpveiculo.RegisterVeiculoRoutes(v1, c)
 	httpservico.RegisterServicoRoutes(v1, c)
 	httpordemservico.RegisterOrdemServicoRoutes(v1, c)
+	httprelatorio.RegisterRelatorioRoutes(v1, c)
 
 	return router
 }
