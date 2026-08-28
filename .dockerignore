@@ -27,4 +27,7 @@ security/reports/
 .air.toml
 .mockery.yaml
 compose.yml
+compose.tools.yml
 Makefile
+security/zap-scan.sh
+security/zap-rules.tsv

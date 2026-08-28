@@ -42,7 +42,7 @@ help:
 	@echo "  $(GREEN)sonar-scan$(RESET):    Run coverage + sonar-scanner (needs SONAR_TOKEN)"
 	@echo "  $(GREEN)sec-sca$(RESET):       Run govulncheck (SCA) into security/reports/govulncheck.json"
 	@echo "  $(GREEN)sec-sast$(RESET):      Run gosec (SAST) into security/reports/gosec.json"
-	@echo "  $(GREEN)sec-dast$(RESET):      Run authenticated OWASP ZAP API scan into security/reports/zap-report.*"
+	@echo "  $(GREEN)sec-dast$(RESET):      Run authenticated OWASP ZAP API scan (isolated app-dast+mysql-dast stack) into security/reports/zap-report-{admin,atendente,mecanico,cliente}.*"
 
 run:
 	go run ./cmd/api
@@ -57,15 +57,16 @@ test-integration:
 	go test -tags integration ./test/integration/... -v
 
 coverage:
-	go test ./... -coverprofile=coverage.out
-	go tool cover -func=coverage.out | tail -1
-	go tool cover -html=coverage.out -o coverage.html
+	@mkdir -p test/reports
+	go test ./... -coverprofile=test/reports/coverage.out
+	go tool cover -func=test/reports/coverage.out | tail -1
+	go tool cover -html=test/reports/coverage.out -o test/reports/coverage.html
 
 lint:
 	go vet ./...
 
 up:
-	docker compose up --build -d
+	docker compose up -d
 
 down:
 	docker compose down
@@ -138,17 +139,17 @@ hooks-uninstall:
 	@echo "$(GREEN)Git hooks uninstalled successfully!$(RESET)"
 
 sonar-up:
-	docker compose up -d --wait sonarqube
+	docker compose -f compose.yml -f compose.tools.yml up -d --wait sonarqube
 
 sonar-down:
-	docker compose stop sonarqube
+	docker compose -f compose.yml -f compose.tools.yml stop sonarqube
 
 sonar-scan: coverage
 	@if [ -z "$(SONAR_TOKEN)" ]; then \
 		echo "SONAR_TOKEN not set. Add SONAR_TOKEN=<seu_token> ao .env"; \
 		exit 1; \
 	fi
-	docker compose --profile tools run --rm sonar-scanner
+	docker compose -f compose.yml -f compose.tools.yml --profile tools run --rm sonar-scanner
 
 sec-sca:
 	@mkdir -p security/reports
