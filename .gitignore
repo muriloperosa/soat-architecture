@@ -12,6 +12,8 @@
 !.vscode/launch.json
 
 # Testes/coverage
+test/reports/*
+!test/reports/.gitkeep
 *.out
 coverage.html
 

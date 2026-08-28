@@ -160,13 +160,13 @@ Organização de `test/integration/`:
 make coverage
 ```
 
-Roda os testes com `-coverprofile`, imprime o total de cobertura no terminal e gera `coverage.html`. Pra ver o relatório detalhado por linha, abra o arquivo gerado no navegador:
+Roda os testes com `-coverprofile`, imprime o total de cobertura no terminal e gera `test/reports/coverage.html`. Pra ver o relatório detalhado por linha, abra o arquivo gerado no navegador:
 
 ```bash
-open coverage.html
+open test/reports/coverage.html
 ```
 
-`coverage.out` e `coverage.html` são gitignored, ficam só localmente.
+`test/reports/coverage.out` e `test/reports/coverage.html` são gitignored, ficam só localmente.
 
 ## Lint
 
@@ -204,7 +204,7 @@ make sonar-scan
 
 Tanto `sonarqube` quanto `sonar-scanner` carregam variáveis do `.env` (`env_file`, mesmo padrão dos serviços `app`/`mysql`); não precisa passar nada na linha de comando além do `.env` configurado.
 
-Configuração do projeto de análise fica em `sonar-project.properties` (project key, paths, exclusões, path do `coverage.out`).
+Configuração do projeto de análise fica em `sonar-project.properties` (project key, paths, exclusões, path do `test/reports/coverage.out`).
 
 Pra parar o servidor:
 

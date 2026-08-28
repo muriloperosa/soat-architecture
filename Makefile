@@ -57,9 +57,10 @@ test-integration:
 	go test -tags integration ./test/integration/... -v
 
 coverage:
-	go test ./... -coverprofile=coverage.out
-	go tool cover -func=coverage.out | tail -1
-	go tool cover -html=coverage.out -o coverage.html
+	@mkdir -p test/reports
+	go test ./... -coverprofile=test/reports/coverage.out
+	go tool cover -func=test/reports/coverage.out | tail -1
+	go tool cover -html=test/reports/coverage.out -o test/reports/coverage.html
 
 lint:
 	go vet ./...
