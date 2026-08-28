@@ -46,6 +46,7 @@ Cada uma dona de uma camada:
 - `AuthorizationMiddleware` é variádico: sempre checa `TipoUsuario` (interno/cliente); opcionalmente, uma lista de `PapelUsuario` permitidos, pra rotas restritas a um papel específico (ex.: gestão de usuário exige admin).
 - Testes de integração com `testcontainers` (MySQL real) e `testify`. Meta de cobertura: 80% ou mais nos domínios críticos.
 - Swagger via `swaggo`, migrations via `golang-migrate`.
+- SCA/SAST/DAST (`govulncheck`, `gosec`, OWASP ZAP) via `make sec-sca`/`sec-sast`/`sec-dast`; detalhes e justificativa de cada ferramenta em [`docs/SECURITY.md`](./SECURITY.md). O DAST roda numa stack Docker isolada (`security/compose.dast.yml`) pra não sujar o banco de desenvolvimento; SonarQube fica em `quality/compose.quality.yml` (`make sonar-up`/`sonar-scan`).
 
 ## Credenciais e status de usuário: adapter por fonte de identidade
 
@@ -150,8 +151,16 @@ soat-architecture/
 ├── test/integration/      # testcontainers (MySQL real), build tag "integration"
 ├── docs/
 │   ├── ARQUITETURA.md     # este documento
+│   ├── SECURITY.md        # SCA/SAST/DAST: ferramentas e justificativa
 │   ├── event-storming.md
 │   └── adr/               # Architecture Decision Records
+├── security/
+│   ├── zap-scan.sh        # orquestra make sec-dast (stack isolada, 1 scan por papel)
+│   ├── compose.dast.yml   # app-dast + mysql-dast + zap, projeto compose separado do dev
+│   ├── zap-rules.tsv      # falsos positivos do ZAP marcados IGNORE
+│   └── reports/           # saída de sec-sca/sec-sast/sec-dast (gitignored)
+├── quality/
+│   └── compose.quality.yml  # sonarqube + sonar-scanner (make sonar-up/sonar-scan)
 ├── .env.example
 ├── Dockerfile
 ├── compose.yml

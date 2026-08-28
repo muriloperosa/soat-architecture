@@ -41,3 +41,18 @@ gosec -fmt=json -out=gosec-report.json ./...
 Justificativa: SCA e SAST analisam código estático; nenhum dos dois prova que a API, rodando de verdade, resiste a ataque. ZAP simula ataques reais contra a API em execução (SQLi, broken auth, injection, etc). O modo API scan aceita `swagger.json`/`openapi.yaml` como entrada, mapeando e testando todos os endpoints documentados automaticamente, sem precisar de script de navegação manual. Gera relatório em HTML/PDF, adequado como apêndice.
 
 Pré-requisito: API rodando contra dados de teste (nunca produção). Se a rota exige JWT, configurar script de autenticação no ZAP, senão o scan só alcança endpoint público.
+
+### Execução: `make sec-dast`
+
+`security/zap-scan.sh` orquestra o scan e sobe uma stack Docker isolada, definida em `security/compose.dast.yml` (serviços `app-dast` + `mysql-dast`, projeto compose separado do dev via `-p soat-architecture-dast`). Motivo: o scan autenticado escreve dados reais (ordens de serviço, veículos, peças) via requisições ativas do ZAP, então rodar contra o `mysql`/`app` de desenvolvimento (`compose.yml`) sujaria o banco local. `mysql-dast` usa `tmpfs`, e a stack inteira é derrubada (`down -v`) ao fim do script — nada persiste, o banco de dev nunca é tocado.
+
+O script roda o scan autenticado **uma vez por papel** (`admin`, `atendente`, `mecanico`, `cliente`), cada um com seu próprio token JWT injetado via `replacer` do ZAP. Isso não é só cobertura de rota: prova que RBAC bloqueia de fato um papel tentando acessar rota de outro (autorização negativa), não só que as rotas respondem quando autenticado. Relatórios saem em `security/reports/zap-report-{admin,atendente,mecanico,cliente}.{html,json}`.
+
+### Falsos positivos conhecidos (`security/zap-rules.tsv`)
+
+Três alertas disparam sempre em `/swagger/doc.json` e `/swagger` e são falsos positivos confirmados (não são erro real da API):
+
+- `90022` (Application Error Disclosure) e `10023` (Debug Error Messages): a string "Internal Server Error" que o ZAP encontra é a *descrição* de uma resposta 500 documentada no próprio OpenAPI spec (`docs/swagger/swagger.json`), não um erro de fato — confirmado sem nenhuma resposta `500` real nos logs da app durante o scan.
+- `100001` (Unexpected Content-Type): `/swagger` é a página HTML do Swagger UI, não um endpoint de API — `text/html` é o content-type correto ali.
+
+`zap-rules.tsv` marca esses três `pluginid`s como `IGNORE` (usado via `-c zap-rules.tsv` no serviço `zap`), o que evita que virem `FAIL` no veredito do ZAP. Isso sozinho não remove os alertas dos relatórios HTML/JSON — por isso `zap-scan.sh` também filtra esses `pluginid`s do JSON gerado (função `strip_ignored_alerts`) depois de cada scan.

@@ -13,8 +13,14 @@ if [ -f .env ]; then
   set +a
 fi
 
-APP_HOST_PORT="${APP_HOST_PORT:-8080}"
-BASE_URL="http://localhost:${APP_HOST_PORT}/v1"
+# Stack isolada (app-dast + mysql-dast), projeto compose separado do dev
+# (nao referencia compose.yml), portas de host próprias (nao colidem com
+# app/mysql de dev mesmo se estiverem rodando) pra "down -v" no fim nunca
+# encostar no ambiente de desenvolvimento nem reaproveitar dados entre scans.
+COMPOSE="docker compose -p soat-architecture-dast -f security/compose.dast.yml"
+DAST_DB_HOST_PORT="${DAST_DB_HOST_PORT:-3307}"
+DAST_APP_HOST_PORT="${DAST_APP_HOST_PORT:-8081}"
+BASE_URL="http://localhost:${DAST_APP_HOST_PORT}/v1"
 
 ADMIN_EMAIL="${ZAP_ADMIN_EMAIL:-zap-admin@teste.local}"
 ATENDENTE_EMAIL="${ZAP_ATENDENTE_EMAIL:-zap-atendente@teste.local}"
@@ -23,10 +29,13 @@ CLIENTE_EMAIL="${ZAP_CLIENTE_EMAIL:-zap-cliente@teste.local}"
 SENHA="${ZAP_USER_SENHA:-Zap#Scan123}"
 CLIENTE_DOCUMENTO="${ZAP_CLIENTE_DOCUMENTO:-52998224725}"
 
-echo "Subindo API + MySQL..."
-docker compose down
-docker compose up -d --wait mysql
-docker compose up --build -d app
+echo "Subindo API + MySQL isolados (app-dast + mysql-dast)..."
+$COMPOSE up -d --wait mysql-dast
+
+echo "Rodando migrations no banco isolado (mysql-dast é tmpfs, começa vazio)..."
+DB_HOST=localhost DB_PORT="$DAST_DB_HOST_PORT" go run ./migrations up
+
+$COMPOSE up --build -d app-dast
 
 echo "Aguardando API responder..."
 for i in $(seq 1 30); do
@@ -48,6 +57,8 @@ login_interno() {
 }
 
 echo "Criando usuários de teste por papel (idempotente, ignora erro se já existir)..."
+export DB_HOST=localhost
+export DB_PORT="$DAST_DB_HOST_PORT"
 go run ./cmd/create-user --nome "ZAP Admin" --email "$ADMIN_EMAIL" --senha "$SENHA" --papel ADMINISTRADOR || true
 go run ./cmd/create-user --nome "ZAP Atendente" --email "$ATENDENTE_EMAIL" --senha "$SENHA" --papel ATENDENTE || true
 go run ./cmd/create-user --nome "ZAP Mecanico" --email "$MECANICO_EMAIL" --senha "$SENHA" --papel MECANICO || true
@@ -75,7 +86,7 @@ CLIENTE_TOKEN=$(curl -s -X POST "${BASE_URL}/auth/cliente/login" \
 
 mkdir -p security/reports
 
-# zap-rules.tsv (via -c no compose.yml) só afeta o veredito/console do ZAP
+# zap-rules.tsv (via -c no security/compose.dast.yml) só afeta o veredito/console do ZAP
 # (WARN/IGNORE/FAIL), não remove os alertas dos relatórios HTML/JSON. Os
 # achados de docs/swagger/doc.json (90022, 10023, 100001) são falsos
 # positivos confirmados (ver zap-rules.tsv), então tiramos eles do JSON aqui.
@@ -110,7 +121,7 @@ run_scan() {
     return
   fi
   echo "Rodando ZAP API scan autenticado como ${role}..."
-  ZAP_TOKEN="$token" ZAP_REPORT_PREFIX="zap-report-${role}" docker compose --profile tools run --rm zap || true
+  ZAP_TOKEN="$token" ZAP_REPORT_PREFIX="zap-report-${role}" $COMPOSE --profile tools run --rm zap || true
   strip_ignored_alerts "security/reports/zap-report-${role}.json"
 }
 
@@ -118,5 +129,8 @@ run_scan "admin" "$ADMIN_TOKEN"
 run_scan "atendente" "$ATENDENTE_TOKEN"
 run_scan "mecanico" "$MECANICO_TOKEN"
 run_scan "cliente" "$CLIENTE_TOKEN"
+
+echo "Derrubando stack isolada de DAST (dev stack intocada)..."
+$COMPOSE down -v
 
 echo "Relatórios gerados em security/reports/zap-report-{admin,atendente,mecanico,cliente}.{html,json}"

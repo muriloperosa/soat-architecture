@@ -31,7 +31,7 @@ cp .env.example .env
 | `DB_MAX_OPEN_CONNS` | Máximo de conexões abertas no pool | `25` |
 | `DB_MAX_IDLE_CONNS` | Máximo de conexões ociosas mantidas no pool | `5` |
 | `DB_CONN_MAX_LIFETIME_MINUTES` | Tempo máximo, em minutos, que uma conexão pode ficar aberta antes de ser reciclada | `5` |
-| `SONAR_HOST_PORT` | Porta exposta no host para o SonarQube (só usada pelo `compose.yml`) | `9000` |
+| `SONAR_HOST_PORT` | Porta exposta no host para o SonarQube (só usada pelo `quality/compose.quality.yml`) | `9000` |
 | `SONAR_TOKEN` | Token de autenticação do SonarQube, usado pelo serviço `sonar-scanner` (gerado na UI, ver seção SonarQube abaixo) | *(vazio)* |
 | `SONAR_HOST_URL` | URL do SonarQube usada pelo `sonar-scanner` (nome do serviço na rede docker; só muda se você apontar pra um SonarQube externo) | `http://sonarqube:9000` |
 
@@ -176,7 +176,7 @@ make lint
 
 ## SonarQube (análise estática)
 
-Sobe um SonarQube local (banco embarcado H2, só pra análise local mesmo) via `compose.yml`:
+Sobe um SonarQube local (banco embarcado H2, só pra análise local mesmo) via `quality/compose.quality.yml`:
 
 ```bash
 make sonar-up
@@ -196,7 +196,7 @@ Cole o token gerado no `.env` (nunca no `.env.example`):
 SONAR_TOKEN=<seu_token>
 ```
 
-Rode a análise (gera cobertura via `make coverage` e escaneia via serviço `sonar-scanner` do `compose.yml`, na mesma rede docker do `sonarqube`):
+Rode a análise (gera cobertura via `make coverage` e escaneia via serviço `sonar-scanner` do `quality/compose.quality.yml`, na mesma rede docker do `sonarqube`):
 
 ```bash
 make sonar-scan
@@ -211,6 +211,20 @@ Pra parar o servidor:
 ```bash
 make sonar-down
 ```
+
+## Segurança (SCA/SAST/DAST)
+
+Justificativa de cada ferramenta em [`docs/SECURITY.md`](docs/SECURITY.md).
+
+```bash
+make sec-sca    # govulncheck -> security/reports/govulncheck.json
+make sec-sast   # gosec -> security/reports/gosec.json
+make sec-dast   # OWASP ZAP -> security/reports/zap-report-{admin,atendente,mecanico,cliente}.{html,json}
+```
+
+`sec-dast` sobe uma stack Docker isolada (`security/compose.dast.yml`, projeto `soat-architecture-dast`: `app-dast` + `mysql-dast` com `tmpfs`) — não usa o `mysql`/`app` de desenvolvimento, então não suja o banco local com dados de teste. A stack some inteira (`down -v`) ao fim do script.
+
+O scan roda autenticado uma vez por papel (admin, atendente, mecânico, cliente), provando que RBAC bloqueia de fato quem não tem permissão, não só que a rota responde. Falsos positivos conhecidos (achados em `/swagger`, documentados em `security/zap-rules.tsv`) são suprimidos automaticamente do relatório.
 
 ## Swagger
 

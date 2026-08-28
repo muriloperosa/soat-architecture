@@ -28,3 +28,7 @@ security/reports/
 .mockery.yaml
 compose.yml
 Makefile
+quality/
+security/compose.dast.yml
+security/zap-scan.sh
+security/zap-rules.tsv
