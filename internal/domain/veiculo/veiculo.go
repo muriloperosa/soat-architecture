@@ -130,7 +130,7 @@ func (veiculo *Veiculo) AtribuirID(id uint64) {
 }
 
 func anoValido(ano uint16) bool {
-	anoMaximo := uint16(time.Now().Year() + 1)
+	anoMaximo := uint16(time.Now().Year() + 1) // #nosec G115 -- ano do calendário, nunca chega perto de MaxUint16
 
 	return ano >= anoMinimo && ano <= anoMaximo
 }
