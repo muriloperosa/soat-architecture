@@ -1,4 +1,4 @@
-.PHONY: help run build test test-integration coverage lint up down db-up db-down tidy vendor setup dev debug mocks swagger hooks-install hooks-uninstall create-user sonar-up sonar-down sonar-scan sec-sca
+.PHONY: help run build test test-integration coverage lint up down db-up db-down tidy vendor setup dev debug mocks swagger hooks-install hooks-uninstall create-user sonar-up sonar-down sonar-scan sec-sca sec-sast
 
 GREEN := $(shell tput setaf 2)
 RESET := $(shell tput sgr0)
@@ -41,6 +41,7 @@ help:
 	@echo "  $(GREEN)sonar-down$(RESET):    Stop the SonarQube container"
 	@echo "  $(GREEN)sonar-scan$(RESET):    Run coverage + sonar-scanner (needs SONAR_TOKEN)"
 	@echo "  $(GREEN)sec-sca$(RESET):       Run govulncheck (SCA) into security/reports/govulncheck.json"
+	@echo "  $(GREEN)sec-sast$(RESET):      Run gosec (SAST) into security/reports/gosec.json"
 
 run:
 	go run ./cmd/api
@@ -110,6 +111,7 @@ setup:
 	go install github.com/go-delve/delve/cmd/dlv@latest
 	go install github.com/vektra/mockery/v2@latest
 	go install golang.org/x/vuln/cmd/govulncheck@latest
+	go install github.com/securego/gosec/v2/cmd/gosec@latest
 
 mocks:
 	$(GOBIN)/mockery
@@ -151,3 +153,8 @@ sec-sca:
 	@mkdir -p security/reports
 	$(GOBIN)/govulncheck -json ./... > security/reports/govulncheck.json
 	@echo "$(GREEN)Relatório gerado em security/reports/govulncheck.json$(RESET)"
+
+sec-sast:
+	@mkdir -p security/reports
+	$(GOBIN)/gosec -fmt=json -out=security/reports/gosec.json ./... || true
+	@echo "$(GREEN)Relatório gerado em security/reports/gosec.json$(RESET)"
