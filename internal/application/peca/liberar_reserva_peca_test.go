@@ -24,7 +24,7 @@ func reservaExistente(t *testing.T, quantidade int) *domainreservapeca.ReservaPe
 func TestNewLiberarReservaPecaUseCase(t *testing.T) {
 	reservaRepository := reservamocks.NewRepository(t)
 
-	useCase := NewLiberarReservaPecaUseCase(reservaRepository, &helpers.FakeTransactionRunner{})
+	useCase := NewLiberarReservaPecaUseCase(reservaRepository, &helpers.TransactionRunnerMock{})
 
 	require.NotNil(t, useCase)
 	require.Equal(t, reservaRepository, useCase.reservaRepository)
@@ -33,7 +33,7 @@ func TestNewLiberarReservaPecaUseCase(t *testing.T) {
 func TestLiberarReservaPecaUseCaseExecutar_LiberacaoParcial(t *testing.T) {
 	ctx := context.Background()
 	reservaRepository := reservamocks.NewRepository(t)
-	runner := &helpers.FakeTransactionRunner{}
+	runner := &helpers.TransactionRunnerMock{}
 	useCase := NewLiberarReservaPecaUseCase(reservaRepository, runner)
 
 	r := reservaExistente(t, 5)
@@ -51,7 +51,7 @@ func TestLiberarReservaPecaUseCaseExecutar_LiberacaoParcial(t *testing.T) {
 func TestLiberarReservaPecaUseCaseExecutar_LiberacaoTotal_RemoveAReserva(t *testing.T) {
 	ctx := context.Background()
 	reservaRepository := reservamocks.NewRepository(t)
-	useCase := NewLiberarReservaPecaUseCase(reservaRepository, &helpers.FakeTransactionRunner{})
+	useCase := NewLiberarReservaPecaUseCase(reservaRepository, &helpers.TransactionRunnerMock{})
 
 	r := reservaExistente(t, 5)
 
@@ -67,7 +67,7 @@ func TestLiberarReservaPecaUseCaseExecutar_LiberacaoTotal_RemoveAReserva(t *test
 func TestLiberarReservaPecaUseCaseExecutar_ReservaNaoEncontrada_RetornaErro(t *testing.T) {
 	ctx := context.Background()
 	reservaRepository := reservamocks.NewRepository(t)
-	useCase := NewLiberarReservaPecaUseCase(reservaRepository, &helpers.FakeTransactionRunner{})
+	useCase := NewLiberarReservaPecaUseCase(reservaRepository, &helpers.TransactionRunnerMock{})
 
 	reservaRepository.EXPECT().BuscarPorOrdemEPecaComBloqueio(ctx, uint64(10), uint64(1)).Return(nil, domainreservapeca.ErrReservaNaoEncontrada).Once()
 
@@ -80,7 +80,7 @@ func TestLiberarReservaPecaUseCaseExecutar_ReservaNaoEncontrada_RetornaErro(t *t
 func TestLiberarReservaPecaUseCaseExecutar_QuantidadeMaiorQueReservada_RetornaErro(t *testing.T) {
 	ctx := context.Background()
 	reservaRepository := reservamocks.NewRepository(t)
-	useCase := NewLiberarReservaPecaUseCase(reservaRepository, &helpers.FakeTransactionRunner{})
+	useCase := NewLiberarReservaPecaUseCase(reservaRepository, &helpers.TransactionRunnerMock{})
 
 	r := reservaExistente(t, 5)
 
@@ -96,7 +96,7 @@ func TestLiberarReservaPecaUseCaseExecutar_QuantidadeMaiorQueReservada_RetornaEr
 func TestLiberarReservaPecaUseCaseExecutar_QuantidadeZeroOuNegativa_RetornaErro(t *testing.T) {
 	ctx := context.Background()
 	reservaRepository := reservamocks.NewRepository(t)
-	useCase := NewLiberarReservaPecaUseCase(reservaRepository, &helpers.FakeTransactionRunner{})
+	useCase := NewLiberarReservaPecaUseCase(reservaRepository, &helpers.TransactionRunnerMock{})
 
 	output, err := useCase.Executar(ctx, LiberarReservaPecaInput{PecaID: 1, OrdemServicoID: 10, Quantidade: 0})
 
@@ -107,7 +107,7 @@ func TestLiberarReservaPecaUseCaseExecutar_QuantidadeZeroOuNegativa_RetornaErro(
 func TestLiberarReservaPecaUseCaseExecutar_ErroAoAtualizar_RetornaErro(t *testing.T) {
 	ctx := context.Background()
 	reservaRepository := reservamocks.NewRepository(t)
-	useCase := NewLiberarReservaPecaUseCase(reservaRepository, &helpers.FakeTransactionRunner{})
+	useCase := NewLiberarReservaPecaUseCase(reservaRepository, &helpers.TransactionRunnerMock{})
 
 	r := reservaExistente(t, 5)
 	erroBanco := errors.New("erro ao atualizar reserva")

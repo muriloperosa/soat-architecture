@@ -56,6 +56,18 @@ Cada uma dona de uma camada:
 
 Cada fonte de identidade (usuário interno, cliente) implementa as duas via um adapter em infraestrutura. O wiring decide, por endpoint, qual adapter injetar (`LoginUseCase` de `/v1/auth/login` recebe o adapter de `usuario`; o de `/v1/auth/cliente/login` receberia o de `cliente`, quando existir).
 
+## Transação cross-repository (TransactionRunner)
+
+Quando um use case precisa coordenar mais de um `Repository` (de agregados diferentes) numa única operação atômica — por exemplo reservar estoque, que lê `Peca` e escreve em `ReservaPeca` — nenhum dos dois repositórios sozinho garante isso. `domain/shared.TransactionRunner` é a interface pra esse caso; `infrastructure/persistence/mysql.TransactionRunner` implementa sobre GORM.
+
+- `TransactionRunner.Executar(ctx, fn)` abre uma transação e injeta o `*gorm.DB` da transação num `context.Context` derivado (chave não exportada), passado pra `fn`.
+- Repositórios chamam `mysql.DBFromContext(ctx, r.db)` em vez de usar `r.db` direto — se o `ctx` carrega uma transação, usa ela; senão, cai de volta pra `r.db`. Isso é zero-custo pros repositórios quando chamados fora de uma transação (a maioria dos casos).
+- `mysql.ComBloqueio(db)` adiciona `SELECT ... FOR UPDATE`. Só serve dentro de uma transação (fora dela, o MySQL libera o lock no fim do autocommit da própria SELECT) — por isso todo método que trava linha (`BuscarPorIDComBloqueio`, `BuscarPorOrdemEPecaComBloqueio`) é nomeado explicitamente, nunca um booleano escondido num parâmetro.
+
+Exemplo de ponta a ponta: `ReservarPecaUseCase` (`internal/application/peca/reservar_peca.go`) trava a linha da `Peca` antes de somar o quanto já está reservado — assim, reservas concorrentes na mesma peça serializam em vez de lerem o mesmo total desatualizado e ambas passarem na validação de disponibilidade (`Peca.PodeReservar`). Provado em `test/integration/reserva_peca_test.go` disparando reservas concorrentes de verdade contra MySQL.
+
+Pra testar use case com `TransactionRunner` sem banco real, `test/helpers.TransactionRunnerMock` só chama `fn(ctx)` direto e conta quantas vezes rodou (`Calls`) — o suficiente pra afirmar que o use case delega à transação, sem precisar simular `BEGIN`/`COMMIT`.
+
 ## Testes de integração
 
 Unitário com mock prova a lógica de cada peça isolada; não prova que as peças se encaixam. `test/integration/` (pacote `integration_test`, atrás da build tag `integration`, `make test-integration`) sobe um MySQL real via `testcontainers`, aplica as migrations de produção e monta `wiring.Container`/router exatamente como em produção — o teste bate no router de verdade, não numa função isolada.
