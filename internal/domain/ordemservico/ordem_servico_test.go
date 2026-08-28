@@ -39,6 +39,7 @@ func TestNewOrdemServico(t *testing.T) {
 
 	historico := os.HistoricoStatus()
 	require.Len(t, historico, 1)
+	require.Equal(t, uint64(0), historico[0].ID())
 	require.Equal(t, ordemservico.StatusRecebida, historico[0].Status())
 	require.Equal(t, uint64(30), historico[0].AlteradoPor())
 	require.Equal(t, os.DataCadastro(), historico[0].AlteradoEm())

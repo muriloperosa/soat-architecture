@@ -77,6 +77,24 @@ func TestVeiculo_Atualizar_MarcaVazia_RetornaErroENaoAltera(t *testing.T) {
 	require.Equal(t, "Fiat", veiculoCriado.Marca())
 }
 
+func TestVeiculo_Atualizar_ModeloVazio_RetornaErroENaoAltera(t *testing.T) {
+	veiculoCriado, err := veiculo.NewVeiculo("ABC1234", "Fiat", "Uno", 15000, 2020, "Branco", 1)
+	require.NoError(t, err)
+
+	err = veiculoCriado.Atualizar("Fiat", "", "Prata")
+	require.ErrorIs(t, err, veiculo.ErrModeloObrigatorio)
+	require.Equal(t, "Uno", veiculoCriado.Modelo())
+}
+
+func TestVeiculo_Atualizar_CorInvalida_RetornaErroENaoAltera(t *testing.T) {
+	veiculoCriado, err := veiculo.NewVeiculo("ABC1234", "Fiat", "Uno", 15000, 2020, "Branco", 1)
+	require.NoError(t, err)
+
+	err = veiculoCriado.Atualizar("Fiat", "Uno", "123")
+	require.ErrorIs(t, err, veiculo.ErrCorInvalida)
+	require.Equal(t, "Branco", veiculoCriado.Cor().String())
+}
+
 func TestVeiculo_AtualizarQuilometragem_Valida(t *testing.T) {
 	veiculoCriado, err := veiculo.NewVeiculo("ABC1234", "Fiat", "Uno", 15000, 2020, "Branco", 1)
 	require.NoError(t, err)
