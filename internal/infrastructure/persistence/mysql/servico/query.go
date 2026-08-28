@@ -1,4 +1,4 @@
-package cliente
+package servico
 
 import (
 	domainquery "github.com/muriloperosa/soat-architecture/internal/domain/query"
@@ -14,6 +14,7 @@ var (
 		domainquery.OperatorIn,
 		domainquery.OperatorNotIn,
 	}
+
 	numberOperators = []domainquery.Operator{
 		domainquery.OperatorEqual,
 		domainquery.OperatorNotEqual,
@@ -24,6 +25,7 @@ var (
 		domainquery.OperatorIn,
 		domainquery.OperatorNotIn,
 	}
+
 	dateOperators = []domainquery.Operator{
 		domainquery.OperatorEqual,
 		domainquery.OperatorNotEqual,
@@ -35,7 +37,7 @@ var (
 )
 
 // NewQueryBuilder define os campos, tipos e operadores públicos da consulta de
-// clientes. Campos não declarados aqui não podem virar filtro ou ordenação SQL.
+// serviços. Campos não declarados aqui não podem virar filtro ou ordenação SQL.
 func NewQueryBuilder() *mysqlquery.Builder {
 	return mysqlquery.NewBuilder(mysqlquery.Config{
 		Fields: map[string]mysqlquery.Field{
@@ -45,35 +47,35 @@ func NewQueryBuilder() *mysqlquery.Builder {
 				Sortable:  true,
 				Operators: numberOperators,
 			},
-			"documento": {
-				Column:    "documento",
-				Type:      mysqlquery.ValueTypeString,
-				Sortable:  true,
-				Operators: textOperators,
-			},
-			"tipo": {
-				Column:    "tipo",
-				Type:      mysqlquery.ValueTypeString,
-				Sortable:  true,
-				Operators: textOperators,
-			},
 			"nome": {
 				Column:    "nome",
 				Type:      mysqlquery.ValueTypeString,
 				Sortable:  true,
 				Operators: textOperators,
 			},
-			"email": {
-				Column:    "email",
+			"descricao": {
+				Column:    "descricao",
 				Type:      mysqlquery.ValueTypeString,
 				Sortable:  true,
 				Operators: textOperators,
 			},
-			"telefone": {
-				Column:    "telefone",
-				Type:      mysqlquery.ValueTypeString,
+			"preco_base": {
+				Column:    "preco_base",
+				Type:      mysqlquery.ValueTypeFloat64,
 				Sortable:  true,
-				Operators: textOperators,
+				Operators: numberOperators,
+			},
+			"tempo_estimado_minutos": {
+				Column:    "tempo_estimado_minutos",
+				Type:      mysqlquery.ValueTypeUint64,
+				Sortable:  true,
+				Operators: numberOperators,
+			},
+			"criado_por": {
+				Column:    "criado_por",
+				Type:      mysqlquery.ValueTypeUint64,
+				Sortable:  true,
+				Operators: numberOperators,
 			},
 			"ativo": {
 				Column:   "ativo",
@@ -84,17 +86,14 @@ func NewQueryBuilder() *mysqlquery.Builder {
 					domainquery.OperatorNotEqual,
 				},
 			},
-			"criado_por": {
-				Column:    "criado_por",
-				Type:      mysqlquery.ValueTypeUint64,
-				Sortable:  true,
-				Operators: numberOperators,
-			},
 			"data_cadastro": {
-				Column: "data_cadastro", Type: mysqlquery.ValueTypeTime, Sortable: true,
+				Column:    "data_cadastro",
+				Type:      mysqlquery.ValueTypeTime,
+				Sortable:  true,
 				Operators: dateOperators,
 			},
 		},
+
 		DefaultOrder:     "id",
 		DefaultDirection: domainquery.DirectionASC,
 		DefaultLimit:     20,

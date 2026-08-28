@@ -100,10 +100,8 @@ func (h *Handler) Criar(c *gin.Context) {
 // @Param email query string false "E-mail contendo o valor"
 // @Param telefone query string false "Telefone contendo o valor"
 // @Param ativo query bool false "Situação ativa do cliente"
-// @Param requer_alterar_senha query bool false "Exigência de alteração de senha"
 // @Param criado_por query string false "ID ou lista de IDs dos criadores"
 // @Param data_cadastro query string false "Data ISO 8601 ou intervalo separado por vírgula" example(2026-08-20,2026-08-22)
-// @Param data_atualizacao query string false "Data ISO 8601 ou intervalo separado por vírgula"
 // @Success 200 {object} ListarClientesResponse
 // @Failure 400 {object} httperror.ErrorResponse
 // @Failure 401 {object} httperror.ErrorResponse

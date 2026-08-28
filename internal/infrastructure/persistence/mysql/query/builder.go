@@ -16,10 +16,11 @@ import (
 type ValueType string
 
 const (
-	ValueTypeString ValueType = "string"
-	ValueTypeUint64 ValueType = "uint64"
-	ValueTypeBool   ValueType = "bool"
-	ValueTypeTime   ValueType = "time"
+	ValueTypeString  ValueType = "string"
+	ValueTypeUint64  ValueType = "uint64"
+	ValueTypeFloat64 ValueType = "float64"
+	ValueTypeBool    ValueType = "bool"
+	ValueTypeTime    ValueType = "time"
 )
 
 // Field define o nome da coluna, o tipo do valor e as operações permitidas.
@@ -156,19 +157,23 @@ func resolveAutomaticFilter(field Field, filter domainquery.Filter) ([]domainque
 		return []domainquery.Filter{{
 			Field: filter.Field, Operator: operator, Value: strings.Join(values, "|"),
 		}}, nil
-	case ValueTypeUint64:
+	case ValueTypeUint64, ValueTypeFloat64:
 		operator := domainquery.OperatorEqual
 		if negated {
 			operator = domainquery.OperatorNotEqual
 		}
+
 		if len(values) > 1 {
 			operator = domainquery.OperatorIn
 			if negated {
 				operator = domainquery.OperatorNotIn
 			}
 		}
+
 		return []domainquery.Filter{{
-			Field: filter.Field, Operator: operator, Value: strings.Join(values, "|"),
+			Field:    filter.Field,
+			Operator: operator,
+			Value:    strings.Join(values, "|"),
 		}}, nil
 	case ValueTypeBool:
 		if len(values) != 1 {
@@ -361,15 +366,23 @@ func parseValue(valueType ValueType, raw string) (any, error) {
 	switch valueType {
 	case ValueTypeString:
 		return raw, nil
+
 	case ValueTypeUint64:
 		return strconv.ParseUint(raw, 10, 64)
+
+	case ValueTypeFloat64:
+		return strconv.ParseFloat(raw, 64)
+
 	case ValueTypeBool:
 		return strconv.ParseBool(raw)
+
 	case ValueTypeTime:
 		if parsed, err := time.Parse(time.RFC3339, raw); err == nil {
 			return parsed, nil
 		}
+
 		return time.Parse(time.DateOnly, raw)
+
 	default:
 		return nil, fmt.Errorf("tipo de filtro não suportado")
 	}
