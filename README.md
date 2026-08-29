@@ -30,4 +30,16 @@ Um hook de `pre-push` local, instalado via `make hooks-install`, roda mocks, lin
 
 ## Executar Localmente
 
-Instruções completas de configuração, execução via Docker ou em modo dev local, testes e demais comandos estão no [Guia de Desenvolvimento](docs/DEVELOPMENT_GUIDE.md).
+Sobe o ambiente inteiro com um único comando, sem exigir Go instalado localmente:
+
+```bash
+.dev/scripts/setup.sh
+```
+
+- limpa containers e volumes de execuções anteriores
+- builda as imagens da aplicação e do toolbox
+- sobe o MySQL
+- roda migrations, testes unitários e de integração
+- popula o banco com usuários de login e dados fictícios
+- sobe a API
+- ao final, imprime as credenciais dos usuários seedados (admin, atendente, mecânico, cliente) para testar a API
