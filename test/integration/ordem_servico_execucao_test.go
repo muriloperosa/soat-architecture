@@ -106,6 +106,26 @@ func TestIniciarExecucaoOrdemServico_TransicaoDeAprovadaParaEmExecucao(t *testin
 	}
 }
 
+func TestIniciarExecucaoOrdemServico_PapelNaoAutorizadoRetorna403(t *testing.T) {
+	resetDB(t)
+	admin := seedUsuario(t, "Admin Oficina", "admin@oficina.com", "senha123", shared.PapelAdmin)
+	seedUsuario(t, "Atendente Oficina", "atendente@oficina.com", "senha123", shared.PapelAtendente)
+	loginAdmin := doLogin(t, "admin@oficina.com", "senha123")
+	loginAtendente := doLogin(t, "atendente@oficina.com", "senha123")
+
+	aberta := abrirOrdemServicoParaExecucao(t, admin.ID, loginAdmin.AccessToken)
+
+	if err := testDB.Exec("UPDATE ordens_servico SET status = ? WHERE id = ?", "APROVADA", aberta.ID).Error; err != nil {
+		t.Fatalf("erro ao forçar status APROVADA: %v", err)
+	}
+
+	rec := doRequest(t, http.MethodPatch, "/v1/ordens-servico/"+strconv.FormatUint(aberta.ID, 10)+"/iniciar-execucao",
+		loginAtendente.AccessToken, nil, nil)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("iniciar-execucao por atendente deveria ser 403, veio %d, body %q", rec.Code, rec.Body.String())
+	}
+}
+
 func TestIniciarExecucaoOrdemServico_ValidaTransicaoDeStatus(t *testing.T) {
 	resetDB(t)
 	admin := seedUsuario(t, "Admin Oficina", "admin@oficina.com", "senha123", shared.PapelAdmin)
