@@ -6,7 +6,6 @@ import (
 	context "context"
 
 	reservapeca "github.com/muriloperosa/soat-architecture/internal/domain/reservapeca"
-
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -23,9 +22,9 @@ func (_m *Repository) EXPECT() *Repository_Expecter {
 	return &Repository_Expecter{mock: &_m.Mock}
 }
 
-// Atualizar provides a mock function with given fields: ctx, _a1
-func (_m *Repository) Atualizar(ctx context.Context, _a1 *reservapeca.ReservaPeca) error {
-	ret := _m.Called(ctx, _a1)
+// Atualizar provides a mock function with given fields: ctx, reserva
+func (_m *Repository) Atualizar(ctx context.Context, reserva *reservapeca.ReservaPeca) error {
+	ret := _m.Called(ctx, reserva)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Atualizar")
@@ -33,7 +32,7 @@ func (_m *Repository) Atualizar(ctx context.Context, _a1 *reservapeca.ReservaPec
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, *reservapeca.ReservaPeca) error); ok {
-		r0 = rf(ctx, _a1)
+		r0 = rf(ctx, reserva)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -48,12 +47,12 @@ type Repository_Atualizar_Call struct {
 
 // Atualizar is a helper method to define mock.On call
 //   - ctx context.Context
-//   - _a1 *reservapeca.ReservaPeca
-func (_e *Repository_Expecter) Atualizar(ctx interface{}, _a1 interface{}) *Repository_Atualizar_Call {
-	return &Repository_Atualizar_Call{Call: _e.mock.On("Atualizar", ctx, _a1)}
+//   - reserva *reservapeca.ReservaPeca
+func (_e *Repository_Expecter) Atualizar(ctx interface{}, reserva interface{}) *Repository_Atualizar_Call {
+	return &Repository_Atualizar_Call{Call: _e.mock.On("Atualizar", ctx, reserva)}
 }
 
-func (_c *Repository_Atualizar_Call) Run(run func(ctx context.Context, _a1 *reservapeca.ReservaPeca)) *Repository_Atualizar_Call {
+func (_c *Repository_Atualizar_Call) Run(run func(ctx context.Context, reserva *reservapeca.ReservaPeca)) *Repository_Atualizar_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(context.Context), args[1].(*reservapeca.ReservaPeca))
 	})
@@ -297,9 +296,9 @@ func (_c *Repository_Remover_Call) RunAndReturn(run func(context.Context, uint64
 	return _c
 }
 
-// Salvar provides a mock function with given fields: ctx, _a1
-func (_m *Repository) Salvar(ctx context.Context, _a1 *reservapeca.ReservaPeca) error {
-	ret := _m.Called(ctx, _a1)
+// Salvar provides a mock function with given fields: ctx, reserva
+func (_m *Repository) Salvar(ctx context.Context, reserva *reservapeca.ReservaPeca) error {
+	ret := _m.Called(ctx, reserva)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Salvar")
@@ -307,7 +306,7 @@ func (_m *Repository) Salvar(ctx context.Context, _a1 *reservapeca.ReservaPeca) 
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, *reservapeca.ReservaPeca) error); ok {
-		r0 = rf(ctx, _a1)
+		r0 = rf(ctx, reserva)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -322,12 +321,12 @@ type Repository_Salvar_Call struct {
 
 // Salvar is a helper method to define mock.On call
 //   - ctx context.Context
-//   - _a1 *reservapeca.ReservaPeca
-func (_e *Repository_Expecter) Salvar(ctx interface{}, _a1 interface{}) *Repository_Salvar_Call {
-	return &Repository_Salvar_Call{Call: _e.mock.On("Salvar", ctx, _a1)}
+//   - reserva *reservapeca.ReservaPeca
+func (_e *Repository_Expecter) Salvar(ctx interface{}, reserva interface{}) *Repository_Salvar_Call {
+	return &Repository_Salvar_Call{Call: _e.mock.On("Salvar", ctx, reserva)}
 }
 
-func (_c *Repository_Salvar_Call) Run(run func(ctx context.Context, _a1 *reservapeca.ReservaPeca)) *Repository_Salvar_Call {
+func (_c *Repository_Salvar_Call) Run(run func(ctx context.Context, reserva *reservapeca.ReservaPeca)) *Repository_Salvar_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(context.Context), args[1].(*reservapeca.ReservaPeca))
 	})
