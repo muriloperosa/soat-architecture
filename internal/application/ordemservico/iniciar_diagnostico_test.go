@@ -76,60 +76,10 @@ func TestIniciarDiagnosticoUseCase_ErroAoPersistir(t *testing.T) {
 	require.ErrorIs(t, err, erroBanco)
 }
 
-func TestInformarDiagnosticoUseCase_ComSucesso(t *testing.T) {
-	repository := ordemservicomocks.NewOrdemServicoRepository(t)
-	os := ordemServicoEmDiagnostico(t)
-	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
-	repository.EXPECT().Atualizar(mock.Anything, os).Return(nil)
-
-	uc := app.NewInformarDiagnosticoUseCase(repository)
-	output, err := uc.Executar(context.Background(), app.InformarDiagnosticoInput{
-		OrdemServicoID: 42,
-		Diagnostico:    "  Falha na bomba de combustível  ",
-	})
-
-	require.NoError(t, err)
-	require.Equal(t, "Falha na bomba de combustível", output.Diagnostico)
-	require.Equal(t, domain.StatusEmDiagnostico.String(), output.Status)
-	require.Len(t, os.HistoricoStatus(), 2)
-}
-
-func TestInformarDiagnosticoUseCase_DiagnosticoVazio(t *testing.T) {
-	repository := ordemservicomocks.NewOrdemServicoRepository(t)
-	os := ordemServicoEmDiagnostico(t)
-	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
-
-	uc := app.NewInformarDiagnosticoUseCase(repository)
-	_, err := uc.Executar(context.Background(), app.InformarDiagnosticoInput{OrdemServicoID: 42, Diagnostico: "   "})
-
-	require.ErrorIs(t, err, domain.ErrDiagnosticoObrigatorio)
-}
-
-func TestInformarDiagnosticoUseCase_StatusInvalido(t *testing.T) {
-	repository := ordemservicomocks.NewOrdemServicoRepository(t)
-	os := ordemServicoRecebida(t)
-	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
-
-	uc := app.NewInformarDiagnosticoUseCase(repository)
-	_, err := uc.Executar(context.Background(), app.InformarDiagnosticoInput{
-		OrdemServicoID: 42,
-		Diagnostico:    "Falha na bomba",
-	})
-
-	require.ErrorIs(t, err, domain.ErrDiagnosticoStatusInvalido)
-}
-
 func ordemServicoRecebida(t *testing.T) *domain.OrdemServico {
 	t.Helper()
 	os, err := domain.NewOrdemServico("OS-20260827-a1b2c3d4e5f6", 10, 20, 52_300, "", "", 3)
 	require.NoError(t, err)
 	os.AtribuirID(42)
-	return os
-}
-
-func ordemServicoEmDiagnostico(t *testing.T) *domain.OrdemServico {
-	t.Helper()
-	os := ordemServicoRecebida(t)
-	require.NoError(t, os.IniciarDiagnostico(7))
 	return os
 }
