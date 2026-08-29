@@ -2,7 +2,6 @@ package cliente
 
 import (
 	app "github.com/muriloperosa/soat-architecture/internal/application/cliente"
-	domain "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
 	"github.com/muriloperosa/soat-architecture/internal/domain/query"
 )
 
