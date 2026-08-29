@@ -274,6 +274,82 @@ func ordemServicoAprovadaHTTP(t *testing.T) *domainordemservico.OrdemServico {
 	)
 }
 
+func TestHandlerEntregarRetorna200(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repository := ordemservicomocks.NewOrdemServicoRepository(t)
+	os := ordemServicoFinalizadaHTTP(t)
+	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
+	repository.EXPECT().Atualizar(mock.Anything, os).Return(nil)
+
+	handler := httpordemservico.NewHandler(nil, nil, nil, app.NewEntregarOrdemServicoUseCase(repository))
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno, Papel: shared.PapelAtendente})
+		c.Next()
+	})
+	router.PATCH("/v1/ordens-servico/:id/entregar", handler.Entregar)
+
+	req := httptest.NewRequest(http.MethodPatch, "/v1/ordens-servico/42/entregar", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	var response httpordemservico.OrdemServicoResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+	require.Equal(t, uint64(42), response.ID)
+	require.Equal(t, domainordemservico.StatusEntregue.String(), response.Status)
+	require.Equal(t, uint64(30), os.HistoricoStatus()[2].AlteradoPor())
+}
+
+func TestHandlerEntregarTransicaoInvalidaRetorna400(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repository := ordemservicomocks.NewOrdemServicoRepository(t)
+	os := ordemServicoRecebidaHTTP(t)
+	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
+
+	handler := httpordemservico.NewHandler(nil, nil, nil, app.NewEntregarOrdemServicoUseCase(repository))
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno})
+		c.Next()
+	})
+	router.PATCH("/v1/ordens-servico/:id/entregar", handler.Entregar)
+
+	req := httptest.NewRequest(http.MethodPatch, "/v1/ordens-servico/42/entregar", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func ordemServicoFinalizadaHTTP(t *testing.T) *domainordemservico.OrdemServico {
+	t.Helper()
+	numero, err := domainordemservico.NewNumeroOrdemServico("OS-20260827-a1b2c3d4e5f6")
+	require.NoError(t, err)
+
+	cadastro := time.Date(2026, time.August, 1, 9, 0, 0, 0, time.UTC)
+	atualizacao := cadastro.Add(3 * time.Hour)
+	historico := []domainordemservico.HistoricoStatus{
+		domainordemservico.ReidratarHistoricoStatus(1, 42, domainordemservico.StatusRecebida, cadastro, 30, ""),
+		domainordemservico.ReidratarHistoricoStatus(2, 42, domainordemservico.StatusFinalizada, atualizacao, 30, ""),
+	}
+
+	return domainordemservico.ReidratarOrdemServico(
+		42,
+		numero,
+		10,
+		20,
+		52_300,
+		domainordemservico.StatusFinalizada,
+		"",
+		"",
+		30,
+		historico,
+		cadastro,
+		atualizacao,
+	)
+}
+
 func ordemServicoRecebidaHTTP(t *testing.T) *domainordemservico.OrdemServico {
 	t.Helper()
 	os, err := domainordemservico.NewOrdemServico("OS-20260827-a1b2c3d4e5f6", 10, 20, 52_300, "", "", 30)

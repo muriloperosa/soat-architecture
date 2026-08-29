@@ -15,6 +15,7 @@ type Handler struct {
 	iniciarDiagnostico  *app.IniciarDiagnosticoUseCase
 	informarDiagnostico *app.InformarDiagnosticoUseCase
 	iniciarExecucao     *app.IniciarExecucaoUseCase
+	entregar            *app.EntregarOrdemServicoUseCase
 }
 
 func NewHandler(
@@ -22,12 +23,14 @@ func NewHandler(
 	iniciarDiagnostico *app.IniciarDiagnosticoUseCase,
 	informarDiagnostico *app.InformarDiagnosticoUseCase,
 	iniciarExecucao *app.IniciarExecucaoUseCase,
+	entregar *app.EntregarOrdemServicoUseCase,
 ) *Handler {
 	return &Handler{
 		abrir:               abrir,
 		iniciarDiagnostico:  iniciarDiagnostico,
 		informarDiagnostico: informarDiagnostico,
 		iniciarExecucao:     iniciarExecucao,
+		entregar:            entregar,
 	}
 }
 
@@ -168,6 +171,42 @@ func (h *Handler) IniciarExecucao(c *gin.Context) {
 	output, err := h.iniciarExecucao.Executar(
 		c.Request.Context(),
 		toIniciarExecucaoInput(id, usuarioID),
+	)
+	if err != nil {
+		httperror.RespondError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, toResponse(output))
+}
+
+// @Summary Entrega uma Ordem de Serviço
+// @Description Altera uma Ordem de Serviço FINALIZADA para ENTREGUE e registra o histórico. Encerra o ciclo da OS. Restrito a usuário interno autenticado.
+// @Tags Ordens de Serviço
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID da Ordem de Serviço"
+// @Success 200 {object} OrdemServicoResponse
+// @Failure 400 {object} httperror.ErrorResponse
+// @Failure 401 {object} httperror.ErrorResponse
+// @Failure 403 {object} httperror.ErrorResponse
+// @Failure 404 {object} httperror.ErrorResponse
+// @Failure 500 {object} httperror.ErrorResponse
+// @Router /v1/ordens-servico/{id}/entregar [patch]
+func (h *Handler) Entregar(c *gin.Context) {
+	id, ok := httprequest.ParseUintParam(c, "id")
+	if !ok {
+		return
+	}
+
+	usuarioID, ok := middleware.SubjectID(c)
+	if !ok {
+		return
+	}
+
+	output, err := h.entregar.Executar(
+		c.Request.Context(),
+		toEntregarInput(id, usuarioID),
 	)
 	if err != nil {
 		httperror.RespondError(c, err)
