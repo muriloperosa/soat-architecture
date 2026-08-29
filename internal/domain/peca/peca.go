@@ -156,6 +156,19 @@ func (p *Peca) Repor(quantidade int) error {
 	return nil
 }
 
+// PodeReservar indica se quantidadeSolicitada pode ser reservada agora,
+// dado quantidadeReservada (soma já reservada em todas as Ordens de
+// Serviço, calculada por outro agregado — ReservaPeca). Não pode deixar o
+// saldo (estoque - reservado - solicitado) abaixo do estoque mínimo.
+// Centraliza a regra pra não duplicá-la em use case/repository/handler.
+func (p *Peca) PodeReservar(quantidadeReservada, quantidadeSolicitada int) bool {
+	if quantidadeSolicitada <= 0 {
+		return false
+	}
+
+	return p.quantidadeEmEstoque-quantidadeReservada-quantidadeSolicitada >= p.estoqueMinimo
+}
+
 func (p *Peca) Ativar() {
 	p.ativo = true
 	p.dataAtualizacao = time.Now()

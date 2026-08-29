@@ -23,7 +23,7 @@ func RegisterServicoRoutes(rg *gin.RouterGroup, c *wiring.Container) {
 	)
 
 	g := rg.Group("/servicos",
-		middleware.AuthenticationMiddleware(c.JWTAuth, c.RefreshTokensRepo, c.UsuarioStatusRepo),
+		middleware.AuthenticationMiddleware(c.JWTAuth, c.RefreshTokensRepo, c.UsuarioStatusRepo, c.ClienteStatusRepo),
 		middleware.AuthorizationMiddleware(domainauth.TipoInterno),
 	)
 	g.POST("", h.Criar)

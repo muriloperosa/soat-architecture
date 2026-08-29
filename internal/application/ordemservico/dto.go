@@ -10,6 +10,16 @@ type AbrirOrdemServicoInput struct {
 	UsuarioID            uint64
 }
 
+type IniciarDiagnosticoInput struct {
+	OrdemServicoID uint64
+	UsuarioID      uint64
+}
+
+type InformarDiagnosticoInput struct {
+	OrdemServicoID uint64
+	Diagnostico    string
+}
+
 type OrdemServicoOutput struct {
 	ID                   uint64
 	Numero               string
@@ -27,7 +37,7 @@ func toOutput(os *domain.OrdemServico) OrdemServicoOutput {
 		Numero:               os.Numero().String(),
 		ClienteID:            os.ClienteID(),
 		VeiculoID:            os.VeiculoID(),
-		QuilometragemEntrada: uint32(os.QuilometragemEntrada()),
+		QuilometragemEntrada: uint32(os.QuilometragemEntrada()), // #nosec G115 -- domínio valida 0 <= km <= MaxUint32 na construção da OS
 		Status:               os.Status().String(),
 		Diagnostico:          os.Diagnostico(),
 		Observacoes:          os.Observacoes(),

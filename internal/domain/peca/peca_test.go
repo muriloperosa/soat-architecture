@@ -100,6 +100,24 @@ func TestPeca_Atualizar_NomeVazio_RetornaErroENaoAltera(t *testing.T) {
 	require.Equal(t, "Peca 1", p.Nome())
 }
 
+func TestPeca_Atualizar_MarcaVazia_RetornaErroENaoAltera(t *testing.T) {
+	p, err := peca.NewPeca("Peca 1", "Marca 1", "Descricao 1", 100.0, 10, 5, 1)
+	require.NoError(t, err)
+
+	err = p.Atualizar("Peca 1", "", "Descricao 2", 200.0, 8)
+	require.ErrorIs(t, err, peca.ErrMarcaObrigatoria)
+	require.Equal(t, "Marca 1", p.Marca())
+}
+
+func TestPeca_Atualizar_DescricaoVazia_RetornaErroENaoAltera(t *testing.T) {
+	p, err := peca.NewPeca("Peca 1", "Marca 1", "Descricao 1", 100.0, 10, 5, 1)
+	require.NoError(t, err)
+
+	err = p.Atualizar("Peca 1", "Marca 1", "", 200.0, 8)
+	require.ErrorIs(t, err, peca.ErrDescricaoObrigatoria)
+	require.Equal(t, "Descricao 1", p.Descricao())
+}
+
 func TestPeca_Atualizar_PrecoNegativo_RetornaErro(t *testing.T) {
 	p, err := peca.NewPeca("Peca 1", "Marca 1", "Descricao 1", 100.0, 10, 5, 1)
 	require.NoError(t, err)
@@ -166,6 +184,38 @@ func TestPeca_Repor_QuantidadeInvalida_RetornaErro(t *testing.T) {
 
 	err = p.Repor(-1)
 	require.ErrorIs(t, err, peca.ErrQuantidadeInvalida)
+}
+
+func TestPeca_PodeReservar_DentroDoDisponivelRespeitandoMinimo_RetornaTrue(t *testing.T) {
+	p, err := peca.NewPeca("Peca 1", "Marca 1", "Descricao 1", 100.0, 10, 5, 1)
+	require.NoError(t, err)
+
+	// estoque 10, reservado 2, minimo 5: 10-2-3=5 >= 5
+	require.True(t, p.PodeReservar(2, 3))
+}
+
+func TestPeca_PodeReservar_FurariaOMinimo_RetornaFalse(t *testing.T) {
+	p, err := peca.NewPeca("Peca 1", "Marca 1", "Descricao 1", 100.0, 10, 5, 1)
+	require.NoError(t, err)
+
+	// estoque 10, reservado 2, minimo 5: 10-2-4=4 < 5
+	require.False(t, p.PodeReservar(2, 4))
+}
+
+func TestPeca_PodeReservar_QuantidadeZeroOuNegativa_RetornaFalse(t *testing.T) {
+	p, err := peca.NewPeca("Peca 1", "Marca 1", "Descricao 1", 100.0, 10, 5, 1)
+	require.NoError(t, err)
+
+	require.False(t, p.PodeReservar(0, 0))
+	require.False(t, p.PodeReservar(0, -1))
+}
+
+func TestPeca_PodeReservar_ExatamenteNoLimiteDoMinimo_RetornaTrue(t *testing.T) {
+	p, err := peca.NewPeca("Peca 1", "Marca 1", "Descricao 1", 100.0, 10, 0, 1)
+	require.NoError(t, err)
+
+	// estoque 10, reservado 0, minimo 0: 10-0-10=0 >= 0
+	require.True(t, p.PodeReservar(0, 10))
 }
 
 func TestPeca_AtivarInativar(t *testing.T) {

@@ -1,6 +1,9 @@
 package peca
 
-import domain "github.com/muriloperosa/soat-architecture/internal/domain/peca"
+import (
+	domain "github.com/muriloperosa/soat-architecture/internal/domain/peca"
+	domainreservapeca "github.com/muriloperosa/soat-architecture/internal/domain/reservapeca"
+)
 
 // CadastrarPecaInput é o DTO de entrada do CadastrarPecaUseCase.
 type CadastrarPecaInput struct {
@@ -47,6 +50,47 @@ type PecaOutput struct {
 	EstoqueMinimo       int
 	CriadoPor           uint64
 	Ativo               bool
+}
+
+// DisponibilidadePecaOutput é o DTO de saída do ConsultarDisponibilidadeUseCase.
+// QuantidadeDisponivel = QuantidadeEmEstoque - QuantidadeReservada.
+type DisponibilidadePecaOutput struct {
+	PecaID               uint64
+	QuantidadeEmEstoque  int
+	QuantidadeReservada  int
+	QuantidadeDisponivel int
+}
+
+// ReservarPecaInput é o DTO de entrada do ReservarPecaUseCase.
+type ReservarPecaInput struct {
+	PecaID         uint64
+	OrdemServicoID uint64
+	Quantidade     int
+}
+
+// LiberarReservaPecaInput é o DTO de entrada do LiberarReservaPecaUseCase.
+type LiberarReservaPecaInput struct {
+	PecaID         uint64
+	OrdemServicoID uint64
+	Quantidade     int
+}
+
+// ReservaPecaOutput é o DTO de saída comum a ReservarPecaUseCase e
+// LiberarReservaPecaUseCase.
+type ReservaPecaOutput struct {
+	ID             uint64
+	OrdemServicoID uint64
+	PecaID         uint64
+	Quantidade     int
+}
+
+func toReservaOutput(r *domainreservapeca.ReservaPeca) ReservaPecaOutput {
+	return ReservaPecaOutput{
+		ID:             r.ID(),
+		OrdemServicoID: r.OrdemServicoID(),
+		PecaID:         r.PecaID(),
+		Quantidade:     r.Quantidade(),
+	}
 }
 
 func toOutput(p *domain.Peca) PecaOutput {

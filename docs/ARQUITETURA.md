@@ -46,6 +46,7 @@ Cada uma dona de uma camada:
 - `AuthorizationMiddleware` é variádico: sempre checa `TipoUsuario` (interno/cliente); opcionalmente, uma lista de `PapelUsuario` permitidos, pra rotas restritas a um papel específico (ex.: gestão de usuário exige admin).
 - Testes de integração com `testcontainers` (MySQL real) e `testify`. Meta de cobertura: 80% ou mais nos domínios críticos.
 - Swagger via `swaggo`, migrations via `golang-migrate`.
+- SCA/SAST/DAST (`govulncheck`, `gosec`, OWASP ZAP) via `make sec-sca`/`sec-sast`/`sec-dast`; detalhes e justificativa de cada ferramenta em [`docs/SECURITY.md`](./SECURITY.md). SonarQube (`make sonar-up`/`sonar-scan`) e a stack isolada de DAST (`app-dast`+`mysql-dast`, pra não sujar o banco de desenvolvimento) vivem em `compose.tools.yml`, sob demanda (profile `tools`), nunca subindo junto com `make up`.
 
 ## Credenciais e status de usuário: adapter por fonte de identidade
 
@@ -55,6 +56,18 @@ Cada uma dona de uma camada:
 - `UsuarioStatusRepository.EstaAtivo` — usado pelo `AuthenticationMiddleware` a cada request.
 
 Cada fonte de identidade (usuário interno, cliente) implementa as duas via um adapter em infraestrutura. O wiring decide, por endpoint, qual adapter injetar (`LoginUseCase` de `/v1/auth/login` recebe o adapter de `usuario`; o de `/v1/auth/cliente/login` receberia o de `cliente`, quando existir).
+
+## Transação cross-repository (TransactionRunner)
+
+Quando um use case precisa coordenar mais de um `Repository` (de agregados diferentes) numa única operação atômica — por exemplo reservar estoque, que lê `Peca` e escreve em `ReservaPeca` — nenhum dos dois repositórios sozinho garante isso. `domain/shared.TransactionRunner` é a interface pra esse caso; `infrastructure/persistence/mysql.TransactionRunner` implementa sobre GORM.
+
+- `TransactionRunner.Executar(ctx, fn)` abre uma transação e injeta o `*gorm.DB` da transação num `context.Context` derivado (chave não exportada), passado pra `fn`.
+- Repositórios chamam `mysql.DBFromContext(ctx, r.db)` em vez de usar `r.db` direto — se o `ctx` carrega uma transação, usa ela; senão, cai de volta pra `r.db`. Isso é zero-custo pros repositórios quando chamados fora de uma transação (a maioria dos casos).
+- `mysql.ComBloqueio(db)` adiciona `SELECT ... FOR UPDATE`. Só serve dentro de uma transação (fora dela, o MySQL libera o lock no fim do autocommit da própria SELECT) — por isso todo método que trava linha (`BuscarPorIDComBloqueio`, `BuscarPorOrdemEPecaComBloqueio`) é nomeado explicitamente, nunca um booleano escondido num parâmetro.
+
+Exemplo de ponta a ponta: `ReservarPecaUseCase` (`internal/application/peca/reservar_peca.go`) trava a linha da `Peca` antes de somar o quanto já está reservado — assim, reservas concorrentes na mesma peça serializam em vez de lerem o mesmo total desatualizado e ambas passarem na validação de disponibilidade (`Peca.PodeReservar`). Provado em `test/integration/reserva_peca_test.go` disparando reservas concorrentes de verdade contra MySQL.
+
+Pra testar use case com `TransactionRunner` sem banco real, `test/helpers.TransactionRunnerMock` só chama `fn(ctx)` direto e conta quantas vezes rodou (`Calls`) — o suficiente pra afirmar que o use case delega à transação, sem precisar simular `BEGIN`/`COMMIT`.
 
 ## Testes de integração
 
@@ -150,11 +163,17 @@ soat-architecture/
 ├── test/integration/      # testcontainers (MySQL real), build tag "integration"
 ├── docs/
 │   ├── ARQUITETURA.md     # este documento
+│   ├── SECURITY.md        # SCA/SAST/DAST: ferramentas e justificativa
 │   ├── event-storming.md
 │   └── adr/               # Architecture Decision Records
+├── security/
+│   ├── zap-scan.sh        # orquestra make sec-dast (stack isolada, 1 scan por papel)
+│   ├── zap-rules.tsv      # falsos positivos do ZAP marcados IGNORE
+│   └── reports/           # saída de sec-sca/sec-sast/sec-dast (gitignored)
 ├── .env.example
 ├── Dockerfile
 ├── compose.yml
+├── compose.tools.yml      # sonarqube + sonar-scanner + app-dast/mysql-dast/zap (profile "tools")
 ├── Makefile
 ├── go.mod
 └── README.md              # como rodar o projeto

@@ -8,7 +8,7 @@ func toModel(os *domain.OrdemServico) *OrdemServicoModel {
 		Numero:               os.Numero().String(),
 		ClienteID:            os.ClienteID(),
 		VeiculoID:            os.VeiculoID(),
-		QuilometragemEntrada: uint32(os.QuilometragemEntrada()),
+		QuilometragemEntrada: uint32(os.QuilometragemEntrada()), // #nosec G115 -- domínio valida 0 <= km <= MaxUint32 na construção da OS
 		Status:               os.Status().String(),
 		Diagnostico:          os.Diagnostico(),
 		Observacoes:          os.Observacoes(),

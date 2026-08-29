@@ -49,12 +49,12 @@ func NewOrdemServico(
 		return nil, err
 	}
 
-	historicoInicial, err := NewHistoricoStatus(StatusRecebida, criadoPor, "")
+	agora := time.Now()
+
+	historicoInicial, err := NewHistoricoStatus(StatusRecebida, criadoPor, "", agora)
 	if err != nil {
 		return nil, err
 	}
-
-	agora := time.Now()
 
 	return &OrdemServico{
 		numero:               numeroVO,
@@ -109,6 +109,58 @@ func (o *OrdemServico) AtribuirID(id uint64) {
 			o.historicoStatus[i].atribuirOrdemServicoID(id)
 		}
 	}
+}
+
+// ValidarTransicaoPara centraliza as invariantes necessárias para uma mudança
+// de status. Assim, os próximos fluxos da OS reutilizam as mesmas regras.
+func (o *OrdemServico) ValidarTransicaoPara(novo StatusOrdemServico) error {
+	if !o.status.PermiteTransicaoPara(novo) {
+		return ErrTransicaoStatusInvalida
+	}
+
+	if o.status == StatusEmDiagnostico &&
+		novo == StatusAguardandoAprovacao &&
+		strings.TrimSpace(o.diagnostico) == "" {
+		return ErrDiagnosticoObrigatorio
+	}
+
+	return nil
+}
+
+// IniciarDiagnostico move uma OS recebida para diagnóstico sem preencher o
+// diagnóstico e registra quem realizou a transição.
+func (o *OrdemServico) IniciarDiagnostico(alteradoPor uint64) error {
+	if err := o.ValidarTransicaoPara(StatusEmDiagnostico); err != nil {
+		return err
+	}
+
+	historico, err := NewHistoricoStatus(StatusEmDiagnostico, alteradoPor, "", time.Now())
+	if err != nil {
+		return err
+	}
+	historico.atribuirOrdemServicoID(o.id)
+
+	o.status = StatusEmDiagnostico
+	o.diagnostico = ""
+	o.dataAtualizacao = historico.AlteradoEm()
+	o.historicoStatus = append(o.historicoStatus, historico)
+	return nil
+}
+
+// InformarDiagnostico registra o diagnóstico enquanto a OS está em análise.
+func (o *OrdemServico) InformarDiagnostico(texto string) error {
+	if o.status != StatusEmDiagnostico {
+		return ErrDiagnosticoStatusInvalido
+	}
+
+	diagnostico := strings.TrimSpace(texto)
+	if diagnostico == "" {
+		return ErrDiagnosticoObrigatorio
+	}
+
+	o.diagnostico = diagnostico
+	o.dataAtualizacao = time.Now()
+	return nil
 }
 
 func (o *OrdemServico) ID() uint64                 { return o.id }

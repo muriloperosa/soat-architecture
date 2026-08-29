@@ -181,6 +181,12 @@ definitions:
     - cliente_id
     - veiculo_id
     type: object
+  ordemservico.InformarDiagnosticoRequest:
+    properties:
+      diagnostico:
+        example: Falha na bomba de combustível
+        type: string
+    type: object
   ordemservico.OrdemServicoResponse:
     properties:
       cliente_id:
@@ -1162,6 +1168,98 @@ paths:
       security:
       - BearerAuth: []
       summary: Abre uma Ordem de Serviço
+      tags:
+      - Ordens de Serviço
+  /v1/ordens-servico/{id}/diagnostico:
+    put:
+      consumes:
+      - application/json
+      description: Registra o diagnóstico realizado enquanto a Ordem de Serviço está
+        EM_DIAGNOSTICO. Restrito a mecânico ou administrador.
+      parameters:
+      - description: ID da Ordem de Serviço
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Diagnóstico realizado
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ordemservico.InformarDiagnosticoRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ordemservico.OrdemServicoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Informa o diagnóstico de uma Ordem de Serviço
+      tags:
+      - Ordens de Serviço
+  /v1/ordens-servico/{id}/iniciar-diagnostico:
+    patch:
+      description: Altera uma Ordem de Serviço RECEBIDA para EM_DIAGNOSTICO e registra
+        o histórico. Restrito a mecânico ou administrador.
+      parameters:
+      - description: ID da Ordem de Serviço
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ordemservico.OrdemServicoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Inicia o diagnóstico de uma Ordem de Serviço
       tags:
       - Ordens de Serviço
   /v1/pecas:

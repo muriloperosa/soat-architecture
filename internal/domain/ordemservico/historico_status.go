@@ -19,6 +19,7 @@ func NewHistoricoStatus(
 	status StatusOrdemServico,
 	alteradoPor uint64,
 	motivo string,
+	alteradoEm time.Time,
 ) (HistoricoStatus, error) {
 	if !status.IsValid() {
 		return HistoricoStatus{}, ErrStatusInvalido
@@ -29,7 +30,7 @@ func NewHistoricoStatus(
 
 	return HistoricoStatus{
 		status:      status,
-		alteradoEm:  time.Now(),
+		alteradoEm:  alteradoEm,
 		alteradoPor: alteradoPor,
 		motivo:      strings.TrimSpace(motivo),
 	}, nil
