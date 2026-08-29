@@ -28,11 +28,11 @@ func TestRefreshUseCase_Executar_TokenValido_RotacionaERetornaNovoPar(t *testing
 	bruto := gerarBrutoDeTeste(t)
 	rtAntigo := &domainauth.RefreshToken{
 		ID: 1, UsuarioID: 1, Tipo: domainauth.TipoCliente, Papel: shared.PapelCliente,
-		TokenHash: infraauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
+		TokenHash: domainauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
 	}
 	uc := appauth.NewRefreshUseCase(refreshTokensRepo, jwtAuth, time.Hour, time.Hour)
 
-	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, infraauth.HashRefreshToken(bruto)).Return(rtAntigo, nil)
+	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, domainauth.HashRefreshToken(bruto)).Return(rtAntigo, nil)
 	refreshTokensRepo.EXPECT().Revogar(mock.Anything, uint64(1)).Return(nil)
 	jwtAuth.EXPECT().GerarAccessToken("1", domainauth.TipoCliente, shared.PapelCliente).Return("novo-access-token", "jti-novo", nil)
 	jwtAuth.EXPECT().GerarRefreshToken().Return("novo-refresh-bruto", nil)
@@ -53,11 +53,11 @@ func TestRefreshUseCase_Executar_ErroAoRevogar_RetornaErroInterno(t *testing.T) 
 	jwtAuth := mocks.NewJWTProvider(t)
 	bruto := gerarBrutoDeTeste(t)
 	rt := &domainauth.RefreshToken{
-		ID: 1, TokenHash: infraauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
+		ID: 1, TokenHash: domainauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
 	}
 	uc := appauth.NewRefreshUseCase(refreshTokensRepo, jwtAuth, time.Hour, time.Hour)
 
-	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, infraauth.HashRefreshToken(bruto)).Return(rt, nil)
+	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, domainauth.HashRefreshToken(bruto)).Return(rt, nil)
 	refreshTokensRepo.EXPECT().Revogar(mock.Anything, uint64(1)).Return(errors.New("conexao recusada"))
 
 	_, err := uc.Executar(context.Background(), appauth.RefreshInput{RefreshTokenBruto: bruto})
@@ -72,11 +72,11 @@ func TestRefreshUseCase_Executar_ErroAoSalvarNovoPar_PropagaErro(t *testing.T) {
 	bruto := gerarBrutoDeTeste(t)
 	rt := &domainauth.RefreshToken{
 		ID: 1, UsuarioID: 1, Tipo: domainauth.TipoCliente, Papel: shared.PapelCliente,
-		TokenHash: infraauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
+		TokenHash: domainauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
 	}
 	uc := appauth.NewRefreshUseCase(refreshTokensRepo, jwtAuth, time.Hour, time.Hour)
 
-	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, infraauth.HashRefreshToken(bruto)).Return(rt, nil)
+	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, domainauth.HashRefreshToken(bruto)).Return(rt, nil)
 	refreshTokensRepo.EXPECT().Revogar(mock.Anything, uint64(1)).Return(nil)
 	jwtAuth.EXPECT().GerarAccessToken("1", domainauth.TipoCliente, shared.PapelCliente).Return("novo-access-token", "jti-novo", nil)
 	jwtAuth.EXPECT().GerarRefreshToken().Return("novo-refresh-bruto", nil)
@@ -96,12 +96,12 @@ func TestRefreshUseCase_Executar_TokenJaRevogado_Erro(t *testing.T) {
 	bruto := gerarBrutoDeTeste(t)
 	agora := time.Now()
 	rt := &domainauth.RefreshToken{
-		ID: 1, TokenHash: infraauth.HashRefreshToken(bruto),
+		ID: 1, TokenHash: domainauth.HashRefreshToken(bruto),
 		ExpiraEm: time.Now().Add(time.Hour), RevogadoEm: &agora,
 	}
 	uc := appauth.NewRefreshUseCase(refreshTokensRepo, jwtAuth, time.Hour, time.Hour)
 
-	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, infraauth.HashRefreshToken(bruto)).Return(rt, nil)
+	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, domainauth.HashRefreshToken(bruto)).Return(rt, nil)
 
 	_, err := uc.Executar(context.Background(), appauth.RefreshInput{RefreshTokenBruto: bruto})
 
@@ -113,7 +113,7 @@ func TestRefreshUseCase_Executar_TokenInexistente_Erro(t *testing.T) {
 	jwtAuth := mocks.NewJWTProvider(t)
 	uc := appauth.NewRefreshUseCase(refreshTokensRepo, jwtAuth, time.Hour, time.Hour)
 
-	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, infraauth.HashRefreshToken("inexistente")).Return(nil, errors.New("nao encontrado"))
+	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, domainauth.HashRefreshToken("inexistente")).Return(nil, errors.New("nao encontrado"))
 
 	_, err := uc.Executar(context.Background(), appauth.RefreshInput{RefreshTokenBruto: "inexistente"})
 

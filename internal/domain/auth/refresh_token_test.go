@@ -26,3 +26,15 @@ func TestRefreshToken_EstaValido_TokenExpirado(t *testing.T) {
 
 	require.False(t, rt.EstaValido())
 }
+
+func TestHashRefreshToken_MesmaEntradaMesmoHash(t *testing.T) {
+	bruto := "token-bruto-de-teste"
+
+	require.Equal(t, auth.HashRefreshToken(bruto), auth.HashRefreshToken(bruto))
+}
+
+func TestHashRefreshToken_NuncaIgualAoBruto(t *testing.T) {
+	bruto := "token-bruto-de-teste"
+
+	require.NotEqual(t, bruto, auth.HashRefreshToken(bruto))
+}

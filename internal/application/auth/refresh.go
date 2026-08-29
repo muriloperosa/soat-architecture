@@ -6,7 +6,6 @@ import (
 
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
-	infraauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/auth"
 )
 
 const msgRefreshTokenInvalido = "refresh token inválido ou expirado"
@@ -32,7 +31,7 @@ func NewRefreshUseCase(refreshTokens domainauth.RefreshTokenRepository, jwtAuth 
 // nunca é reaproveitado mesmo que a chamada seguinte falhe antes de persistir
 // o novo par.
 func (uc *RefreshUseCase) Executar(ctx context.Context, input RefreshInput) (RefreshOutput, error) {
-	hash := infraauth.HashRefreshToken(input.RefreshTokenBruto)
+	hash := domainauth.HashRefreshToken(input.RefreshTokenBruto)
 	rt, err := uc.refreshTokens.BuscarPorHash(ctx, hash)
 	if err != nil || !rt.EstaValido() {
 		return RefreshOutput{}, shared.NewUnauthorizedError(msgRefreshTokenInvalido)

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
-	infraauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/auth"
 )
 
 // LogoutUseCase revoga um refresh token. Idempotente: se o token não existir
@@ -22,7 +21,7 @@ func NewLogoutUseCase(refreshTokens domainauth.RefreshTokenRepository) *LogoutUs
 // Executar revoga o refresh token informado. Token inexistente ou já revogado
 // não é erro (logout é idempotente por natureza).
 func (uc *LogoutUseCase) Executar(ctx context.Context, input LogoutInput) error {
-	hash := infraauth.HashRefreshToken(input.RefreshTokenBruto)
+	hash := domainauth.HashRefreshToken(input.RefreshTokenBruto)
 	rt, err := uc.refreshTokens.BuscarPorHash(ctx, hash)
 	if err != nil {
 		return nil

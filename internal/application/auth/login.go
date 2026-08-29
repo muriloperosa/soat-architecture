@@ -7,7 +7,6 @@ import (
 
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
-	infraauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/auth"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -88,7 +87,7 @@ func gerarTokens(ctx context.Context, refreshTokens domainauth.RefreshTokenRepos
 		UsuarioID:      usuarioID,
 		Tipo:           tipo,
 		Papel:          papel,
-		TokenHash:      infraauth.HashRefreshToken(refreshBruto),
+		TokenHash:      domainauth.HashRefreshToken(refreshBruto),
 		AccessTokenJti: jti,
 		ExpiraEm:       time.Now().Add(refreshTTL),
 	}

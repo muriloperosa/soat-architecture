@@ -108,15 +108,3 @@ func TestGerarRefreshToken_GeraValorNaoVazioEUnico(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEqual(t, a, b)
 }
-
-func TestHashRefreshToken_MesmaEntradaMesmoHash(t *testing.T) {
-	bruto := "token-bruto-de-teste"
-
-	require.Equal(t, infraauth.HashRefreshToken(bruto), infraauth.HashRefreshToken(bruto))
-}
-
-func TestHashRefreshToken_NuncaIgualAoBruto(t *testing.T) {
-	bruto := "token-bruto-de-teste"
-
-	require.NotEqual(t, bruto, infraauth.HashRefreshToken(bruto))
-}
