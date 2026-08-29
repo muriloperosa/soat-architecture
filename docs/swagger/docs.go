@@ -925,6 +925,70 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/ordens-servico/{id}/iniciar-execucao": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Altera uma Ordem de Serviço APROVADA para EM_EXECUCAO e registra o histórico. Restrito a usuário interno autenticado.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ordens de Serviço"
+                ],
+                "summary": "Inicia a execução de uma Ordem de Serviço",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da Ordem de Serviço",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ordemservico.OrdemServicoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/pecas": {
             "post": {
                 "security": [

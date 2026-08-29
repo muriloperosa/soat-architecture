@@ -13,6 +13,7 @@ func RegisterOrdemServicoRoutes(rg *gin.RouterGroup, container *wiring.Container
 		container.AbrirOrdemServicoUC,
 		container.IniciarDiagnosticoUC,
 		container.InformarDiagnosticoUC,
+		container.IniciarExecucaoUC,
 	)
 
 	ordensServico := rg.Group(
@@ -22,6 +23,7 @@ func RegisterOrdemServicoRoutes(rg *gin.RouterGroup, container *wiring.Container
 	)
 
 	ordensServico.POST("", handler.Abrir)
+	ordensServico.PATCH("/:id/iniciar-execucao", handler.IniciarExecucao)
 
 	diagnostico := ordensServico.Group(
 		"",
