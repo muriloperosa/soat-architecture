@@ -17,8 +17,6 @@ import (
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/wiring"
 )
 
-// senhaPadrao é a senha usada em todos os usuários de login criados pelo
-// seed. Mantida fixa e simples de propósito: é só pra ambiente de avaliação.
 const senhaPadrao = "Senha@123"
 
 type credencial struct {
@@ -28,11 +26,6 @@ type credencial struct {
 	senha string
 }
 
-// seed popula o banco com os 4 usuários de login exigidos pra avaliação
-// (admin, atendente, mecânico, cliente) e um conjunto pequeno de dados
-// fictícios (clientes, veículos, serviços, peças e uma ordem de serviço em
-// andamento), rodando direto contra os use cases via wiring.Container, sem
-// passar por HTTP/JWT (mesmo approach do cmd/create-user).
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
