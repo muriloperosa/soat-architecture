@@ -13,7 +13,7 @@ func RegisterRelatorioRoutes(rg *gin.RouterGroup, container *wiring.Container) {
 
 	relatorios := rg.Group(
 		"/relatorios",
-		middleware.AuthenticationMiddleware(container.JWTAuth, container.RefreshTokensRepo, container.UsuarioStatusRepo),
+		middleware.AuthenticationMiddleware(container.JWTAuth, container.RefreshTokensRepo, container.UsuarioStatusRepo, container.ClienteStatusRepo),
 		middleware.AuthorizationMiddleware(domainauth.TipoInterno, shared.PapelAdmin),
 	)
 
