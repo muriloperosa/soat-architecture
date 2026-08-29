@@ -20,6 +20,11 @@ type InformarDiagnosticoInput struct {
 	Diagnostico    string
 }
 
+type IniciarExecucaoInput struct {
+	OrdemServicoID uint64
+	UsuarioID      uint64
+}
+
 type EntregarOrdemServicoInput struct {
 	OrdemServicoID uint64
 	UsuarioID      uint64

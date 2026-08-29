@@ -14,6 +14,7 @@ type Handler struct {
 	abrir               *app.AbrirOrdemServicoUseCase
 	iniciarDiagnostico  *app.IniciarDiagnosticoUseCase
 	informarDiagnostico *app.InformarDiagnosticoUseCase
+	iniciarExecucao     *app.IniciarExecucaoUseCase
 	entregar            *app.EntregarOrdemServicoUseCase
 }
 
@@ -21,12 +22,14 @@ func NewHandler(
 	abrir *app.AbrirOrdemServicoUseCase,
 	iniciarDiagnostico *app.IniciarDiagnosticoUseCase,
 	informarDiagnostico *app.InformarDiagnosticoUseCase,
+	iniciarExecucao *app.IniciarExecucaoUseCase,
 	entregar *app.EntregarOrdemServicoUseCase,
 ) *Handler {
 	return &Handler{
 		abrir:               abrir,
 		iniciarDiagnostico:  iniciarDiagnostico,
 		informarDiagnostico: informarDiagnostico,
+		iniciarExecucao:     iniciarExecucao,
 		entregar:            entregar,
 	}
 }
@@ -132,6 +135,42 @@ func (h *Handler) InformarDiagnostico(c *gin.Context) {
 	output, err := h.informarDiagnostico.Executar(
 		c.Request.Context(),
 		toInformarDiagnosticoInput(id, request),
+	)
+	if err != nil {
+		httperror.RespondError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, toResponse(output))
+}
+
+// @Summary Inicia a execução de uma Ordem de Serviço
+// @Description Altera uma Ordem de Serviço APROVADA para EM_EXECUCAO e registra o histórico. Restrito a mecânico ou administrador.
+// @Tags Ordens de Serviço
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID da Ordem de Serviço"
+// @Success 200 {object} OrdemServicoResponse
+// @Failure 400 {object} httperror.ErrorResponse
+// @Failure 401 {object} httperror.ErrorResponse
+// @Failure 403 {object} httperror.ErrorResponse
+// @Failure 404 {object} httperror.ErrorResponse
+// @Failure 500 {object} httperror.ErrorResponse
+// @Router /v1/ordens-servico/{id}/iniciar-execucao [patch]
+func (h *Handler) IniciarExecucao(c *gin.Context) {
+	id, ok := httprequest.ParseUintParam(c, "id")
+	if !ok {
+		return
+	}
+
+	usuarioID, ok := middleware.SubjectID(c)
+	if !ok {
+		return
+	}
+
+	output, err := h.iniciarExecucao.Executar(
+		c.Request.Context(),
+		toIniciarExecucaoInput(id, usuarioID),
 	)
 	if err != nil {
 		httperror.RespondError(c, err)
