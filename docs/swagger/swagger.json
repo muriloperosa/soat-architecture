@@ -2306,6 +2306,199 @@
             }
         },
         "/v1/veiculos": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lista veículos com paginação, ordenação e filtros diretos por campo. Campos de texto usam LIKE, listas separadas por vírgula usam IN e booleanos usam igualdade. Duas datas ISO 8601 formam um intervalo. Use o sufixo _not para negar filtros.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Veiculos"
+                ],
+                "summary": "Lista veículos",
+                "parameters": [
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Quantidade de registros ignorados",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Quantidade de registros retornados",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "id",
+                            "placa",
+                            "marca",
+                            "modelo",
+                            "quilometragem_atual",
+                            "ano",
+                            "cor",
+                            "criado_por",
+                            "ativo",
+                            "data_cadastro",
+                            "data_atualizacao"
+                        ],
+                        "type": "string",
+                        "default": "id",
+                        "description": "Campo de ordenação",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "ASC",
+                            "DESC"
+                        ],
+                        "type": "string",
+                        "default": "ASC",
+                        "description": "Direção da ordenação",
+                        "name": "direction",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "1,2,3",
+                        "description": "ID ou lista de IDs separada por vírgula",
+                        "name": "id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "ABC1D23",
+                        "description": "Placa contendo o valor",
+                        "name": "placa",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "ABC",
+                        "description": "Placa que não deve conter o valor",
+                        "name": "placa_not",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "Fiat",
+                        "description": "Marca contendo o valor",
+                        "name": "marca",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "Ford",
+                        "description": "Marca que não deve conter o valor",
+                        "name": "marca_not",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "Uno",
+                        "description": "Modelo contendo o valor",
+                        "name": "modelo",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "Palio",
+                        "description": "Modelo que não deve conter o valor",
+                        "name": "modelo_not",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "15000,30000",
+                        "description": "Quilometragem atual ou lista de valores",
+                        "name": "quilometragem_atual",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "2020,2021,2022",
+                        "description": "Ano ou lista de anos",
+                        "name": "ano",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "Prata",
+                        "description": "Cor contendo o valor",
+                        "name": "cor",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "Preto",
+                        "description": "Cor que não deve conter o valor",
+                        "name": "cor_not",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID ou lista de IDs dos usuários que cadastraram o veículo",
+                        "name": "criado_por",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Situação ativa do veículo",
+                        "name": "ativo",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "2026-08-20,2026-08-22",
+                        "description": "Data ISO 8601 ou intervalo separado por vírgula",
+                        "name": "data_cadastro",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/veiculo.ListarVeiculosResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -3388,6 +3581,37 @@
                 "quilometragem_atual": {
                     "type": "integer",
                     "example": 15000
+                }
+            }
+        },
+        "veiculo.ListarVeiculosResponse": {
+            "type": "object",
+            "properties": {
+                "direction": {
+                    "type": "string",
+                    "example": "ASC"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/veiculo.VeiculoResponse"
+                    }
+                },
+                "limit": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "offset": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "order": {
+                    "type": "string",
+                    "example": "id"
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 42
                 }
             }
         },

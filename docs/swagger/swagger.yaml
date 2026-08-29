@@ -535,6 +535,28 @@ definitions:
     - modelo
     - placa
     type: object
+  veiculo.ListarVeiculosResponse:
+    properties:
+      direction:
+        example: ASC
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/veiculo.VeiculoResponse'
+        type: array
+      limit:
+        example: 20
+        type: integer
+      offset:
+        example: 0
+        type: integer
+      order:
+        example: id
+        type: string
+      total:
+        example: 42
+        type: integer
+    type: object
   veiculo.VeiculoResponse:
     properties:
       ano:
@@ -2084,6 +2106,146 @@ paths:
       tags:
       - Usuarios
   /v1/veiculos:
+    get:
+      description: Lista veículos com paginação, ordenação e filtros diretos por campo.
+        Campos de texto usam LIKE, listas separadas por vírgula usam IN e booleanos
+        usam igualdade. Duas datas ISO 8601 formam um intervalo. Use o sufixo _not
+        para negar filtros.
+      parameters:
+      - default: 0
+        description: Quantidade de registros ignorados
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      - default: 20
+        description: Quantidade de registros retornados
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - default: id
+        description: Campo de ordenação
+        enum:
+        - id
+        - placa
+        - marca
+        - modelo
+        - quilometragem_atual
+        - ano
+        - cor
+        - criado_por
+        - ativo
+        - data_cadastro
+        - data_atualizacao
+        in: query
+        name: order
+        type: string
+      - default: ASC
+        description: Direção da ordenação
+        enum:
+        - ASC
+        - DESC
+        in: query
+        name: direction
+        type: string
+      - description: ID ou lista de IDs separada por vírgula
+        example: 1,2,3
+        in: query
+        name: id
+        type: string
+      - description: Placa contendo o valor
+        example: ABC1D23
+        in: query
+        name: placa
+        type: string
+      - description: Placa que não deve conter o valor
+        example: ABC
+        in: query
+        name: placa_not
+        type: string
+      - description: Marca contendo o valor
+        example: Fiat
+        in: query
+        name: marca
+        type: string
+      - description: Marca que não deve conter o valor
+        example: Ford
+        in: query
+        name: marca_not
+        type: string
+      - description: Modelo contendo o valor
+        example: Uno
+        in: query
+        name: modelo
+        type: string
+      - description: Modelo que não deve conter o valor
+        example: Palio
+        in: query
+        name: modelo_not
+        type: string
+      - description: Quilometragem atual ou lista de valores
+        example: 15000,30000
+        in: query
+        name: quilometragem_atual
+        type: string
+      - description: Ano ou lista de anos
+        example: 2020,2021,2022
+        in: query
+        name: ano
+        type: string
+      - description: Cor contendo o valor
+        example: Prata
+        in: query
+        name: cor
+        type: string
+      - description: Cor que não deve conter o valor
+        example: Preto
+        in: query
+        name: cor_not
+        type: string
+      - description: ID ou lista de IDs dos usuários que cadastraram o veículo
+        in: query
+        name: criado_por
+        type: string
+      - description: Situação ativa do veículo
+        in: query
+        name: ativo
+        type: boolean
+      - description: Data ISO 8601 ou intervalo separado por vírgula
+        example: 2026-08-20,2026-08-22
+        in: query
+        name: data_cadastro
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/veiculo.ListarVeiculosResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Lista veículos
+      tags:
+      - Veiculos
     post:
       consumes:
       - application/json
