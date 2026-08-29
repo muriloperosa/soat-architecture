@@ -45,7 +45,7 @@ func TestAtualizarUsuario_ComSenhaNova_ForcaTrocaNoProximoLogin(t *testing.T) {
 	// própria senha, é o admin agindo em nome dele)
 	var atualizado httpusuario.UsuarioResponse
 	rec = doRequest(t, http.MethodPut, fmt.Sprintf("/v1/usuarios/%d", alvo.ID), loginAdmin.AccessToken,
-		httpusuario.AtualizarUsuarioRequest{Nome: "Bia Lima", Email: "bia@oficina.com", SenhaNova: "senhaResetadaPeloAdmin123", Papel: shared.PapelMecanico},
+		httpusuario.AtualizarUsuarioRequest{Nome: "Bia Lima", Email: "bia@oficina.com", SenhaNova: "senhaResetadaPeloAdmin123", Papel: string(shared.PapelMecanico)},
 		&atualizado)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("Atualizar com senha_nova: status %d, body %q", rec.Code, rec.Body.String())

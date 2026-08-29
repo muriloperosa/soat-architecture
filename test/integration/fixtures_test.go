@@ -40,7 +40,7 @@ func seedUsuario(t *testing.T, nome, email, senha string, papel shared.PapelUsua
 		Nome:         nome,
 		Email:        email,
 		SenhaInicial: senha,
-		Papel:        papel,
+		Papel:        string(papel),
 	})
 	if err != nil {
 		t.Fatalf("erro ao semear usuário de teste: %v", err)
@@ -60,7 +60,7 @@ func seedOrdemServico(t *testing.T, criadoPor uint64) uint64 {
 
 	clienteOut, err := testContainer.CriarClienteUseCase.Executar(context.Background(), appcliente.CriarClienteInput{
 		Documento: "52998224725",
-		Tipo:      domaincliente.TipoPessoaFisica,
+		Tipo:      string(domaincliente.TipoPessoaFisica),
 		Nome:      "Cliente Teste Reserva",
 		Email:     fmt.Sprintf("cliente-reserva-%d@teste.com", sufixo),
 		Telefone:  "44999991234",

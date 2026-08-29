@@ -20,7 +20,7 @@ func TestAbrirOrdemServico_PersisteOSHistoricoERetorna201(t *testing.T) {
 
 	cliente, err := testContainer.CriarClienteUseCase.Executar(t.Context(), appcliente.CriarClienteInput{
 		Documento: "52998224725",
-		Tipo:      domaincliente.TipoPessoaFisica,
+		Tipo:      string(domaincliente.TipoPessoaFisica),
 		Nome:      "Maria Silva",
 		Email:     "maria@email.com",
 		Telefone:  "11999998888",

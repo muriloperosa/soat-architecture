@@ -23,7 +23,7 @@ func TestSenhaProvisoria_RoundTrip(t *testing.T) {
 	// handler real e o requer_alterar_senha na resposta de criação)
 	var criado httpusuario.UsuarioResponse
 	rec := doRequest(t, http.MethodPost, "/v1/usuarios", loginAdmin.AccessToken,
-		httpusuario.CriarUsuarioRequest{Nome: "Bia Lima", Email: "bia@oficina.com", Senha: "senhaInicial123", Papel: shared.PapelMecanico},
+		httpusuario.CriarUsuarioRequest{Nome: "Bia Lima", Email: "bia@oficina.com", Senha: "senhaInicial123", Papel: string(shared.PapelMecanico)},
 		&criado)
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("POST /v1/usuarios falhou: status %d, body %q", rec.Code, rec.Body.String())

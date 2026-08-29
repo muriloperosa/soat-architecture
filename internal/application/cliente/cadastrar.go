@@ -30,7 +30,7 @@ func (uc *CriarClienteUseCase) Executar(
 
 	cliente, err := domain.NewCliente(
 		input.Documento,
-		input.Tipo,
+		domain.TipoPessoa(input.Tipo),
 		input.Nome,
 		input.Email,
 		input.Telefone,
