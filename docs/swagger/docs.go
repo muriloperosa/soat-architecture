@@ -1346,6 +1346,91 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/relatorios/ordens-servico/transicao-status": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Calcula quantas OS fizeram a transição from_status-\u003eto_status no período informado e a duração média/mínima/máxima. Restrito a administrador.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Relatórios"
+                ],
+                "summary": "Relatório de transição de status de Ordens de Serviço",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Data inicial (YYYY-MM-DD)",
+                        "name": "start_date",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Data final (YYYY-MM-DD)",
+                        "name": "final_date",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Status de origem",
+                        "name": "from_status",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Status de destino",
+                        "name": "to_status",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Unidade de tempo da resposta: h (horas - padrão), m (minutos) ou s (segundos)",
+                        "name": "unit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/relatorio.TransicaoStatusResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/servicos": {
             "get": {
                 "security": [
@@ -2734,6 +2819,31 @@ const docTemplate = `{
                 "quantidade": {
                     "type": "integer",
                     "example": 10
+                }
+            }
+        },
+        "relatorio.TransicaoStatusResponse": {
+            "type": "object",
+            "properties": {
+                "tempo_maximo": {
+                    "type": "number",
+                    "example": 3
+                },
+                "tempo_medio": {
+                    "type": "number",
+                    "example": 1.5
+                },
+                "tempo_minimo": {
+                    "type": "number",
+                    "example": 0.5
+                },
+                "total_ordens_servico": {
+                    "type": "integer",
+                    "example": 12
+                },
+                "unidade": {
+                    "type": "string",
+                    "example": "h"
                 }
             }
         },
