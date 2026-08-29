@@ -95,9 +95,10 @@ type Container struct {
 	AtivarServicoUC    *appservico.AtivarServicoUseCase
 	InativarServicoUC  *appservico.InativarServicoUseCase
 
-	AbrirOrdemServicoUC   *appordemservico.AbrirOrdemServicoUseCase
-	IniciarDiagnosticoUC  *appordemservico.IniciarDiagnosticoUseCase
-	InformarDiagnosticoUC *appordemservico.InformarDiagnosticoUseCase
+	AbrirOrdemServicoUC    *appordemservico.AbrirOrdemServicoUseCase
+	IniciarDiagnosticoUC   *appordemservico.IniciarDiagnosticoUseCase
+	InformarDiagnosticoUC  *appordemservico.InformarDiagnosticoUseCase
+	EntregarOrdemServicoUC *appordemservico.EntregarOrdemServicoUseCase
 }
 
 func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
@@ -174,6 +175,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	)
 	c.IniciarDiagnosticoUC = appordemservico.NewIniciarDiagnosticoUseCase(c.OrdemServicoRepo)
 	c.InformarDiagnosticoUC = appordemservico.NewInformarDiagnosticoUseCase(c.OrdemServicoRepo)
+	c.EntregarOrdemServicoUC = appordemservico.NewEntregarOrdemServicoUseCase(c.OrdemServicoRepo)
 
 	return c
 }
