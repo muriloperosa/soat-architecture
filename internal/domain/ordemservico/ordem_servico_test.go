@@ -248,6 +248,167 @@ func TestValidarTransicaoParaAguardandoAprovacao_ExigeDiagnostico(t *testing.T) 
 	require.NoError(t, os.ValidarTransicaoPara(ordemservico.StatusAguardandoAprovacao))
 }
 
+func osAprovada(t *testing.T, id uint64) *ordemservico.OrdemServico {
+	t.Helper()
+	numero, err := ordemservico.NewNumeroOrdemServico("OS-2026-0077")
+	require.NoError(t, err)
+
+	cadastro := time.Date(2026, time.August, 10, 9, 0, 0, 0, time.UTC)
+	atualizacao := cadastro.Add(4 * time.Hour)
+	historico := []ordemservico.HistoricoStatus{
+		ordemservico.ReidratarHistoricoStatus(1, id, ordemservico.StatusRecebida, cadastro, 3, ""),
+		ordemservico.ReidratarHistoricoStatus(2, id, ordemservico.StatusAprovada, atualizacao, 3, ""),
+	}
+
+	return ordemservico.ReidratarOrdemServico(
+		id,
+		numero,
+		10,
+		20,
+		52_300,
+		ordemservico.StatusAprovada,
+		"motor revisado",
+		"",
+		3,
+		historico,
+		cadastro,
+		atualizacao,
+	)
+}
+
+func TestIniciarExecucao_ComSucesso(t *testing.T) {
+	os := osAprovada(t, 42)
+	antes := os.DataAtualizacao()
+
+	err := os.IniciarExecucao(7)
+
+	require.NoError(t, err)
+	require.Equal(t, ordemservico.StatusEmExecucao, os.Status())
+	require.False(t, os.DataAtualizacao().Before(antes))
+	historico := os.HistoricoStatus()
+	require.Len(t, historico, 3)
+	require.Equal(t, ordemservico.StatusEmExecucao, historico[2].Status())
+	require.Equal(t, uint64(42), historico[2].OrdemServicoID())
+	require.Equal(t, uint64(7), historico[2].AlteradoPor())
+	require.Empty(t, historico[2].Motivo())
+	require.Equal(t, os.DataAtualizacao(), historico[2].AlteradoEm())
+}
+
+func TestIniciarExecucao_SomenteOSAprovada(t *testing.T) {
+	testes := []struct {
+		nome   string
+		status ordemservico.StatusOrdemServico
+	}{
+		{"recebida", ordemservico.StatusRecebida},
+		{"rejeitada", ordemservico.StatusRejeitada},
+		{"aguardando aprovação", ordemservico.StatusAguardandoAprovacao},
+	}
+
+	for _, teste := range testes {
+		t.Run(teste.nome, func(t *testing.T) {
+			os := osAprovada(t, 42)
+			os = ordemservico.ReidratarOrdemServico(
+				os.ID(), os.Numero(), os.ClienteID(), os.VeiculoID(), os.QuilometragemEntrada(),
+				teste.status, os.Diagnostico(), os.Observacoes(), os.CriadoPor(),
+				os.HistoricoStatus(), os.DataCadastro(), os.DataAtualizacao(),
+			)
+
+			err := os.IniciarExecucao(7)
+
+			require.ErrorIs(t, err, ordemservico.ErrTransicaoStatusInvalida)
+			require.Equal(t, teste.status, os.Status())
+		})
+	}
+}
+
+func TestIniciarExecucao_ResponsavelObrigatorio(t *testing.T) {
+	os := osAprovada(t, 42)
+
+	err := os.IniciarExecucao(0)
+
+	require.ErrorIs(t, err, ordemservico.ErrResponsavelHistoricoObrigatorio)
+	require.Equal(t, ordemservico.StatusAprovada, os.Status())
+	require.Len(t, os.HistoricoStatus(), 2)
+}
+
+func osFinalizada(t *testing.T, id uint64) *ordemservico.OrdemServico {
+	t.Helper()
+	numero, err := ordemservico.NewNumeroOrdemServico("OS-2026-0099")
+	require.NoError(t, err)
+
+	cadastro := time.Date(2026, time.August, 1, 9, 0, 0, 0, time.UTC)
+	atualizacao := cadastro.Add(3 * time.Hour)
+	historico := []ordemservico.HistoricoStatus{
+		ordemservico.ReidratarHistoricoStatus(1, id, ordemservico.StatusRecebida, cadastro, 3, ""),
+		ordemservico.ReidratarHistoricoStatus(2, id, ordemservico.StatusFinalizada, atualizacao, 3, ""),
+	}
+
+	return ordemservico.ReidratarOrdemServico(
+		id,
+		numero,
+		10,
+		20,
+		52_300,
+		ordemservico.StatusFinalizada,
+		"motor revisado",
+		"",
+		3,
+		historico,
+		cadastro,
+		atualizacao,
+	)
+}
+
+func TestEntregar_ComSucesso(t *testing.T) {
+	os := osFinalizada(t, 42)
+	antes := os.DataAtualizacao()
+
+	err := os.Entregar(7)
+
+	require.NoError(t, err)
+	require.Equal(t, ordemservico.StatusEntregue, os.Status())
+	require.False(t, os.DataAtualizacao().Before(antes))
+	historico := os.HistoricoStatus()
+	require.Len(t, historico, 3)
+	require.Equal(t, ordemservico.StatusEntregue, historico[2].Status())
+	require.Equal(t, uint64(42), historico[2].OrdemServicoID())
+	require.Equal(t, uint64(7), historico[2].AlteradoPor())
+	require.Empty(t, historico[2].Motivo())
+	require.Equal(t, os.DataAtualizacao(), historico[2].AlteradoEm())
+}
+
+func TestEntregar_SomenteOSFinalizada(t *testing.T) {
+	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
+	require.NoError(t, err)
+
+	err = os.Entregar(7)
+
+	require.ErrorIs(t, err, ordemservico.ErrTransicaoStatusInvalida)
+	require.Equal(t, ordemservico.StatusRecebida, os.Status())
+	require.Len(t, os.HistoricoStatus(), 1)
+}
+
+func TestEntregar_ResponsavelObrigatorio(t *testing.T) {
+	os := osFinalizada(t, 42)
+
+	err := os.Entregar(0)
+
+	require.ErrorIs(t, err, ordemservico.ErrResponsavelHistoricoObrigatorio)
+	require.Equal(t, ordemservico.StatusFinalizada, os.Status())
+	require.Len(t, os.HistoricoStatus(), 2)
+}
+
+func TestEntregar_NaoPermiteTransicaoDeEntregueParaExecucao(t *testing.T) {
+	os := osFinalizada(t, 42)
+	require.NoError(t, os.Entregar(7))
+
+	err := os.Entregar(7)
+
+	require.ErrorIs(t, err, ordemservico.ErrTransicaoStatusInvalida)
+	require.Equal(t, ordemservico.StatusEntregue, os.Status())
+	require.False(t, ordemservico.StatusEntregue.PermiteTransicaoPara(ordemservico.StatusEmExecucao))
+}
+
 func TestStatusOrdemServicoDefineTransicoesPermitidas(t *testing.T) {
 	permitidas := map[ordemservico.StatusOrdemServico][]ordemservico.StatusOrdemServico{
 		ordemservico.StatusRecebida:            {ordemservico.StatusEmDiagnostico},

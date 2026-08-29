@@ -29,6 +29,20 @@ func toInformarDiagnosticoInput(
 	}
 }
 
+func toIniciarExecucaoInput(ordemServicoID, usuarioID uint64) app.IniciarExecucaoInput {
+	return app.IniciarExecucaoInput{
+		OrdemServicoID: ordemServicoID,
+		UsuarioID:      usuarioID,
+	}
+}
+
+func toEntregarInput(ordemServicoID, usuarioID uint64) app.EntregarOrdemServicoInput {
+	return app.EntregarOrdemServicoInput{
+		OrdemServicoID: ordemServicoID,
+		UsuarioID:      usuarioID,
+	}
+}
+
 func toResponse(output app.OrdemServicoOutput) OrdemServicoResponse {
 	return OrdemServicoResponse{
 		ID:                   output.ID,
