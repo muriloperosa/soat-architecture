@@ -39,6 +39,7 @@ func TestNewOrdemServico(t *testing.T) {
 
 	historico := os.HistoricoStatus()
 	require.Len(t, historico, 1)
+	require.Equal(t, uint64(0), historico[0].ID())
 	require.Equal(t, ordemservico.StatusRecebida, historico[0].Status())
 	require.Equal(t, uint64(30), historico[0].AlteradoPor())
 	require.Equal(t, os.DataCadastro(), historico[0].AlteradoEm())
@@ -158,10 +159,10 @@ func TestAtribuirIDPropagaIdentidadeAoHistoricoInicial(t *testing.T) {
 }
 
 func TestNewHistoricoStatusValidaDados(t *testing.T) {
-	_, err := ordemservico.NewHistoricoStatus("INVALIDO", 1, "")
+	_, err := ordemservico.NewHistoricoStatus("INVALIDO", 1, "", time.Now())
 	require.ErrorIs(t, err, ordemservico.ErrStatusInvalido)
 
-	_, err = ordemservico.NewHistoricoStatus(ordemservico.StatusRecebida, 0, "")
+	_, err = ordemservico.NewHistoricoStatus(ordemservico.StatusRecebida, 0, "", time.Now())
 	require.ErrorIs(t, err, ordemservico.ErrResponsavelHistoricoObrigatorio)
 }
 

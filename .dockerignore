@@ -20,8 +20,14 @@ test/
 *.out
 coverage.html
 
+# Relatórios de segurança (SCA/SAST/DAST)
+security/reports/
+
 # Local dev files
 .air.toml
 .mockery.yaml
 compose.yml
+compose.tools.yml
 Makefile
+security/zap-scan.sh
+security/zap-rules.tsv

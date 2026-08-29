@@ -17,7 +17,7 @@ func RegisterOrdemServicoRoutes(rg *gin.RouterGroup, container *wiring.Container
 
 	ordensServico := rg.Group(
 		"/ordens-servico",
-		middleware.AuthenticationMiddleware(container.JWTAuth, container.RefreshTokensRepo, container.UsuarioStatusRepo),
+		middleware.AuthenticationMiddleware(container.JWTAuth, container.RefreshTokensRepo, container.UsuarioStatusRepo, container.ClienteStatusRepo),
 		middleware.AuthorizationMiddleware(domainauth.TipoInterno),
 	)
 

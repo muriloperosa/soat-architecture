@@ -9,6 +9,7 @@ import (
 	httpauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/auth"
 	httpcliente "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/cliente"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/health"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/middleware"
 	httpordemservico "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/ordemservico"
 	httppeca "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/peca"
 	httprelatorio "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/relatorio"
@@ -21,7 +22,8 @@ import (
 func NewRouter(c *wiring.Container) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Logger())
-	router.Use(gin.Recovery())
+	router.Use(middleware.RecoveryMiddleware())
+	router.Use(middleware.SecurityHeadersMiddleware())
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 

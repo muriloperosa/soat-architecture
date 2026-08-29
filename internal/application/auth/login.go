@@ -11,7 +11,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const msgCredenciaisInvalidas = "credenciais inválidas"
+const msgCredenciaisInvalidas = "credenciais inválidas" // #nosec G101 -- mensagem de erro, não segredo
 
 // LoginUseCase autentica por email+senha e emite o par access+refresh token.
 // A fonte de credenciais (interno ou cliente) e o TipoUsuario já vêm decididos

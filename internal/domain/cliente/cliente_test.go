@@ -59,6 +59,7 @@ func TestNewClienteValido(t *testing.T) {
 
 	require.True(t, cliente.Ativo())
 	require.True(t, cliente.RequerAlterarSenha())
+	require.Equal(t, uint64(1), cliente.CriadoPor())
 
 	require.False(t, cliente.DataCadastro().IsZero())
 	require.False(t, cliente.DataAtualizacao().IsZero())
@@ -100,6 +101,21 @@ func TestNewClienteDocumentoInvalido(t *testing.T) {
 	)
 
 	require.ErrorIs(t, err, ErrCPFInvalido)
+	require.Equal(t, Cliente{}, cliente)
+}
+
+func TestNewClienteCriadoPorObrigatorio(t *testing.T) {
+	cliente, err := NewCliente(
+		"529.982.247-25",
+		TipoPessoaFisica,
+		"João da Silva",
+		"joao@email.com",
+		"(44) 99999-1234",
+		"senha123",
+		0,
+	)
+
+	require.ErrorIs(t, err, ErrCriadoPorObrigatorio)
 	require.Equal(t, Cliente{}, cliente)
 }
 

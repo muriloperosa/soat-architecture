@@ -49,12 +49,12 @@ func NewOrdemServico(
 		return nil, err
 	}
 
-	historicoInicial, err := NewHistoricoStatus(StatusRecebida, criadoPor, "")
+	agora := time.Now()
+
+	historicoInicial, err := NewHistoricoStatus(StatusRecebida, criadoPor, "", agora)
 	if err != nil {
 		return nil, err
 	}
-
-	agora := time.Now()
 
 	return &OrdemServico{
 		numero:               numeroVO,
@@ -134,7 +134,7 @@ func (o *OrdemServico) IniciarDiagnostico(alteradoPor uint64) error {
 		return err
 	}
 
-	historico, err := NewHistoricoStatus(StatusEmDiagnostico, alteradoPor, "")
+	historico, err := NewHistoricoStatus(StatusEmDiagnostico, alteradoPor, "", time.Now())
 	if err != nil {
 		return err
 	}

@@ -187,6 +187,65 @@ func (_c *Repository_BuscarPorID_Call) RunAndReturn(run func(context.Context, ui
 	return _c
 }
 
+// BuscarPorIDComBloqueio provides a mock function with given fields: ctx, id
+func (_m *Repository) BuscarPorIDComBloqueio(ctx context.Context, id uint64) (*peca.Peca, error) {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BuscarPorIDComBloqueio")
+	}
+
+	var r0 *peca.Peca
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint64) (*peca.Peca, error)); ok {
+		return rf(ctx, id)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uint64) *peca.Peca); ok {
+		r0 = rf(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*peca.Peca)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uint64) error); ok {
+		r1 = rf(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Repository_BuscarPorIDComBloqueio_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BuscarPorIDComBloqueio'
+type Repository_BuscarPorIDComBloqueio_Call struct {
+	*mock.Call
+}
+
+// BuscarPorIDComBloqueio is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint64
+func (_e *Repository_Expecter) BuscarPorIDComBloqueio(ctx interface{}, id interface{}) *Repository_BuscarPorIDComBloqueio_Call {
+	return &Repository_BuscarPorIDComBloqueio_Call{Call: _e.mock.On("BuscarPorIDComBloqueio", ctx, id)}
+}
+
+func (_c *Repository_BuscarPorIDComBloqueio_Call) Run(run func(ctx context.Context, id uint64)) *Repository_BuscarPorIDComBloqueio_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uint64))
+	})
+	return _c
+}
+
+func (_c *Repository_BuscarPorIDComBloqueio_Call) Return(_a0 *peca.Peca, _a1 error) *Repository_BuscarPorIDComBloqueio_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Repository_BuscarPorIDComBloqueio_Call) RunAndReturn(run func(context.Context, uint64) (*peca.Peca, error)) *Repository_BuscarPorIDComBloqueio_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Salvar provides a mock function with given fields: ctx, _a1
 func (_m *Repository) Salvar(ctx context.Context, _a1 *peca.Peca) error {
 	ret := _m.Called(ctx, _a1)

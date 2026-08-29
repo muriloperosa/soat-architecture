@@ -18,16 +18,20 @@ import (
 	domainordemservico "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
 	domainpeca "github.com/muriloperosa/soat-architecture/internal/domain/peca"
 	domainrelatorio "github.com/muriloperosa/soat-architecture/internal/domain/relatorio"
+	domainreservapeca "github.com/muriloperosa/soat-architecture/internal/domain/reservapeca"
 	domainservico "github.com/muriloperosa/soat-architecture/internal/domain/servico"
+	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	domainusuario "github.com/muriloperosa/soat-architecture/internal/domain/usuario"
 	domainveiculo "github.com/muriloperosa/soat-architecture/internal/domain/veiculo"
 	infraauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/auth"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/config"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql"
 	mysqlauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/auth"
 	mysqlcliente "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/cliente"
 	mysqlordemservico "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/ordemservico"
 	mysqlpeca "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/peca"
 	mysqlrelatorio "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/relatorio"
+	mysqlreservapeca "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/reservapeca"
 	mysqlservico "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/servico"
 	mysqlusuario "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/usuario"
 	mysqlveiculo "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/veiculo"
@@ -44,6 +48,8 @@ type Container struct {
 	ClienteRepository domaincliente.ClienteRepository
 	ClienteStatusRepo domainauth.UsuarioStatusRepository
 	PecaRepo          domainpeca.Repository
+	ReservaPecaRepo   domainreservapeca.Repository
+	TransactionRunner shared.TransactionRunner
 	VeiculoRepo       domainveiculo.Repository
 	ServicoRepo       domainservico.ServicoRepository
 	OrdemServicoRepo  domainordemservico.OrdemServicoRepository
@@ -69,12 +75,15 @@ type Container struct {
 	InativarClienteUseCase              *appcliente.InativarClienteUseCase
 	AlterarSenhaClienteUseCase          *appcliente.AlterarSenhaClienteUseCase
 
-	CadastrarPecaUC      *apppeca.CadastrarPecaUseCase
-	AtualizarPecaUC      *apppeca.AtualizarPecaUseCase
-	AtivarPecaUC         *apppeca.AtivarPecaUseCase
-	InativarPecaUC       *apppeca.InativarPecaUseCase
-	ConsultarPecaPorIDUC *apppeca.ConsultarPecaPorIDUseCase
-	ReporEstoquePecaUC   *apppeca.ReporEstoqueUseCase
+	CadastrarPecaUC            *apppeca.CadastrarPecaUseCase
+	AtualizarPecaUC            *apppeca.AtualizarPecaUseCase
+	AtivarPecaUC               *apppeca.AtivarPecaUseCase
+	InativarPecaUC             *apppeca.InativarPecaUseCase
+	ConsultarPecaPorIDUC       *apppeca.ConsultarPecaPorIDUseCase
+	ReporEstoquePecaUC         *apppeca.ReporEstoqueUseCase
+	ConsultarDisponibilidadeUC *apppeca.ConsultarDisponibilidadeUseCase
+	ReservarPecaUC             *apppeca.ReservarPecaUseCase
+	LiberarReservaPecaUC       *apppeca.LiberarReservaPecaUseCase
 
 	CadastrarVeiculoUC         *appveiculo.CadastrarVeiculoUseCase
 	AtualizarVeiculoUC         *appveiculo.AtualizarVeiculoUseCase
@@ -103,6 +112,8 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.UsuarioRepo = mysqlusuario.NewUsuarioRepository(db)
 	c.ClienteRepository = mysqlcliente.NewClienteRepository(db)
 	c.PecaRepo = mysqlpeca.NewRepository(db)
+	c.ReservaPecaRepo = mysqlreservapeca.NewRepository(db)
+	c.TransactionRunner = mysql.NewTransactionRunner(db)
 	c.VeiculoRepo = mysqlveiculo.NewRepository(db)
 	c.ServicoRepo = mysqlservico.NewServicoRepository(db)
 	c.OrdemServicoRepo = mysqlordemservico.NewOrdemServicoRepository(db)
@@ -145,6 +156,9 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.InativarPecaUC = apppeca.NewInativarPecaUseCase(c.PecaRepo)
 	c.ConsultarPecaPorIDUC = apppeca.NewConsultarPecaPorIDUseCase(c.PecaRepo)
 	c.ReporEstoquePecaUC = apppeca.NewReporEstoqueUseCase(c.PecaRepo)
+	c.ConsultarDisponibilidadeUC = apppeca.NewConsultarDisponibilidadeUseCase(c.PecaRepo, c.ReservaPecaRepo)
+	c.ReservarPecaUC = apppeca.NewReservarPecaUseCase(c.PecaRepo, c.ReservaPecaRepo, c.TransactionRunner)
+	c.LiberarReservaPecaUC = apppeca.NewLiberarReservaPecaUseCase(c.ReservaPecaRepo, c.TransactionRunner)
 
 	c.CadastrarVeiculoUC = appveiculo.NewCadastrarVeiculoUseCase(c.VeiculoRepo)
 	c.AtualizarVeiculoUC = appveiculo.NewAtualizarVeiculoUseCase(c.VeiculoRepo)

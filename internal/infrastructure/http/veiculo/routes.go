@@ -12,7 +12,7 @@ import (
 func RegisterVeiculoRoutes(rg *gin.RouterGroup, c *wiring.Container) {
 	h := NewHandler(c.CadastrarVeiculoUC, c.AtualizarVeiculoUC, c.AtivarVeiculoUC, c.InativarVeiculoUC, c.ConsultarVeiculoPorIDUC, c.ConsultarVeiculoPorPlacaUC)
 
-	autenticado := rg.Group("/veiculos", middleware.AuthenticationMiddleware(c.JWTAuth, c.RefreshTokensRepo, c.UsuarioStatusRepo))
+	autenticado := rg.Group("/veiculos", middleware.AuthenticationMiddleware(c.JWTAuth, c.RefreshTokensRepo, c.UsuarioStatusRepo, c.ClienteStatusRepo))
 
 	gestao := autenticado.Group("", middleware.AuthorizationMiddleware(domainauth.TipoInterno, shared.PapelAdmin))
 	gestao.POST("", h.Cadastrar)
