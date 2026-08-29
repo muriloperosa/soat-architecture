@@ -48,6 +48,30 @@ func TestIniciarExecucaoUseCase_OSInexistente(t *testing.T) {
 	require.ErrorIs(t, err, domain.ErrOrdemServicoNaoEncontrada)
 }
 
+func TestIniciarExecucaoUseCase_ErroAoBuscar(t *testing.T) {
+	repository := ordemservicomocks.NewOrdemServicoRepository(t)
+	erroBanco := errors.New("banco indisponível")
+	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(nil, erroBanco)
+
+	uc := app.NewIniciarExecucaoUseCase(repository)
+	_, err := uc.Executar(context.Background(), app.IniciarExecucaoInput{OrdemServicoID: 42, UsuarioID: 7})
+
+	var appErr *shared.AppError
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindInternal, appErr.Kind)
+	require.ErrorIs(t, err, erroBanco)
+}
+
+func TestIniciarExecucaoUseCase_OSNula(t *testing.T) {
+	repository := ordemservicomocks.NewOrdemServicoRepository(t)
+	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(nil, nil)
+
+	uc := app.NewIniciarExecucaoUseCase(repository)
+	_, err := uc.Executar(context.Background(), app.IniciarExecucaoInput{OrdemServicoID: 42, UsuarioID: 7})
+
+	require.ErrorIs(t, err, domain.ErrOrdemServicoNaoEncontrada)
+}
+
 func TestIniciarExecucaoUseCase_TransicaoInvalida(t *testing.T) {
 	repository := ordemservicomocks.NewOrdemServicoRepository(t)
 	os := ordemServicoRecebida(t)
