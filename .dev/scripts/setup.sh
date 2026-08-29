@@ -63,6 +63,9 @@ CREDENCIAIS="$($COMPOSE_TOOLS run --rm toolbox go run ./cmd/seed)"
 log "Subindo a aplicação"
 docker compose up -d --build app
 
+app_port="$(grep -m1 '^APP_HOST_PORT=' .env | cut -d= -f2)"
+
 log "Ambiente pronto!"
 echo "$CREDENCIAIS"
 echo "Use as credenciais acima para testar a aplicação."
+echo "Health check: http://localhost:${app_port}/v1/health"
