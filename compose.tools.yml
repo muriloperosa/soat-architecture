@@ -94,6 +94,7 @@ services:
     command:
       - >
         zap-api-scan.py -t http://app-dast:${APP_PORT:-8080}/swagger/doc.json -f openapi
+        -O http://app-dast:${APP_PORT:-8080}
         -r ${ZAP_REPORT_PREFIX:-zap-report}.html -J ${ZAP_REPORT_PREFIX:-zap-report}.json
         -c zap-rules.tsv
         -z "-config replacer.full_list(0).description=auth
