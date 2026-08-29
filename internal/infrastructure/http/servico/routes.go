@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httpquery"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/middleware"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/wiring"
 )
@@ -18,6 +19,7 @@ func RegisterServicoRoutes(rg *gin.RouterGroup, c *wiring.Container) {
 		c.BuscarServicoUC,
 		c.AtivarServicoUC,
 		c.InativarServicoUC,
+		httpquery.NewParser(),
 	)
 
 	g := rg.Group("/servicos",

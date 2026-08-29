@@ -1,415 +1,692 @@
 package servico_test
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 
-	"github.com/gin-gonic/gin"
 	appservico "github.com/muriloperosa/soat-architecture/internal/application/servico"
-	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
+	"github.com/muriloperosa/soat-architecture/internal/domain/query"
 	domainservico "github.com/muriloperosa/soat-architecture/internal/domain/servico"
 	"github.com/muriloperosa/soat-architecture/internal/domain/servico/mocks"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
-	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/middleware"
-	httpservico "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/servico"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
-func preco(v float64) *float64 { return &v }
-
-func claimsInterno() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "1", Tipo: domainauth.TipoInterno, Papel: shared.PapelAtendente})
-		c.Next()
-	}
-}
-
 func novoServico(t *testing.T) *domainservico.Servico {
 	t.Helper()
-	s, err := domainservico.NewServico("Troca de óleo", "Troca de óleo e filtro", 150.50, 60, 1)
+
+	s, err := domainservico.NewServico(
+		"Troca de óleo",
+		"Troca de óleo e filtro",
+		150.50,
+		60,
+		1,
+	)
+
 	require.NoError(t, err)
+
 	return s
 }
 
-func TestHandler_Criar_RequestValido_Retorna201(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+func TestCriarServicoUseCase_Executar_DadosValidos_CriaAtivo(t *testing.T) {
 	repo := mocks.NewServicoRepository(t)
-	repo.EXPECT().Salvar(mock.Anything, mock.AnythingOfType("*servico.Servico")).
-		Run(func(ctx context.Context, s *domainservico.Servico) { s.AtribuirID(1) }).
+	uc := appservico.NewCriarServicoUseCase(repo)
+
+	repo.
+		EXPECT().
+		Salvar(
+			mock.Anything,
+			mock.AnythingOfType("*servico.Servico"),
+		).
+		Run(func(ctx context.Context, s *domainservico.Servico) {
+			s.AtribuirID(1)
+		}).
 		Return(nil)
 
-	h := httpservico.NewHandler(appservico.NewCriarServicoUseCase(repo), nil, nil, nil, nil, nil)
-	engine := gin.New()
-	engine.Use(claimsInterno())
-	engine.POST("/v1/servicos", h.Criar)
+	out, err := uc.Executar(
+		context.Background(),
+		appservico.CriarServicoInput{
+			Nome:                 "Troca de óleo",
+			Descricao:            "Troca de óleo e filtro",
+			PrecoBase:            150.50,
+			TempoEstimadoMinutos: 60,
+			CriadoPor:            1,
+		},
+	)
 
-	body, _ := json.Marshal(httpservico.CriarServicoRequest{
-		Nome: "Troca de óleo", Descricao: "Troca de óleo e filtro", PrecoBase: preco(150.50), TempoEstimadoMinutos: 60,
-	})
-	req := httptest.NewRequest(http.MethodPost, "/v1/servicos", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-	engine.ServeHTTP(rec, req)
-
-	require.Equal(t, http.StatusCreated, rec.Code)
-
-	var resp httpservico.ServicoResponse
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-	require.Equal(t, uint64(1), resp.ID)
-	require.True(t, resp.Ativo)
-	require.Equal(t, uint64(1), resp.CriadoPor)
-	require.Equal(t, 150.50, resp.PrecoBase)
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), out.ID)
+	require.True(t, out.Ativo)
+	require.Equal(t, 150.50, out.PrecoBase)
+	require.Equal(t, 60, out.TempoEstimadoMinutos)
+	require.Equal(t, uint64(1), out.CriadoPor)
 }
 
-func TestHandler_Criar_PrecoZero_Retorna201(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+func TestCriarServicoUseCase_Executar_DadosInvalidos_PropagaErroDeValidacao(t *testing.T) {
 	repo := mocks.NewServicoRepository(t)
-	repo.EXPECT().Salvar(mock.Anything, mock.AnythingOfType("*servico.Servico")).
-		Run(func(ctx context.Context, s *domainservico.Servico) { s.AtribuirID(1) }).
+	uc := appservico.NewCriarServicoUseCase(repo)
+
+	_, err := uc.Executar(
+		context.Background(),
+		appservico.CriarServicoInput{
+			Nome:                 "",
+			Descricao:            "descrição",
+			PrecoBase:            100,
+			TempoEstimadoMinutos: 30,
+			CriadoPor:            1,
+		},
+	)
+
+	require.ErrorIs(t, err, domainservico.ErrNomeObrigatorio)
+}
+
+func TestCriarServicoUseCase_Executar_ErroDoBancoAoSalvar_RetornaInternalError(t *testing.T) {
+	repo := mocks.NewServicoRepository(t)
+	uc := appservico.NewCriarServicoUseCase(repo)
+
+	repo.
+		EXPECT().
+		Salvar(
+			mock.Anything,
+			mock.AnythingOfType("*servico.Servico"),
+		).
+		Return(errors.New("conexao recusada"))
+
+	_, err := uc.Executar(
+		context.Background(),
+		appservico.CriarServicoInput{
+			Nome:                 "Troca de óleo",
+			Descricao:            "descrição",
+			PrecoBase:            100,
+			TempoEstimadoMinutos: 30,
+			CriadoPor:            1,
+		},
+	)
+
+	var appErr *shared.AppError
+
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindInternal, appErr.Kind)
+}
+
+func TestAtualizarServicoUseCase_Executar_ServicoExiste_AtualizaCampos(t *testing.T) {
+	repo := mocks.NewServicoRepository(t)
+	uc := appservico.NewAtualizarServicoUseCase(repo)
+
+	existente := novoServico(t)
+	existente.AtribuirID(1)
+
+	repo.
+		EXPECT().
+		BuscarPorID(mock.Anything, uint64(1)).
+		Return(existente, nil)
+
+	repo.
+		EXPECT().
+		Atualizar(
+			mock.Anything,
+			mock.AnythingOfType("*servico.Servico"),
+		).
 		Return(nil)
 
-	h := httpservico.NewHandler(appservico.NewCriarServicoUseCase(repo), nil, nil, nil, nil, nil)
-	engine := gin.New()
-	engine.Use(claimsInterno())
-	engine.POST("/v1/servicos", h.Criar)
+	out, err := uc.Executar(
+		context.Background(),
+		appservico.AtualizarServicoInput{
+			ID:                   1,
+			Nome:                 "Alinhamento",
+			Descricao:            "alinhamento e balanceamento",
+			PrecoBase:            200.75,
+			TempoEstimadoMinutos: 90,
+		},
+	)
 
-	body, _ := json.Marshal(httpservico.CriarServicoRequest{
-		Nome: "Diagnóstico", Descricao: "avaliação gratuita", PrecoBase: preco(0), TempoEstimadoMinutos: 30,
-	})
-	req := httptest.NewRequest(http.MethodPost, "/v1/servicos", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-	engine.ServeHTTP(rec, req)
-
-	require.Equal(t, http.StatusCreated, rec.Code)
-
-	var resp httpservico.ServicoResponse
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-	require.Equal(t, 0.0, resp.PrecoBase)
+	require.NoError(t, err)
+	require.Equal(t, "Alinhamento", out.Nome)
+	require.Equal(t, 200.75, out.PrecoBase)
+	require.Equal(t, 90, out.TempoEstimadoMinutos)
+	require.Equal(t, uint64(1), out.CriadoPor)
+	require.True(t, out.Ativo)
 }
 
-func TestHandler_Criar_SemClaims_Retorna401(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+func TestAtualizarServicoUseCase_Executar_ServicoNaoExiste_RetornaNotFound(t *testing.T) {
 	repo := mocks.NewServicoRepository(t)
+	uc := appservico.NewAtualizarServicoUseCase(repo)
 
-	h := httpservico.NewHandler(appservico.NewCriarServicoUseCase(repo), nil, nil, nil, nil, nil)
-	engine := gin.New()
-	engine.POST("/v1/servicos", h.Criar)
+	repo.
+		EXPECT().
+		BuscarPorID(mock.Anything, uint64(99)).
+		Return(nil, domainservico.ErrServicoNaoEncontrado)
 
-	body, _ := json.Marshal(httpservico.CriarServicoRequest{
-		Nome: "Troca de óleo", Descricao: "descrição", PrecoBase: preco(100), TempoEstimadoMinutos: 30,
-	})
-	req := httptest.NewRequest(http.MethodPost, "/v1/servicos", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-	engine.ServeHTTP(rec, req)
+	_, err := uc.Executar(
+		context.Background(),
+		appservico.AtualizarServicoInput{
+			ID:                   99,
+			Nome:                 "X",
+			Descricao:            "Y",
+			PrecoBase:            10,
+			TempoEstimadoMinutos: 15,
+		},
+	)
 
-	require.Equal(t, http.StatusUnauthorized, rec.Code)
+	require.ErrorIs(t, err, domainservico.ErrServicoNaoEncontrado)
 }
 
-func TestHandler_Criar_BodyInvalido_Retorna400(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+func TestAtualizarServicoUseCase_Executar_ErroDoBancoAoBuscar_RetornaInternalError(t *testing.T) {
 	repo := mocks.NewServicoRepository(t)
+	uc := appservico.NewAtualizarServicoUseCase(repo)
 
-	h := httpservico.NewHandler(appservico.NewCriarServicoUseCase(repo), nil, nil, nil, nil, nil)
-	engine := gin.New()
-	engine.Use(claimsInterno())
-	engine.POST("/v1/servicos", h.Criar)
+	repo.
+		EXPECT().
+		BuscarPorID(mock.Anything, uint64(1)).
+		Return(nil, errors.New("conexao recusada"))
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/servicos", bytes.NewReader([]byte("{invalido")))
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-	engine.ServeHTTP(rec, req)
+	_, err := uc.Executar(
+		context.Background(),
+		appservico.AtualizarServicoInput{
+			ID:                   1,
+			Nome:                 "Alinhamento",
+			Descricao:            "descrição",
+			PrecoBase:            200,
+			TempoEstimadoMinutos: 90,
+		},
+	)
 
-	require.Equal(t, http.StatusBadRequest, rec.Code)
+	var appErr *shared.AppError
+
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindInternal, appErr.Kind)
 }
 
-func TestHandler_Criar_ErroInternoDoUseCase_Retorna500(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+func TestAtualizarServicoUseCase_Executar_DadosInvalidos_PropagaErroDeValidacao(t *testing.T) {
 	repo := mocks.NewServicoRepository(t)
-	repo.EXPECT().Salvar(mock.Anything, mock.AnythingOfType("*servico.Servico")).Return(errors.New("conexao recusada"))
+	uc := appservico.NewAtualizarServicoUseCase(repo)
 
-	h := httpservico.NewHandler(appservico.NewCriarServicoUseCase(repo), nil, nil, nil, nil, nil)
-	engine := gin.New()
-	engine.Use(claimsInterno())
-	engine.POST("/v1/servicos", h.Criar)
+	existente := novoServico(t)
+	existente.AtribuirID(1)
 
-	body, _ := json.Marshal(httpservico.CriarServicoRequest{
-		Nome: "Troca de óleo", Descricao: "descrição", PrecoBase: preco(100), TempoEstimadoMinutos: 30,
-	})
-	req := httptest.NewRequest(http.MethodPost, "/v1/servicos", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-	engine.ServeHTTP(rec, req)
+	repo.
+		EXPECT().
+		BuscarPorID(mock.Anything, uint64(1)).
+		Return(existente, nil)
 
-	require.Equal(t, http.StatusInternalServerError, rec.Code)
+	_, err := uc.Executar(
+		context.Background(),
+		appservico.AtualizarServicoInput{
+			ID:                   1,
+			Nome:                 "",
+			Descricao:            "descrição",
+			PrecoBase:            200,
+			TempoEstimadoMinutos: 90,
+		},
+	)
+
+	require.ErrorIs(t, err, domainservico.ErrNomeObrigatorio)
 }
 
-func TestHandler_Listar_Retorna200ComCatalogo(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+func TestAtualizarServicoUseCase_Executar_ErroDoBancoAoAtualizar_RetornaInternalError(t *testing.T) {
 	repo := mocks.NewServicoRepository(t)
-	s := novoServico(t)
-	s.AtribuirID(1)
-	repo.EXPECT().Listar(mock.Anything).Return([]*domainservico.Servico{s}, nil)
+	uc := appservico.NewAtualizarServicoUseCase(repo)
 
-	h := httpservico.NewHandler(nil, nil, appservico.NewListarServicosUseCase(repo), nil, nil, nil)
-	engine := gin.New()
-	engine.GET("/v1/servicos", h.Listar)
+	existente := novoServico(t)
+	existente.AtribuirID(1)
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/servicos", nil)
-	rec := httptest.NewRecorder()
-	engine.ServeHTTP(rec, req)
+	repo.
+		EXPECT().
+		BuscarPorID(mock.Anything, uint64(1)).
+		Return(existente, nil)
 
-	require.Equal(t, http.StatusOK, rec.Code)
+	repo.
+		EXPECT().
+		Atualizar(
+			mock.Anything,
+			mock.AnythingOfType("*servico.Servico"),
+		).
+		Return(errors.New("conexao recusada"))
 
-	var resp []httpservico.ServicoResponse
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-	require.Len(t, resp, 1)
-	require.Equal(t, "Troca de óleo", resp[0].Nome)
+	_, err := uc.Executar(
+		context.Background(),
+		appservico.AtualizarServicoInput{
+			ID:                   1,
+			Nome:                 "Alinhamento",
+			Descricao:            "descrição",
+			PrecoBase:            200,
+			TempoEstimadoMinutos: 90,
+		},
+	)
+
+	var appErr *shared.AppError
+
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindInternal, appErr.Kind)
 }
 
-func TestHandler_Listar_Vazio_RetornaArrayVazio(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+func TestListarServicosUseCase_Executar_RetornaPagina(t *testing.T) {
 	repo := mocks.NewServicoRepository(t)
-	repo.EXPECT().Listar(mock.Anything).Return([]*domainservico.Servico{}, nil)
+	uc := appservico.NewListarServicosUseCase(repo)
 
-	h := httpservico.NewHandler(nil, nil, appservico.NewListarServicosUseCase(repo), nil, nil, nil)
-	engine := gin.New()
-	engine.GET("/v1/servicos", h.Listar)
+	s1 := novoServico(t)
+	s1.AtribuirID(1)
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/servicos", nil)
-	rec := httptest.NewRecorder()
-	engine.ServeHTTP(rec, req)
+	s2, err := domainservico.NewServico(
+		"Alinhamento",
+		"alinhamento e balanceamento",
+		200,
+		90,
+		1,
+	)
+	require.NoError(t, err)
+	s2.AtribuirID(2)
 
-	require.Equal(t, http.StatusOK, rec.Code)
-	require.JSONEq(t, "[]", rec.Body.String())
+	params := query.Params{
+		Offset:    10,
+		Limit:     20,
+		Order:     "nome",
+		Direction: query.DirectionDESC,
+	}
+
+	repo.
+		EXPECT().
+		Listar(mock.Anything, params).
+		Return(
+			query.Page[*domainservico.Servico]{
+				Items: []*domainservico.Servico{
+					s1,
+					s2,
+				},
+				Total:     35,
+				Offset:    10,
+				Limit:     20,
+				Order:     "nome",
+				Direction: query.DirectionDESC,
+			},
+			nil,
+		)
+
+	out, err := uc.Executar(
+		context.Background(),
+		params,
+	)
+
+	require.NoError(t, err)
+
+	require.Len(t, out.Items, 2)
+
+	require.Equal(t, int64(35), out.Total)
+	require.Equal(t, 10, out.Offset)
+	require.Equal(t, 20, out.Limit)
+	require.Equal(t, "nome", out.Order)
+	require.Equal(t, query.DirectionDESC, out.Direction)
+
+	require.Equal(t, uint64(1), out.Items[0].ID)
+	require.Equal(t, "Troca de óleo", out.Items[0].Nome)
+	require.Equal(t, 150.50, out.Items[0].PrecoBase)
+	require.Equal(t, 60, out.Items[0].TempoEstimadoMinutos)
+
+	require.Equal(t, uint64(2), out.Items[1].ID)
+	require.Equal(t, "Alinhamento", out.Items[1].Nome)
+	require.Equal(t, 200.0, out.Items[1].PrecoBase)
+	require.Equal(t, 90, out.Items[1].TempoEstimadoMinutos)
 }
 
-func TestHandler_Listar_ErroDoUseCase_Retorna500(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+func TestListarServicosUseCase_Executar_ListaVazia_RetornaPaginaVazia(t *testing.T) {
 	repo := mocks.NewServicoRepository(t)
-	repo.EXPECT().Listar(mock.Anything).Return(nil, errors.New("conexao recusada"))
+	uc := appservico.NewListarServicosUseCase(repo)
 
-	h := httpservico.NewHandler(nil, nil, appservico.NewListarServicosUseCase(repo), nil, nil, nil)
-	engine := gin.New()
-	engine.GET("/v1/servicos", h.Listar)
+	params := query.Params{
+		Offset:    0,
+		Limit:     20,
+		Order:     "id",
+		Direction: query.DirectionASC,
+	}
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/servicos", nil)
-	rec := httptest.NewRecorder()
-	engine.ServeHTTP(rec, req)
+	repo.
+		EXPECT().
+		Listar(mock.Anything, params).
+		Return(
+			query.Page[*domainservico.Servico]{
+				Items:     []*domainservico.Servico{},
+				Total:     0,
+				Offset:    0,
+				Limit:     20,
+				Order:     "id",
+				Direction: query.DirectionASC,
+			},
+			nil,
+		)
 
-	require.Equal(t, http.StatusInternalServerError, rec.Code)
+	out, err := uc.Executar(
+		context.Background(),
+		params,
+	)
+
+	require.NoError(t, err)
+
+	require.Empty(t, out.Items)
+	require.NotNil(t, out.Items)
+
+	require.Equal(t, int64(0), out.Total)
+	require.Equal(t, 0, out.Offset)
+	require.Equal(t, 20, out.Limit)
+	require.Equal(t, "id", out.Order)
+	require.Equal(t, query.DirectionASC, out.Direction)
 }
 
-func TestHandler_Buscar_ServicoExiste_Retorna200(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+func TestListarServicosUseCase_Executar_ErroDoBanco_RetornaInternalError(t *testing.T) {
 	repo := mocks.NewServicoRepository(t)
-	s := novoServico(t)
-	s.AtribuirID(1)
-	repo.EXPECT().BuscarPorID(mock.Anything, uint64(1)).Return(s, nil)
+	uc := appservico.NewListarServicosUseCase(repo)
 
-	h := httpservico.NewHandler(nil, nil, nil, appservico.NewBuscarServicoUseCase(repo), nil, nil)
-	engine := gin.New()
-	engine.GET("/v1/servicos/:id", h.Buscar)
+	params := query.Params{}
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/servicos/1", nil)
-	rec := httptest.NewRecorder()
-	engine.ServeHTTP(rec, req)
+	repo.
+		EXPECT().
+		Listar(mock.Anything, params).
+		Return(
+			query.Page[*domainservico.Servico]{},
+			errors.New("conexao recusada"),
+		)
 
-	require.Equal(t, http.StatusOK, rec.Code)
+	out, err := uc.Executar(
+		context.Background(),
+		params,
+	)
 
-	var resp httpservico.ServicoResponse
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-	require.Equal(t, uint64(1), resp.ID)
+	require.Error(t, err)
+	require.Empty(t, out.Items)
+
+	var appErr *shared.AppError
+
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindInternal, appErr.Kind)
 }
 
-func TestHandler_Buscar_IDInvalido_Retorna400(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+func TestListarServicosUseCase_Executar_AppErrorDoRepositorio_PropagaErro(t *testing.T) {
 	repo := mocks.NewServicoRepository(t)
+	uc := appservico.NewListarServicosUseCase(repo)
 
-	h := httpservico.NewHandler(nil, nil, nil, appservico.NewBuscarServicoUseCase(repo), nil, nil)
-	engine := gin.New()
-	engine.GET("/v1/servicos/:id", h.Buscar)
+	params := query.Params{
+		Limit: 101,
+	}
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/servicos/nao-e-numero", nil)
-	rec := httptest.NewRecorder()
-	engine.ServeHTTP(rec, req)
+	expectedErr := shared.NewValidationError(
+		"Limit não pode ser maior que 100.",
+	)
 
-	require.Equal(t, http.StatusBadRequest, rec.Code)
+	repo.
+		EXPECT().
+		Listar(mock.Anything, params).
+		Return(
+			query.Page[*domainservico.Servico]{},
+			expectedErr,
+		)
+
+	out, err := uc.Executar(
+		context.Background(),
+		params,
+	)
+
+	require.Error(t, err)
+	require.Same(t, expectedErr, err)
+	require.Empty(t, out.Items)
+
+	var appErr *shared.AppError
+
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindValidation, appErr.Kind)
 }
 
-func TestHandler_Buscar_NaoEncontrado_Retorna404(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+func TestBuscarServicoUseCase_Executar_ServicoExiste_RetornaDados(t *testing.T) {
 	repo := mocks.NewServicoRepository(t)
-	repo.EXPECT().BuscarPorID(mock.Anything, uint64(99)).Return(nil, domainservico.ErrServicoNaoEncontrado)
+	uc := appservico.NewBuscarServicoUseCase(repo)
 
-	h := httpservico.NewHandler(nil, nil, nil, appservico.NewBuscarServicoUseCase(repo), nil, nil)
-	engine := gin.New()
-	engine.GET("/v1/servicos/:id", h.Buscar)
+	existente := novoServico(t)
+	existente.AtribuirID(1)
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/servicos/99", nil)
-	rec := httptest.NewRecorder()
-	engine.ServeHTTP(rec, req)
+	repo.
+		EXPECT().
+		BuscarPorID(mock.Anything, uint64(1)).
+		Return(existente, nil)
 
-	require.Equal(t, http.StatusNotFound, rec.Code)
+	out, err := uc.Executar(
+		context.Background(),
+		1,
+	)
+
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), out.ID)
+	require.Equal(t, "Troca de óleo", out.Nome)
 }
 
-func TestHandler_Atualizar_ServicoExiste_Retorna200(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+func TestBuscarServicoUseCase_Executar_ServicoNaoExiste_RetornaNotFound(t *testing.T) {
 	repo := mocks.NewServicoRepository(t)
-	s := novoServico(t)
-	s.AtribuirID(1)
-	repo.EXPECT().BuscarPorID(mock.Anything, uint64(1)).Return(s, nil)
-	repo.EXPECT().Atualizar(mock.Anything, mock.AnythingOfType("*servico.Servico")).Return(nil)
+	uc := appservico.NewBuscarServicoUseCase(repo)
 
-	h := httpservico.NewHandler(nil, appservico.NewAtualizarServicoUseCase(repo), nil, nil, nil, nil)
-	engine := gin.New()
-	engine.PUT("/v1/servicos/:id", h.Atualizar)
+	repo.
+		EXPECT().
+		BuscarPorID(mock.Anything, uint64(99)).
+		Return(nil, domainservico.ErrServicoNaoEncontrado)
 
-	body, _ := json.Marshal(httpservico.AtualizarServicoRequest{
-		Nome: "Alinhamento", Descricao: "alinhamento e balanceamento", PrecoBase: preco(200.75), TempoEstimadoMinutos: 90,
-	})
-	req := httptest.NewRequest(http.MethodPut, "/v1/servicos/1", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-	engine.ServeHTTP(rec, req)
+	_, err := uc.Executar(
+		context.Background(),
+		99,
+	)
 
-	require.Equal(t, http.StatusOK, rec.Code)
-
-	var resp httpservico.ServicoResponse
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-	require.Equal(t, "Alinhamento", resp.Nome)
-	require.Equal(t, 200.75, resp.PrecoBase)
+	require.ErrorIs(t, err, domainservico.ErrServicoNaoEncontrado)
 }
 
-func TestHandler_Atualizar_BodyInvalido_Retorna400(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+func TestBuscarServicoUseCase_Executar_ErroDoBanco_RetornaInternalError(t *testing.T) {
 	repo := mocks.NewServicoRepository(t)
+	uc := appservico.NewBuscarServicoUseCase(repo)
 
-	h := httpservico.NewHandler(nil, appservico.NewAtualizarServicoUseCase(repo), nil, nil, nil, nil)
-	engine := gin.New()
-	engine.PUT("/v1/servicos/:id", h.Atualizar)
+	repo.
+		EXPECT().
+		BuscarPorID(mock.Anything, uint64(1)).
+		Return(nil, errors.New("conexao recusada"))
 
-	req := httptest.NewRequest(http.MethodPut, "/v1/servicos/1", bytes.NewReader([]byte("{invalido")))
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-	engine.ServeHTTP(rec, req)
+	_, err := uc.Executar(
+		context.Background(),
+		1,
+	)
 
-	require.Equal(t, http.StatusBadRequest, rec.Code)
+	var appErr *shared.AppError
+
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindInternal, appErr.Kind)
 }
 
-func TestHandler_Atualizar_NaoEncontrado_Retorna404(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+func TestAtivarServicoUseCase_Executar_AtivaServicoInativo(t *testing.T) {
 	repo := mocks.NewServicoRepository(t)
-	repo.EXPECT().BuscarPorID(mock.Anything, uint64(99)).Return(nil, domainservico.ErrServicoNaoEncontrado)
+	uc := appservico.NewAtivarServicoUseCase(repo)
 
-	h := httpservico.NewHandler(nil, appservico.NewAtualizarServicoUseCase(repo), nil, nil, nil, nil)
-	engine := gin.New()
-	engine.PUT("/v1/servicos/:id", h.Atualizar)
+	existente := novoServico(t)
+	existente.AtribuirID(1)
+	existente.Inativar()
 
-	body, _ := json.Marshal(httpservico.AtualizarServicoRequest{
-		Nome: "Alinhamento", Descricao: "descrição", PrecoBase: preco(200), TempoEstimadoMinutos: 90,
-	})
-	req := httptest.NewRequest(http.MethodPut, "/v1/servicos/99", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-	engine.ServeHTTP(rec, req)
+	repo.
+		EXPECT().
+		BuscarPorID(mock.Anything, uint64(1)).
+		Return(existente, nil)
 
-	require.Equal(t, http.StatusNotFound, rec.Code)
+	repo.
+		EXPECT().
+		Atualizar(
+			mock.Anything,
+			mock.AnythingOfType("*servico.Servico"),
+		).
+		Run(func(ctx context.Context, s *domainservico.Servico) {
+			require.True(t, s.Ativo())
+		}).
+		Return(nil)
+
+	require.NoError(
+		t,
+		uc.Executar(context.Background(), 1),
+	)
 }
 
-func TestHandler_Atualizar_IDInvalido_Retorna400(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+func TestAtivarServicoUseCase_Executar_ServicoNaoExiste_RetornaNotFound(t *testing.T) {
 	repo := mocks.NewServicoRepository(t)
+	uc := appservico.NewAtivarServicoUseCase(repo)
 
-	h := httpservico.NewHandler(nil, appservico.NewAtualizarServicoUseCase(repo), nil, nil, nil, nil)
-	engine := gin.New()
-	engine.PUT("/v1/servicos/:id", h.Atualizar)
+	repo.
+		EXPECT().
+		BuscarPorID(mock.Anything, uint64(99)).
+		Return(nil, domainservico.ErrServicoNaoEncontrado)
 
-	body, _ := json.Marshal(httpservico.AtualizarServicoRequest{
-		Nome: "Alinhamento", Descricao: "descrição", PrecoBase: preco(200), TempoEstimadoMinutos: 90,
-	})
-	req := httptest.NewRequest(http.MethodPut, "/v1/servicos/nao-e-numero", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-	engine.ServeHTTP(rec, req)
+	err := uc.Executar(
+		context.Background(),
+		99,
+	)
 
-	require.Equal(t, http.StatusBadRequest, rec.Code)
+	require.ErrorIs(t, err, domainservico.ErrServicoNaoEncontrado)
 }
 
-func TestHandler_Ativar_ComSucesso_Retorna204(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+func TestAtivarServicoUseCase_Executar_ErroDoBancoAoBuscar_RetornaInternalError(t *testing.T) {
 	repo := mocks.NewServicoRepository(t)
-	s := novoServico(t)
-	s.AtribuirID(1)
-	s.Inativar()
-	repo.EXPECT().BuscarPorID(mock.Anything, uint64(1)).Return(s, nil)
-	repo.EXPECT().Atualizar(mock.Anything, mock.AnythingOfType("*servico.Servico")).Return(nil)
+	uc := appservico.NewAtivarServicoUseCase(repo)
 
-	h := httpservico.NewHandler(nil, nil, nil, nil, appservico.NewAtivarServicoUseCase(repo), nil)
-	engine := gin.New()
-	engine.PATCH("/v1/servicos/:id/ativar", h.Ativar)
+	repo.
+		EXPECT().
+		BuscarPorID(mock.Anything, uint64(1)).
+		Return(nil, errors.New("conexao recusada"))
 
-	req := httptest.NewRequest(http.MethodPatch, "/v1/servicos/1/ativar", nil)
-	rec := httptest.NewRecorder()
-	engine.ServeHTTP(rec, req)
+	err := uc.Executar(
+		context.Background(),
+		1,
+	)
 
-	require.Equal(t, http.StatusNoContent, rec.Code)
+	var appErr *shared.AppError
+
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindInternal, appErr.Kind)
 }
 
-func TestHandler_Ativar_NaoEncontrado_Retorna404(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+func TestAtivarServicoUseCase_Executar_ErroDoBancoAoAtualizar_RetornaInternalError(t *testing.T) {
 	repo := mocks.NewServicoRepository(t)
-	repo.EXPECT().BuscarPorID(mock.Anything, uint64(99)).Return(nil, domainservico.ErrServicoNaoEncontrado)
+	uc := appservico.NewAtivarServicoUseCase(repo)
 
-	h := httpservico.NewHandler(nil, nil, nil, nil, appservico.NewAtivarServicoUseCase(repo), nil)
-	engine := gin.New()
-	engine.PATCH("/v1/servicos/:id/ativar", h.Ativar)
+	existente := novoServico(t)
+	existente.AtribuirID(1)
+	existente.Inativar()
 
-	req := httptest.NewRequest(http.MethodPatch, "/v1/servicos/99/ativar", nil)
-	rec := httptest.NewRecorder()
-	engine.ServeHTTP(rec, req)
+	repo.
+		EXPECT().
+		BuscarPorID(mock.Anything, uint64(1)).
+		Return(existente, nil)
 
-	require.Equal(t, http.StatusNotFound, rec.Code)
+	repo.
+		EXPECT().
+		Atualizar(
+			mock.Anything,
+			mock.AnythingOfType("*servico.Servico"),
+		).
+		Return(errors.New("conexao recusada"))
+
+	err := uc.Executar(
+		context.Background(),
+		1,
+	)
+
+	var appErr *shared.AppError
+
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindInternal, appErr.Kind)
 }
 
-func TestHandler_Inativar_ComSucesso_Retorna204(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+func TestInativarServicoUseCase_Executar_InativaServicoAtivo(t *testing.T) {
 	repo := mocks.NewServicoRepository(t)
-	s := novoServico(t)
-	s.AtribuirID(1)
-	repo.EXPECT().BuscarPorID(mock.Anything, uint64(1)).Return(s, nil)
-	repo.EXPECT().Atualizar(mock.Anything, mock.AnythingOfType("*servico.Servico")).Return(nil)
+	uc := appservico.NewInativarServicoUseCase(repo)
 
-	h := httpservico.NewHandler(nil, nil, nil, nil, nil, appservico.NewInativarServicoUseCase(repo))
-	engine := gin.New()
-	engine.PATCH("/v1/servicos/:id/inativar", h.Inativar)
+	existente := novoServico(t)
+	existente.AtribuirID(1)
 
-	req := httptest.NewRequest(http.MethodPatch, "/v1/servicos/1/inativar", nil)
-	rec := httptest.NewRecorder()
-	engine.ServeHTTP(rec, req)
+	repo.
+		EXPECT().
+		BuscarPorID(mock.Anything, uint64(1)).
+		Return(existente, nil)
 
-	require.Equal(t, http.StatusNoContent, rec.Code)
+	repo.
+		EXPECT().
+		Atualizar(
+			mock.Anything,
+			mock.AnythingOfType("*servico.Servico"),
+		).
+		Run(func(ctx context.Context, s *domainservico.Servico) {
+			require.False(t, s.Ativo())
+		}).
+		Return(nil)
+
+	require.NoError(
+		t,
+		uc.Executar(context.Background(), 1),
+	)
 }
 
-func TestHandler_Inativar_NaoEncontrado_Retorna404(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+func TestInativarServicoUseCase_Executar_ServicoNaoExiste_RetornaNotFound(t *testing.T) {
 	repo := mocks.NewServicoRepository(t)
-	repo.EXPECT().BuscarPorID(mock.Anything, uint64(99)).Return(nil, domainservico.ErrServicoNaoEncontrado)
+	uc := appservico.NewInativarServicoUseCase(repo)
 
-	h := httpservico.NewHandler(nil, nil, nil, nil, nil, appservico.NewInativarServicoUseCase(repo))
-	engine := gin.New()
-	engine.PATCH("/v1/servicos/:id/inativar", h.Inativar)
+	repo.
+		EXPECT().
+		BuscarPorID(mock.Anything, uint64(99)).
+		Return(nil, domainservico.ErrServicoNaoEncontrado)
 
-	req := httptest.NewRequest(http.MethodPatch, "/v1/servicos/99/inativar", nil)
-	rec := httptest.NewRecorder()
-	engine.ServeHTTP(rec, req)
+	err := uc.Executar(
+		context.Background(),
+		99,
+	)
 
-	require.Equal(t, http.StatusNotFound, rec.Code)
+	require.ErrorIs(t, err, domainservico.ErrServicoNaoEncontrado)
+}
+
+func TestInativarServicoUseCase_Executar_ErroDoBancoAoBuscar_RetornaInternalError(t *testing.T) {
+	repo := mocks.NewServicoRepository(t)
+	uc := appservico.NewInativarServicoUseCase(repo)
+
+	repo.
+		EXPECT().
+		BuscarPorID(mock.Anything, uint64(1)).
+		Return(nil, errors.New("conexao recusada"))
+
+	err := uc.Executar(
+		context.Background(),
+		1,
+	)
+
+	var appErr *shared.AppError
+
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindInternal, appErr.Kind)
+}
+
+func TestInativarServicoUseCase_Executar_ErroDoBancoAoAtualizar_RetornaInternalError(t *testing.T) {
+	repo := mocks.NewServicoRepository(t)
+	uc := appservico.NewInativarServicoUseCase(repo)
+
+	existente := novoServico(t)
+	existente.AtribuirID(1)
+
+	repo.
+		EXPECT().
+		BuscarPorID(mock.Anything, uint64(1)).
+		Return(existente, nil)
+
+	repo.
+		EXPECT().
+		Atualizar(
+			mock.Anything,
+			mock.AnythingOfType("*servico.Servico"),
+		).
+		Return(errors.New("conexao recusada"))
+
+	err := uc.Executar(
+		context.Background(),
+		1,
+	)
+
+	var appErr *shared.AppError
+
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindInternal, appErr.Kind)
 }

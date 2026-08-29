@@ -18,12 +18,8 @@ type Repository struct {
 }
 
 // NewServicoRepository monta o Repository sobre a conexão db informada.
-func NewServicoRepository(db *gorm.DB, builders ...*mysqlquery.Builder) domainservico.ServicoRepository {
+func NewServicoRepository(db *gorm.DB) domainservico.ServicoRepository {
 	builder := NewQueryBuilder()
-
-	if len(builders) > 0 && builders[0] != nil {
-		builder = builders[0]
-	}
 
 	return &Repository{
 		db:           db,
@@ -106,7 +102,7 @@ func (r *Repository) Listar(
 
 // Atualizar persiste os campos mutáveis do serviço (nome, descricao, preco_base,
 // tempo_estimado_minutos, ativo, data_atualizacao).
-func (r *Repository) Atualizar(ctx context.Context,s *domainservico.Servico) error {
+func (r *Repository) Atualizar(ctx context.Context, s *domainservico.Servico) error {
 	m := toModel(s)
 
 	result := r.db.
@@ -114,12 +110,12 @@ func (r *Repository) Atualizar(ctx context.Context,s *domainservico.Servico) err
 		Model(&Model{}).
 		Where("id = ?", m.ID).
 		Updates(map[string]any{
-			"nome":                     m.Nome,
-			"descricao":                m.Descricao,
-			"preco_base":               m.PrecoBase,
-			"tempo_estimado_minutos":   m.TempoEstimadoMinutos,
-			"ativo":                    m.Ativo,
-			"data_atualizacao":         m.DataAtualizacao,
+			"nome":                   m.Nome,
+			"descricao":              m.Descricao,
+			"preco_base":             m.PrecoBase,
+			"tempo_estimado_minutos": m.TempoEstimadoMinutos,
+			"ativo":                  m.Ativo,
+			"data_atualizacao":       m.DataAtualizacao,
 		})
 
 	if result.Error != nil {

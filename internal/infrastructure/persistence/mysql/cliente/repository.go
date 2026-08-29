@@ -18,11 +18,8 @@ type Repository struct {
 
 var _ domain.ClienteRepository = (*Repository)(nil)
 
-func NewClienteRepository(db *gorm.DB, builders ...*mysqlquery.Builder) domain.ClienteRepository {
+func NewClienteRepository(db *gorm.DB) domain.ClienteRepository {
 	builder := NewQueryBuilder()
-	if len(builders) > 0 && builders[0] != nil {
-		builder = builders[0]
-	}
 	return &Repository{db: db, queryBuilder: builder}
 }
 

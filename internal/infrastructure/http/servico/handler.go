@@ -7,18 +7,20 @@ import (
 
 	appservico "github.com/muriloperosa/soat-architecture/internal/application/servico"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httperror"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httpquery"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httprequest"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/middleware"
 )
 
 // Handler expõe o CRUD do catálogo de serviços, restrito a usuário interno.
 type Handler struct {
-	criar     *appservico.CriarServicoUseCase
-	atualizar *appservico.AtualizarServicoUseCase
-	listar    *appservico.ListarServicosUseCase
-	buscar    *appservico.BuscarServicoUseCase
-	ativar    *appservico.AtivarServicoUseCase
-	inativar  *appservico.InativarServicoUseCase
+	criar       *appservico.CriarServicoUseCase
+	atualizar   *appservico.AtualizarServicoUseCase
+	listar      *appservico.ListarServicosUseCase
+	buscar      *appservico.BuscarServicoUseCase
+	ativar      *appservico.AtivarServicoUseCase
+	inativar    *appservico.InativarServicoUseCase
+	queryParser *httpquery.Parser
 }
 
 func NewHandler(
@@ -28,14 +30,16 @@ func NewHandler(
 	buscar *appservico.BuscarServicoUseCase,
 	ativar *appservico.AtivarServicoUseCase,
 	inativar *appservico.InativarServicoUseCase,
+	queryParser *httpquery.Parser,
 ) *Handler {
 	return &Handler{
-		criar:     criar,
-		atualizar: atualizar,
-		listar:    listar,
-		buscar:    buscar,
-		ativar:    ativar,
-		inativar:  inativar,
+		criar:       criar,
+		atualizar:   atualizar,
+		listar:      listar,
+		buscar:      buscar,
+		ativar:      ativar,
+		inativar:    inativar,
+		queryParser: queryParser,
 	}
 }
 
@@ -73,21 +77,49 @@ func (h *Handler) Criar(c *gin.Context) {
 }
 
 // @Summary Lista serviços
-// @Description Lista o catálogo completo de serviços. Restrito a usuário interno.
+// @Description Lista serviços com paginação, ordenação e filtros diretos por campo. Texto usa LIKE, listas separadas por vírgula usam IN e booleanos usam igualdade. Duas datas ISO 8601 formam um intervalo. Use o sufixo _not para negar filtros.
 // @Tags Servicos
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {array} ServicoResponse
+// @Param offset query int false "Quantidade de registros ignorados" default(0) minimum(0)
+// @Param limit query int false "Quantidade de registros retornados" default(20) minimum(1) maximum(100)
+// @Param order query string false "Campo de ordenação" Enums(id,nome,descricao,preco_base,tempo_estimado_minutos,criado_por,ativo,data_cadastro,data_atualizacao) default(id)
+// @Param direction query string false "Direção da ordenação" Enums(ASC,DESC) default(ASC)
+// @Param id query string false "ID ou lista de IDs separada por vírgula" example(1,2,3)
+// @Param nome query string false "Nome contendo o valor" example(óleo)
+// @Param nome_not query string false "Nome que não deve conter o valor" example(Teste)
+// @Param descricao query string false "Descrição contendo o valor"
+// @Param preco_base query string false "Preço base ou lista de preços" example(150.50)
+// @Param tempo_estimado_minutos query string false "Tempo estimado ou lista de tempos" example(30,60,90)
+// @Param criado_por query string false "ID ou lista de IDs dos criadores"
+// @Param ativo query bool false "Situação ativa do serviço"
+// @Param data_cadastro query string false "Data ISO 8601 ou intervalo separado por vírgula" example(2026-08-20,2026-08-22)
+// @Success 200 {object} ListarServicosResponse
+// @Failure 400 {object} httperror.ErrorResponse
 // @Failure 401 {object} httperror.ErrorResponse
 // @Failure 403 {object} httperror.ErrorResponse
+// @Failure 500 {object} httperror.ErrorResponse
 // @Router /v1/servicos [get]
 func (h *Handler) Listar(c *gin.Context) {
-	out, err := h.listar.Executar(c.Request.Context())
+	params, err := h.queryParser.Parse(c)
 	if err != nil {
 		httperror.RespondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, toServicoResponseList(out))
+
+	out, err := h.listar.Executar(
+		c.Request.Context(),
+		params,
+	)
+	if err != nil {
+		httperror.RespondError(c, err)
+		return
+	}
+
+	c.JSON(
+		http.StatusOK,
+		toListResponse(out),
+	)
 }
 
 // @Summary Busca serviço

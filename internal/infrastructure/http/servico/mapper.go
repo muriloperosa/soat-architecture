@@ -1,6 +1,9 @@
 package servico
 
-import appservico "github.com/muriloperosa/soat-architecture/internal/application/servico"
+import (
+	appservico "github.com/muriloperosa/soat-architecture/internal/application/servico"
+	"github.com/muriloperosa/soat-architecture/internal/domain/query"
+)
 
 // toCriarInput converte o DTO HTTP de criação pro DTO de entrada do
 // CriarServicoUseCase. criadoPor vem do subject do JWT, não do corpo.
@@ -39,10 +42,19 @@ func toServicoResponse(out appservico.ServicoOutput) ServicoResponse {
 	}
 }
 
-func toServicoResponseList(outs []appservico.ServicoOutput) []ServicoResponse {
-	resps := make([]ServicoResponse, 0, len(outs))
-	for _, out := range outs {
-		resps = append(resps, toServicoResponse(out))
+func toListResponse(page query.Page[appservico.ServicoOutput]) ListarServicosResponse {
+	items := make([]ServicoResponse, 0, len(page.Items))
+
+	for _, item := range page.Items {
+		items = append(items, toServicoResponse(item))
 	}
-	return resps
+
+	return ListarServicosResponse{
+		Items:     items,
+		Total:     page.Total,
+		Offset:    page.Offset,
+		Limit:     page.Limit,
+		Order:     page.Order,
+		Direction: string(page.Direction),
+	}
 }

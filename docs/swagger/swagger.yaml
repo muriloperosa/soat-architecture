@@ -338,6 +338,28 @@ definitions:
     - preco_base
     - tempo_estimado_minutos
     type: object
+  servico.ListarServicosResponse:
+    properties:
+      direction:
+        example: ASC
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/servico.ServicoResponse'
+        type: array
+      limit:
+        example: 20
+        type: integer
+      offset:
+        example: 0
+        type: integer
+      order:
+        example: nome
+        type: string
+      total:
+        example: 42
+        type: integer
+    type: object
   servico.ServicoResponse:
     properties:
       ativo:
@@ -778,10 +800,6 @@ paths:
         in: query
         name: ativo
         type: boolean
-      - description: Exigência de alteração de senha
-        in: query
-        name: requer_alterar_senha
-        type: boolean
       - description: ID ou lista de IDs dos criadores
         in: query
         name: criado_por
@@ -790,10 +808,6 @@ paths:
         example: 2026-08-20,2026-08-22
         in: query
         name: data_cadastro
-        type: string
-      - description: Data ISO 8601 ou intervalo separado por vírgula
-        in: query
-        name: data_atualizacao
         type: string
       produces:
       - application/json
@@ -1383,22 +1397,109 @@ paths:
       - Pecas
   /v1/servicos:
     get:
-      description: Lista o catálogo completo de serviços. Restrito a usuário interno.
+      description: Lista serviços com paginação, ordenação e filtros diretos por campo.
+        Texto usa LIKE, listas separadas por vírgula usam IN e booleanos usam igualdade.
+        Duas datas ISO 8601 formam um intervalo. Use o sufixo _not para negar filtros.
+      parameters:
+      - default: 0
+        description: Quantidade de registros ignorados
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      - default: 20
+        description: Quantidade de registros retornados
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - default: id
+        description: Campo de ordenação
+        enum:
+        - id
+        - nome
+        - descricao
+        - preco_base
+        - tempo_estimado_minutos
+        - criado_por
+        - ativo
+        - data_cadastro
+        - data_atualizacao
+        in: query
+        name: order
+        type: string
+      - default: ASC
+        description: Direção da ordenação
+        enum:
+        - ASC
+        - DESC
+        in: query
+        name: direction
+        type: string
+      - description: ID ou lista de IDs separada por vírgula
+        example: 1,2,3
+        in: query
+        name: id
+        type: string
+      - description: Nome contendo o valor
+        example: óleo
+        in: query
+        name: nome
+        type: string
+      - description: Nome que não deve conter o valor
+        example: Teste
+        in: query
+        name: nome_not
+        type: string
+      - description: Descrição contendo o valor
+        in: query
+        name: descricao
+        type: string
+      - description: Preço base ou lista de preços
+        example: "150.50"
+        in: query
+        name: preco_base
+        type: string
+      - description: Tempo estimado ou lista de tempos
+        example: 30,60,90
+        in: query
+        name: tempo_estimado_minutos
+        type: string
+      - description: ID ou lista de IDs dos criadores
+        in: query
+        name: criado_por
+        type: string
+      - description: Situação ativa do serviço
+        in: query
+        name: ativo
+        type: boolean
+      - description: Data ISO 8601 ou intervalo separado por vírgula
+        example: 2026-08-20,2026-08-22
+        in: query
+        name: data_cadastro
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/servico.ServicoResponse'
-            type: array
+            $ref: '#/definitions/servico.ListarServicosResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/httperror.ErrorResponse'
         "403":
           description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/httperror.ErrorResponse'
       security:

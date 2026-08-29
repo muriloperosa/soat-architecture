@@ -393,12 +393,6 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "type": "boolean",
-                        "description": "Exigência de alteração de senha",
-                        "name": "requer_alterar_senha",
-                        "in": "query"
-                    },
-                    {
                         "type": "string",
                         "description": "ID ou lista de IDs dos criadores",
                         "name": "criado_por",
@@ -409,12 +403,6 @@ const docTemplate = `{
                         "example": "2026-08-20,2026-08-22",
                         "description": "Data ISO 8601 ou intervalo separado por vírgula",
                         "name": "data_cadastro",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Data ISO 8601 ou intervalo separado por vírgula",
-                        "name": "data_atualizacao",
                         "in": "query"
                     }
                 ],
@@ -1326,7 +1314,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Lista o catálogo completo de serviços. Restrito a usuário interno.",
+                "description": "Lista serviços com paginação, ordenação e filtros diretos por campo. Texto usa LIKE, listas separadas por vírgula usam IN e booleanos usam igualdade. Duas datas ISO 8601 formam um intervalo. Use o sufixo _not para negar filtros.",
                 "produces": [
                     "application/json"
                 ],
@@ -1334,14 +1322,125 @@ const docTemplate = `{
                     "Servicos"
                 ],
                 "summary": "Lista serviços",
+                "parameters": [
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Quantidade de registros ignorados",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Quantidade de registros retornados",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "id",
+                            "nome",
+                            "descricao",
+                            "preco_base",
+                            "tempo_estimado_minutos",
+                            "criado_por",
+                            "ativo",
+                            "data_cadastro",
+                            "data_atualizacao"
+                        ],
+                        "type": "string",
+                        "default": "id",
+                        "description": "Campo de ordenação",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "ASC",
+                            "DESC"
+                        ],
+                        "type": "string",
+                        "default": "ASC",
+                        "description": "Direção da ordenação",
+                        "name": "direction",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "1,2,3",
+                        "description": "ID ou lista de IDs separada por vírgula",
+                        "name": "id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "óleo",
+                        "description": "Nome contendo o valor",
+                        "name": "nome",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "Teste",
+                        "description": "Nome que não deve conter o valor",
+                        "name": "nome_not",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Descrição contendo o valor",
+                        "name": "descricao",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "150.50",
+                        "description": "Preço base ou lista de preços",
+                        "name": "preco_base",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "30,60,90",
+                        "description": "Tempo estimado ou lista de tempos",
+                        "name": "tempo_estimado_minutos",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID ou lista de IDs dos criadores",
+                        "name": "criado_por",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Situação ativa do serviço",
+                        "name": "ativo",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "2026-08-20,2026-08-22",
+                        "description": "Data ISO 8601 ou intervalo separado por vírgula",
+                        "name": "data_cadastro",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/servico.ServicoResponse"
-                            }
+                            "$ref": "#/definitions/servico.ListarServicosResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
                         }
                     },
                     "401": {
@@ -1352,6 +1451,12 @@ const docTemplate = `{
                     },
                     "403": {
                         "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/httperror.ErrorResponse"
                         }
@@ -2783,6 +2888,37 @@ const docTemplate = `{
                 "tempo_estimado_minutos": {
                     "type": "integer",
                     "example": 60
+                }
+            }
+        },
+        "servico.ListarServicosResponse": {
+            "type": "object",
+            "properties": {
+                "direction": {
+                    "type": "string",
+                    "example": "ASC"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/servico.ServicoResponse"
+                    }
+                },
+                "limit": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "offset": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "order": {
+                    "type": "string",
+                    "example": "nome"
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 42
                 }
             }
         },

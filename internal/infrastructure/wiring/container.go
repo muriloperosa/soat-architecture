@@ -94,7 +94,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c := &Container{Config: cfg, DB: db}
 	c.RefreshTokensRepo = mysqlauth.NewRefreshTokenRepository(db)
 	c.UsuarioRepo = mysqlusuario.NewUsuarioRepository(db)
-	c.ClienteRepository = mysqlcliente.NewClienteRepository(db, mysqlcliente.NewQueryBuilder())
+	c.ClienteRepository = mysqlcliente.NewClienteRepository(db)
 	c.PecaRepo = mysqlpeca.NewRepository(db)
 	c.VeiculoRepo = mysqlveiculo.NewRepository(db)
 	c.ServicoRepo = mysqlservico.NewServicoRepository(db)
