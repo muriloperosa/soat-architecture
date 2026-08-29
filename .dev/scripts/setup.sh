@@ -17,6 +17,27 @@ log() {
     printf '\n==> %s\n' "$1"
 }
 
+ask() {
+    local prompt="$1" default="$2" answer
+    read -r -p "$prompt [$default]: " answer
+    echo "${answer:-$default}"
+}
+
+if [ ! -f .env ]; then
+    log "Criando .env a partir do .env.example"
+    cp .env.example .env
+
+    default_app_port="$(grep -m1 '^APP_HOST_PORT=' .env.example | cut -d= -f2)"
+    default_db_port="$(grep -m1 '^DB_HOST_PORT=' .env.example | cut -d= -f2)"
+
+    app_port="$(ask 'Porta da API no host' "$default_app_port")"
+    db_port="$(ask 'Porta do MySQL no host' "$default_db_port")"
+
+    sed -i.bak "s/^APP_HOST_PORT=.*/APP_HOST_PORT=${app_port}/" .env
+    sed -i.bak "s/^DB_HOST_PORT=.*/DB_HOST_PORT=${db_port}/" .env
+    rm -f .env.bak
+fi
+
 log "Limpando containers e volumes de execuções anteriores"
 docker compose down -v
 
