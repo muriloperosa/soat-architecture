@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	app "github.com/muriloperosa/soat-architecture/internal/application/ordemservico"
@@ -36,7 +37,7 @@ func TestHandlerAbrirRetorna201(t *testing.T) {
 		Run(func(_ context.Context, os *domainordemservico.OrdemServico) { os.AtribuirID(99) }).
 		Return(nil)
 
-	handler := httpordemservico.NewHandler(app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo), nil, nil)
+	handler := httpordemservico.NewHandler(app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo), nil, nil, nil)
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno, Papel: shared.PapelAdmin})
@@ -71,7 +72,7 @@ func TestHandlerAbrirClienteInexistenteRetorna404(t *testing.T) {
 	veiculoRepo := veiculomocks.NewRepository(t)
 	clienteRepo.EXPECT().BuscarPorID(mock.Anything, uint64(999)).Return(nil, domaincliente.ErrClienteNaoEncontrado)
 
-	handler := httpordemservico.NewHandler(app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo), nil, nil)
+	handler := httpordemservico.NewHandler(app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo), nil, nil, nil)
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno})
@@ -96,7 +97,7 @@ func TestHandlerAbrirVeiculoInexistenteRetorna404(t *testing.T) {
 	clienteRepo.EXPECT().BuscarPorID(mock.Anything, uint64(10)).Return(clienteValido(t), nil)
 	veiculoRepo.EXPECT().BuscarPorID(mock.Anything, uint64(999)).Return(nil, domainveiculo.ErrVeiculoNaoEncontrado)
 
-	handler := httpordemservico.NewHandler(app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo), nil, nil)
+	handler := httpordemservico.NewHandler(app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo), nil, nil, nil)
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno})
@@ -136,7 +137,7 @@ func TestHandlerIniciarDiagnosticoRetorna200(t *testing.T) {
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 	repository.EXPECT().Atualizar(mock.Anything, os).Return(nil)
 
-	handler := httpordemservico.NewHandler(nil, app.NewIniciarDiagnosticoUseCase(repository), nil)
+	handler := httpordemservico.NewHandler(nil, app.NewIniciarDiagnosticoUseCase(repository), nil, nil)
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno, Papel: shared.PapelMecanico})
@@ -164,7 +165,7 @@ func TestHandlerInformarDiagnosticoRetorna200(t *testing.T) {
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 	repository.EXPECT().Atualizar(mock.Anything, os).Return(nil)
 
-	handler := httpordemservico.NewHandler(nil, nil, app.NewInformarDiagnosticoUseCase(repository))
+	handler := httpordemservico.NewHandler(nil, nil, app.NewInformarDiagnosticoUseCase(repository), nil)
 	router := gin.New()
 	router.PUT("/v1/ordens-servico/:id/diagnostico", handler.InformarDiagnostico)
 	body := []byte(`{"diagnostico":"Falha na bomba de combustível"}`)
@@ -186,7 +187,7 @@ func TestHandlerInformarDiagnosticoVazioRetorna400(t *testing.T) {
 	require.NoError(t, os.IniciarDiagnostico(30))
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 
-	handler := httpordemservico.NewHandler(nil, nil, app.NewInformarDiagnosticoUseCase(repository))
+	handler := httpordemservico.NewHandler(nil, nil, app.NewInformarDiagnosticoUseCase(repository), nil)
 	router := gin.New()
 	router.PUT("/v1/ordens-servico/:id/diagnostico", handler.InformarDiagnostico)
 	req := httptest.NewRequest(http.MethodPut, "/v1/ordens-servico/42/diagnostico", bytes.NewReader([]byte(`{"diagnostico":"   "}`)))
@@ -195,6 +196,82 @@ func TestHandlerInformarDiagnosticoVazioRetorna400(t *testing.T) {
 	router.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestHandlerEntregarRetorna200(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repository := ordemservicomocks.NewOrdemServicoRepository(t)
+	os := ordemServicoFinalizadaHTTP(t)
+	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
+	repository.EXPECT().Atualizar(mock.Anything, os).Return(nil)
+
+	handler := httpordemservico.NewHandler(nil, nil, nil, app.NewEntregarOrdemServicoUseCase(repository))
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno, Papel: shared.PapelAtendente})
+		c.Next()
+	})
+	router.PATCH("/v1/ordens-servico/:id/entregar", handler.Entregar)
+
+	req := httptest.NewRequest(http.MethodPatch, "/v1/ordens-servico/42/entregar", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	var response httpordemservico.OrdemServicoResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+	require.Equal(t, uint64(42), response.ID)
+	require.Equal(t, domainordemservico.StatusEntregue.String(), response.Status)
+	require.Equal(t, uint64(30), os.HistoricoStatus()[2].AlteradoPor())
+}
+
+func TestHandlerEntregarTransicaoInvalidaRetorna400(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repository := ordemservicomocks.NewOrdemServicoRepository(t)
+	os := ordemServicoRecebidaHTTP(t)
+	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
+
+	handler := httpordemservico.NewHandler(nil, nil, nil, app.NewEntregarOrdemServicoUseCase(repository))
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno})
+		c.Next()
+	})
+	router.PATCH("/v1/ordens-servico/:id/entregar", handler.Entregar)
+
+	req := httptest.NewRequest(http.MethodPatch, "/v1/ordens-servico/42/entregar", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func ordemServicoFinalizadaHTTP(t *testing.T) *domainordemservico.OrdemServico {
+	t.Helper()
+	numero, err := domainordemservico.NewNumeroOrdemServico("OS-20260827-a1b2c3d4e5f6")
+	require.NoError(t, err)
+
+	cadastro := time.Date(2026, time.August, 1, 9, 0, 0, 0, time.UTC)
+	atualizacao := cadastro.Add(3 * time.Hour)
+	historico := []domainordemservico.HistoricoStatus{
+		domainordemservico.ReidratarHistoricoStatus(1, 42, domainordemservico.StatusRecebida, cadastro, 30, ""),
+		domainordemservico.ReidratarHistoricoStatus(2, 42, domainordemservico.StatusFinalizada, atualizacao, 30, ""),
+	}
+
+	return domainordemservico.ReidratarOrdemServico(
+		42,
+		numero,
+		10,
+		20,
+		52_300,
+		domainordemservico.StatusFinalizada,
+		"",
+		"",
+		30,
+		historico,
+		cadastro,
+		atualizacao,
+	)
 }
 
 func ordemServicoRecebidaHTTP(t *testing.T) *domainordemservico.OrdemServico {
