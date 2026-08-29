@@ -18,7 +18,7 @@ func abrirOrdemServicoParaEntrega(t *testing.T, adminID uint64, token string) ht
 	t.Helper()
 
 	cliente, err := testContainer.CriarClienteUseCase.Executar(t.Context(), appcliente.CriarClienteInput{
-		Documento: "52998224725", Tipo: domaincliente.TipoPessoaFisica, Nome: "Maria Silva",
+		Documento: "52998224725", Tipo: string(domaincliente.TipoPessoaFisica), Nome: "Maria Silva",
 		Email: "maria@email.com", Telefone: "11999998888", Senha: "senhaCliente123", CriadoPor: adminID,
 	})
 	if err != nil {
