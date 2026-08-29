@@ -37,7 +37,7 @@ func TestHandlerAbrirRetorna201(t *testing.T) {
 		Run(func(_ context.Context, os *domainordemservico.OrdemServico) { os.AtribuirID(99) }).
 		Return(nil)
 
-	handler := httpordemservico.NewHandler(app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo), nil, nil, nil)
+	handler := httpordemservico.NewHandler(app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo), nil, nil, nil, nil)
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno, Papel: shared.PapelAdmin})
@@ -72,7 +72,7 @@ func TestHandlerAbrirClienteInexistenteRetorna404(t *testing.T) {
 	veiculoRepo := veiculomocks.NewRepository(t)
 	clienteRepo.EXPECT().BuscarPorID(mock.Anything, uint64(999)).Return(nil, domaincliente.ErrClienteNaoEncontrado)
 
-	handler := httpordemservico.NewHandler(app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo), nil, nil, nil)
+	handler := httpordemservico.NewHandler(app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo), nil, nil, nil, nil)
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno})
@@ -97,7 +97,7 @@ func TestHandlerAbrirVeiculoInexistenteRetorna404(t *testing.T) {
 	clienteRepo.EXPECT().BuscarPorID(mock.Anything, uint64(10)).Return(clienteValido(t), nil)
 	veiculoRepo.EXPECT().BuscarPorID(mock.Anything, uint64(999)).Return(nil, domainveiculo.ErrVeiculoNaoEncontrado)
 
-	handler := httpordemservico.NewHandler(app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo), nil, nil, nil)
+	handler := httpordemservico.NewHandler(app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo), nil, nil, nil, nil)
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno})
@@ -137,7 +137,7 @@ func TestHandlerIniciarDiagnosticoRetorna200(t *testing.T) {
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 	repository.EXPECT().Atualizar(mock.Anything, os).Return(nil)
 
-	handler := httpordemservico.NewHandler(nil, app.NewIniciarDiagnosticoUseCase(repository), nil, nil)
+	handler := httpordemservico.NewHandler(nil, app.NewIniciarDiagnosticoUseCase(repository), nil, nil, nil)
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno, Papel: shared.PapelMecanico})
@@ -165,7 +165,7 @@ func TestHandlerInformarDiagnosticoRetorna200(t *testing.T) {
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 	repository.EXPECT().Atualizar(mock.Anything, os).Return(nil)
 
-	handler := httpordemservico.NewHandler(nil, nil, app.NewInformarDiagnosticoUseCase(repository), nil)
+	handler := httpordemservico.NewHandler(nil, nil, app.NewInformarDiagnosticoUseCase(repository), nil, nil)
 	router := gin.New()
 	router.PUT("/v1/ordens-servico/:id/diagnostico", handler.InformarDiagnostico)
 	body := []byte(`{"diagnostico":"Falha na bomba de combustível"}`)
@@ -187,7 +187,7 @@ func TestHandlerInformarDiagnosticoVazioRetorna400(t *testing.T) {
 	require.NoError(t, os.IniciarDiagnostico(30))
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 
-	handler := httpordemservico.NewHandler(nil, nil, app.NewInformarDiagnosticoUseCase(repository), nil)
+	handler := httpordemservico.NewHandler(nil, nil, app.NewInformarDiagnosticoUseCase(repository), nil, nil)
 	router := gin.New()
 	router.PUT("/v1/ordens-servico/:id/diagnostico", handler.InformarDiagnostico)
 	req := httptest.NewRequest(http.MethodPut, "/v1/ordens-servico/42/diagnostico", bytes.NewReader([]byte(`{"diagnostico":"   "}`)))
@@ -205,7 +205,7 @@ func TestHandlerIniciarExecucaoRetorna200(t *testing.T) {
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 	repository.EXPECT().Atualizar(mock.Anything, os).Return(nil)
 
-	handler := httpordemservico.NewHandler(nil, nil, nil, app.NewIniciarExecucaoUseCase(repository))
+	handler := httpordemservico.NewHandler(nil, nil, nil, app.NewIniciarExecucaoUseCase(repository), nil)
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno, Papel: shared.PapelMecanico})
@@ -231,7 +231,7 @@ func TestHandlerIniciarExecucaoTransicaoInvalidaRetorna400(t *testing.T) {
 	os := ordemServicoRecebidaHTTP(t)
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 
-	handler := httpordemservico.NewHandler(nil, nil, nil, app.NewIniciarExecucaoUseCase(repository))
+	handler := httpordemservico.NewHandler(nil, nil, nil, app.NewIniciarExecucaoUseCase(repository), nil)
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno})
@@ -281,7 +281,7 @@ func TestHandlerEntregarRetorna200(t *testing.T) {
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 	repository.EXPECT().Atualizar(mock.Anything, os).Return(nil)
 
-	handler := httpordemservico.NewHandler(nil, nil, nil, app.NewEntregarOrdemServicoUseCase(repository))
+	handler := httpordemservico.NewHandler(nil, nil, nil, nil, app.NewEntregarOrdemServicoUseCase(repository))
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno, Papel: shared.PapelAtendente})
@@ -307,7 +307,7 @@ func TestHandlerEntregarTransicaoInvalidaRetorna400(t *testing.T) {
 	os := ordemServicoRecebidaHTTP(t)
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 
-	handler := httpordemservico.NewHandler(nil, nil, nil, app.NewEntregarOrdemServicoUseCase(repository))
+	handler := httpordemservico.NewHandler(nil, nil, nil, nil, app.NewEntregarOrdemServicoUseCase(repository))
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno})
