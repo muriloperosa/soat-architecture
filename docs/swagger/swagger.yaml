@@ -304,6 +304,24 @@ definitions:
     required:
     - quantidade
     type: object
+  relatorio.TransicaoStatusResponse:
+    properties:
+      tempo_maximo:
+        example: 3
+        type: number
+      tempo_medio:
+        example: 1.5
+        type: number
+      tempo_minimo:
+        example: 0.5
+        type: number
+      total_ordens_servico:
+        example: 12
+        type: integer
+      unidade:
+        example: h
+        type: string
+    type: object
   servico.AtualizarServicoRequest:
     properties:
       descricao:
@@ -1493,6 +1511,64 @@ paths:
       summary: Repõe estoque de peça
       tags:
       - Pecas
+  /v1/relatorios/ordens-servico/transicao-status:
+    get:
+      description: Calcula quantas OS fizeram a transição from_status->to_status no
+        período informado e a duração média/mínima/máxima. Restrito a administrador.
+      parameters:
+      - description: Data inicial (YYYY-MM-DD)
+        in: query
+        name: start_date
+        required: true
+        type: string
+      - description: Data final (YYYY-MM-DD)
+        in: query
+        name: final_date
+        required: true
+        type: string
+      - description: Status de origem
+        in: query
+        name: from_status
+        required: true
+        type: string
+      - description: Status de destino
+        in: query
+        name: to_status
+        required: true
+        type: string
+      - description: 'Unidade de tempo da resposta: h (horas - padrão), m (minutos)
+          ou s (segundos)'
+        in: query
+        name: unit
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/relatorio.TransicaoStatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Relatório de transição de status de Ordens de Serviço
+      tags:
+      - Relatórios
   /v1/servicos:
     get:
       description: Lista serviços com paginação, ordenação e filtros diretos por campo.
