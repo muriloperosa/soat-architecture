@@ -1088,6 +1088,170 @@
             }
         },
         "/v1/pecas": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lista peças do estoque com paginação, ordenação e filtros.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pecas"
+                ],
+                "summary": "Lista peças",
+                "parameters": [
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Quantidade de registros a ignorar",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Quantidade máxima de registros",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "id",
+                            "codigo",
+                            "nome",
+                            "marca",
+                            "descricao",
+                            "preco",
+                            "quantidade_em_estoque",
+                            "estoque_minimo",
+                            "criado_por",
+                            "ativo",
+                            "data_cadastro",
+                            "data_atualizacao"
+                        ],
+                        "type": "string",
+                        "default": "id",
+                        "description": "Campo para ordenação",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "ASC",
+                            "DESC"
+                        ],
+                        "type": "string",
+                        "default": "ASC",
+                        "description": "Direção da ordenação",
+                        "name": "direction",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filtra pelo ID",
+                        "name": "id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filtra pelo código",
+                        "name": "codigo",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filtra pelo nome",
+                        "name": "nome",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filtra pela marca",
+                        "name": "marca",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filtra pela descrição",
+                        "name": "descricao",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Filtra pelo preço",
+                        "name": "preco",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filtra pela quantidade em estoque",
+                        "name": "quantidade_em_estoque",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filtra pelo estoque mínimo",
+                        "name": "estoque_minimo",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filtra pelo usuário que cadastrou",
+                        "name": "criado_por",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filtra pelo status ativo",
+                        "name": "ativo",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filtra pela data de cadastro",
+                        "name": "data_cadastro",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/peca.ListarPecasResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -3201,6 +3365,37 @@
                 "quantidade_em_estoque": {
                     "type": "integer",
                     "example": 20
+                }
+            }
+        },
+        "peca.ListarPecasResponse": {
+            "type": "object",
+            "properties": {
+                "direction": {
+                    "type": "string",
+                    "example": "ASC"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/peca.PecaResponse"
+                    }
+                },
+                "limit": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "offset": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "order": {
+                    "type": "string",
+                    "example": "nome"
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 42
                 }
             }
         },

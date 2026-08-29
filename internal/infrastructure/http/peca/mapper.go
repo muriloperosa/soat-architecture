@@ -1,6 +1,9 @@
 package peca
 
-import apppeca "github.com/muriloperosa/soat-architecture/internal/application/peca"
+import (
+	apppeca "github.com/muriloperosa/soat-architecture/internal/application/peca"
+	"github.com/muriloperosa/soat-architecture/internal/domain/query"
+)
 
 // toCadastrarInput converte o DTO HTTP de cadastro pro DTO de entrada do
 // CadastrarPecaUseCase. criadoPor vem do subject do JWT, não do corpo da
@@ -50,5 +53,22 @@ func toPecaResponse(out apppeca.PecaOutput) PecaResponse {
 		EstoqueMinimo:       out.EstoqueMinimo,
 		CriadoPor:           out.CriadoPor,
 		Ativo:               out.Ativo,
+	}
+}
+
+func toListResponse(page query.Page[apppeca.PecaOutput]) ListarPecasResponse {
+	items := make([]PecaResponse, 0, len(page.Items))
+
+	for _, item := range page.Items {
+		items = append(items, toPecaResponse(item))
+	}
+
+	return ListarPecasResponse{
+		Items:     items,
+		Total:     page.Total,
+		Offset:    page.Offset,
+		Limit:     page.Limit,
+		Order:     page.Order,
+		Direction: string(page.Direction),
 	}
 }

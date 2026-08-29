@@ -81,6 +81,7 @@ type Container struct {
 	AtivarPecaUC               *apppeca.AtivarPecaUseCase
 	InativarPecaUC             *apppeca.InativarPecaUseCase
 	ConsultarPecaPorIDUC       *apppeca.ConsultarPecaPorIDUseCase
+	ListarPecasUC              *apppeca.ListarPecasUseCase
 	ReporEstoquePecaUC         *apppeca.ReporEstoqueUseCase
 	ConsultarDisponibilidadeUC *apppeca.ConsultarDisponibilidadeUseCase
 	ReservarPecaUC             *apppeca.ReservarPecaUseCase
@@ -158,6 +159,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.AtivarPecaUC = apppeca.NewAtivarPecaUseCase(c.PecaRepo)
 	c.InativarPecaUC = apppeca.NewInativarPecaUseCase(c.PecaRepo)
 	c.ConsultarPecaPorIDUC = apppeca.NewConsultarPecaPorIDUseCase(c.PecaRepo)
+	c.ListarPecasUC = apppeca.NewListarPecasUseCase(c.PecaRepo)
 	c.ReporEstoquePecaUC = apppeca.NewReporEstoqueUseCase(c.PecaRepo)
 	c.ConsultarDisponibilidadeUC = apppeca.NewConsultarDisponibilidadeUseCase(c.PecaRepo, c.ReservaPecaRepo)
 	c.ReservarPecaUC = apppeca.NewReservarPecaUseCase(c.PecaRepo, c.ReservaPecaRepo, c.TransactionRunner)

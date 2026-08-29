@@ -7,6 +7,7 @@ import (
 
 	apppeca "github.com/muriloperosa/soat-architecture/internal/application/peca"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httperror"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httpquery"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httprequest"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/middleware"
 )
@@ -19,7 +20,9 @@ type Handler struct {
 	ativar         *apppeca.AtivarPecaUseCase
 	inativar       *apppeca.InativarPecaUseCase
 	consultarPorID *apppeca.ConsultarPecaPorIDUseCase
+	listar         *apppeca.ListarPecasUseCase
 	reporEstoque   *apppeca.ReporEstoqueUseCase
+	queryParser    *httpquery.Parser
 }
 
 func NewHandler(
@@ -28,7 +31,9 @@ func NewHandler(
 	ativar *apppeca.AtivarPecaUseCase,
 	inativar *apppeca.InativarPecaUseCase,
 	consultarPorID *apppeca.ConsultarPecaPorIDUseCase,
+	listar *apppeca.ListarPecasUseCase,
 	reporEstoque *apppeca.ReporEstoqueUseCase,
+	queryParser *httpquery.Parser,
 ) *Handler {
 	return &Handler{
 		cadastrar:      cadastrar,
@@ -36,7 +41,9 @@ func NewHandler(
 		ativar:         ativar,
 		inativar:       inativar,
 		consultarPorID: consultarPorID,
+		listar:         listar,
 		reporEstoque:   reporEstoque,
+		queryParser:    queryParser,
 	}
 }
 
@@ -215,4 +222,46 @@ func (h *Handler) ReporEstoque(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, toPecaResponse(out))
+}
+
+// @Summary Lista peças
+// @Description Lista peças do estoque com paginação, ordenação e filtros.
+// @Tags Pecas
+// @Produce json
+// @Security BearerAuth
+// @Param offset query int false "Quantidade de registros a ignorar" default(0) minimum(0)
+// @Param limit query int false "Quantidade máxima de registros" default(20) minimum(1) maximum(100)
+// @Param order query string false "Campo para ordenação" Enums(id,codigo,nome,marca,descricao,preco,quantidade_em_estoque,estoque_minimo,criado_por,ativo,data_cadastro,data_atualizacao) default(id)
+// @Param direction query string false "Direção da ordenação" Enums(ASC,DESC) default(ASC)
+// @Param id query int false "Filtra pelo ID"
+// @Param codigo query string false "Filtra pelo código"
+// @Param nome query string false "Filtra pelo nome"
+// @Param marca query string false "Filtra pela marca"
+// @Param descricao query string false "Filtra pela descrição"
+// @Param preco query number false "Filtra pelo preço"
+// @Param quantidade_em_estoque query int false "Filtra pela quantidade em estoque"
+// @Param estoque_minimo query int false "Filtra pelo estoque mínimo"
+// @Param criado_por query int false "Filtra pelo usuário que cadastrou"
+// @Param ativo query bool false "Filtra pelo status ativo"
+// @Param data_cadastro query string false "Filtra pela data de cadastro"
+// @Success 200 {object} ListarPecasResponse
+// @Failure 400 {object} httperror.ErrorResponse
+// @Failure 401 {object} httperror.ErrorResponse
+// @Failure 403 {object} httperror.ErrorResponse
+// @Failure 500 {object} httperror.ErrorResponse
+// @Router /v1/pecas [get]
+func (h *Handler) Listar(c *gin.Context) {
+	params, err := h.queryParser.Parse(c)
+	if err != nil {
+		httperror.RespondError(c, err)
+		return
+	}
+
+	out, err := h.listar.Executar(c.Request.Context(), params)
+	if err != nil {
+		httperror.RespondError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, toListResponse(out))
 }

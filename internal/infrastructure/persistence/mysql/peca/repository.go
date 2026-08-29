@@ -5,19 +5,27 @@ import (
 	"errors"
 
 	domain "github.com/muriloperosa/soat-architecture/internal/domain/peca"
+	domainquery "github.com/muriloperosa/soat-architecture/internal/domain/query"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql"
+	mysqlquery "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/query"
 
 	"gorm.io/gorm"
 )
 
 type Repository struct {
-	db *gorm.DB
+	db           *gorm.DB
+	queryBuilder *mysqlquery.Builder
 }
 
 var _ domain.Repository = (*Repository)(nil)
 
 func NewRepository(db *gorm.DB) domain.Repository {
-	return &Repository{db: db}
+	builder := NewQueryBuilder()
+
+	return &Repository{
+		db:           db,
+		queryBuilder: builder,
+	}
 }
 
 // Salvar implements [peca.Repository].
@@ -84,6 +92,55 @@ func (r *Repository) BuscarPorIDComBloqueio(ctx context.Context, id uint64) (*do
 	}
 
 	return toDomain(model), nil
+}
+
+// Listar implements [peca.Repository].
+func (r *Repository) Listar(
+	ctx context.Context,
+	params domainquery.Params,
+) (domainquery.Page[*domain.Peca], error) {
+	normalized, err := r.queryBuilder.Normalize(params)
+	if err != nil {
+		return domainquery.Page[*domain.Peca]{}, err
+	}
+
+	filtered, err := r.queryBuilder.ApplyFilters(
+		r.db.WithContext(ctx).Model(&PecaModel{}),
+		normalized.Filters,
+	)
+	if err != nil {
+		return domainquery.Page[*domain.Peca]{}, err
+	}
+
+	var total int64
+
+	if err = filtered.Count(&total).Error; err != nil {
+		return domainquery.Page[*domain.Peca]{}, err
+	}
+
+	models := make([]PecaModel, 0)
+
+	if err = r.queryBuilder.
+		ApplyPagination(filtered, normalized).
+		Find(&models).
+		Error; err != nil {
+		return domainquery.Page[*domain.Peca]{}, err
+	}
+
+	pecas := make([]*domain.Peca, 0, len(models))
+
+	for _, model := range models {
+		pecas = append(pecas, toDomain(model))
+	}
+
+	return domainquery.Page[*domain.Peca]{
+		Items:     pecas,
+		Total:     total,
+		Offset:    normalized.Offset,
+		Limit:     normalized.Limit,
+		Order:     normalized.Order,
+		Direction: normalized.Direction,
+	}, nil
 }
 
 // Atualizar implements [peca.Repository].

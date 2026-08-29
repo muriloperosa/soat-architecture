@@ -37,3 +37,12 @@ type PecaResponse struct {
 	CriadoPor           uint64  `json:"criado_por" example:"1"`
 	Ativo               bool    `json:"ativo" example:"true"`
 }
+
+type ListarPecasResponse struct {
+	Items     []PecaResponse `json:"items"`
+	Total     int64          `json:"total" example:"42"`
+	Offset    int            `json:"offset" example:"0"`
+	Limit     int            `json:"limit" example:"20"`
+	Order     string         `json:"order" example:"nome"`
+	Direction string         `json:"direction" example:"ASC"`
+}

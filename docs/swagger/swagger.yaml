@@ -263,6 +263,28 @@ definitions:
     - nome
     - preco
     type: object
+  peca.ListarPecasResponse:
+    properties:
+      direction:
+        example: ASC
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/peca.PecaResponse'
+        type: array
+      limit:
+        example: 20
+        type: integer
+      offset:
+        example: 0
+        type: integer
+      order:
+        example: nome
+        type: string
+      total:
+        example: 42
+        type: integer
+    type: object
   peca.PecaResponse:
     properties:
       ativo:
@@ -1303,6 +1325,120 @@ paths:
       tags:
       - Ordens de Serviço
   /v1/pecas:
+    get:
+      description: Lista peças do estoque com paginação, ordenação e filtros.
+      parameters:
+      - default: 0
+        description: Quantidade de registros a ignorar
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      - default: 20
+        description: Quantidade máxima de registros
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - default: id
+        description: Campo para ordenação
+        enum:
+        - id
+        - codigo
+        - nome
+        - marca
+        - descricao
+        - preco
+        - quantidade_em_estoque
+        - estoque_minimo
+        - criado_por
+        - ativo
+        - data_cadastro
+        - data_atualizacao
+        in: query
+        name: order
+        type: string
+      - default: ASC
+        description: Direção da ordenação
+        enum:
+        - ASC
+        - DESC
+        in: query
+        name: direction
+        type: string
+      - description: Filtra pelo ID
+        in: query
+        name: id
+        type: integer
+      - description: Filtra pelo código
+        in: query
+        name: codigo
+        type: string
+      - description: Filtra pelo nome
+        in: query
+        name: nome
+        type: string
+      - description: Filtra pela marca
+        in: query
+        name: marca
+        type: string
+      - description: Filtra pela descrição
+        in: query
+        name: descricao
+        type: string
+      - description: Filtra pelo preço
+        in: query
+        name: preco
+        type: number
+      - description: Filtra pela quantidade em estoque
+        in: query
+        name: quantidade_em_estoque
+        type: integer
+      - description: Filtra pelo estoque mínimo
+        in: query
+        name: estoque_minimo
+        type: integer
+      - description: Filtra pelo usuário que cadastrou
+        in: query
+        name: criado_por
+        type: integer
+      - description: Filtra pelo status ativo
+        in: query
+        name: ativo
+        type: boolean
+      - description: Filtra pela data de cadastro
+        in: query
+        name: data_cadastro
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/peca.ListarPecasResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Lista peças
+      tags:
+      - Pecas
     post:
       consumes:
       - application/json
