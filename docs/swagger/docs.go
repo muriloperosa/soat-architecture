@@ -2495,6 +2495,10 @@ const docTemplate = `{
                 },
                 "tipo_pessoa": {
                     "type": "string",
+                    "enum": [
+                        "PF",
+                        "PJ"
+                    ],
                     "example": "PF"
                 }
             }
@@ -2532,6 +2536,10 @@ const docTemplate = `{
                 },
                 "tipo_pessoa": {
                     "type": "string",
+                    "enum": [
+                        "PF",
+                        "PJ"
+                    ],
                     "example": "PF"
                 }
             }
@@ -2897,6 +2905,12 @@ const docTemplate = `{
                 },
                 "papel": {
                     "type": "string",
+                    "enum": [
+                        "ADMINISTRADOR",
+                        "MECANICO",
+                        "ATENDENTE",
+                        "CLIENTE"
+                    ],
                     "example": "ATENDENTE"
                 },
                 "senha_nova": {
@@ -2924,6 +2938,12 @@ const docTemplate = `{
                 },
                 "papel": {
                     "type": "string",
+                    "enum": [
+                        "ADMINISTRADOR",
+                        "MECANICO",
+                        "ATENDENTE",
+                        "CLIENTE"
+                    ],
                     "example": "MECANICO"
                 },
                 "senha": {
@@ -2953,6 +2973,12 @@ const docTemplate = `{
                 },
                 "papel": {
                     "type": "string",
+                    "enum": [
+                        "ADMINISTRADOR",
+                        "MECANICO",
+                        "ATENDENTE",
+                        "CLIENTE"
+                    ],
                     "example": "MECANICO"
                 },
                 "requer_alterar_senha": {

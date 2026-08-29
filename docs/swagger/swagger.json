@@ -2492,6 +2492,10 @@
                 },
                 "tipo_pessoa": {
                     "type": "string",
+                    "enum": [
+                        "PF",
+                        "PJ"
+                    ],
                     "example": "PF"
                 }
             }
@@ -2529,6 +2533,10 @@
                 },
                 "tipo_pessoa": {
                     "type": "string",
+                    "enum": [
+                        "PF",
+                        "PJ"
+                    ],
                     "example": "PF"
                 }
             }
@@ -2894,6 +2902,12 @@
                 },
                 "papel": {
                     "type": "string",
+                    "enum": [
+                        "ADMINISTRADOR",
+                        "MECANICO",
+                        "ATENDENTE",
+                        "CLIENTE"
+                    ],
                     "example": "ATENDENTE"
                 },
                 "senha_nova": {
@@ -2921,6 +2935,12 @@
                 },
                 "papel": {
                     "type": "string",
+                    "enum": [
+                        "ADMINISTRADOR",
+                        "MECANICO",
+                        "ATENDENTE",
+                        "CLIENTE"
+                    ],
                     "example": "MECANICO"
                 },
                 "senha": {
@@ -2950,6 +2970,12 @@
                 },
                 "papel": {
                     "type": "string",
+                    "enum": [
+                        "ADMINISTRADOR",
+                        "MECANICO",
+                        "ATENDENTE",
+                        "CLIENTE"
+                    ],
                     "example": "MECANICO"
                 },
                 "requer_alterar_senha": {

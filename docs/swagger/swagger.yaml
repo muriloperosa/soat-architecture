@@ -91,6 +91,9 @@ definitions:
         example: "11999998888"
         type: string
       tipo_pessoa:
+        enum:
+        - PF
+        - PJ
         example: PF
         type: string
     type: object
@@ -112,6 +115,9 @@ definitions:
         example: "11999998888"
         type: string
       tipo_pessoa:
+        enum:
+        - PF
+        - PJ
         example: PF
         type: string
     required:
@@ -379,6 +385,11 @@ definitions:
         example: Ana Souza
         type: string
       papel:
+        enum:
+        - ADMINISTRADOR
+        - MECANICO
+        - ATENDENTE
+        - CLIENTE
         example: ATENDENTE
         type: string
       senha_nova:
@@ -398,6 +409,11 @@ definitions:
         example: Ana Souza
         type: string
       papel:
+        enum:
+        - ADMINISTRADOR
+        - MECANICO
+        - ATENDENTE
+        - CLIENTE
         example: MECANICO
         type: string
       senha:
@@ -424,6 +440,11 @@ definitions:
         example: Ana Souza
         type: string
       papel:
+        enum:
+        - ADMINISTRADOR
+        - MECANICO
+        - ATENDENTE
+        - CLIENTE
         example: MECANICO
         type: string
       requer_alterar_senha:
