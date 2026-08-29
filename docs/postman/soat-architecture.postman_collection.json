@@ -1,16 +1,54 @@
 {
   "info": {
     "name": "SOAT Architecture — Oficina Mecânica",
-    "description": "Auth JWT (interno/cliente) + gestão de usuário interno. Login/Refresh/Criar usuário salvam token/id automaticamente nas variáveis da collection (veja as abas Tests de cada request).",
+    "description": "Cobertura completa da API (auth JWT interno/cliente, usuários, clientes, veículos, peças, serviços, ordens de serviço, relatórios). Login/Refresh/Criar salvam token/id automaticamente nas variáveis da collection (veja as abas Tests de cada request).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "base_url", "value": "http://localhost:8080" },
-    { "key": "access_token", "value": "" },
-    { "key": "refresh_token", "value": "" },
-    { "key": "cliente_access_token", "value": "" },
-    { "key": "cliente_refresh_token", "value": "" },
-    { "key": "usuario_id", "value": "" }
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "access_token",
+      "value": ""
+    },
+    {
+      "key": "refresh_token",
+      "value": ""
+    },
+    {
+      "key": "cliente_access_token",
+      "value": ""
+    },
+    {
+      "key": "cliente_refresh_token",
+      "value": ""
+    },
+    {
+      "key": "usuario_id",
+      "value": ""
+    },
+    {
+      "key": "cliente_id",
+      "value": ""
+    },
+    {
+      "key": "veiculo_id",
+      "value": ""
+    },
+    {
+      "key": "peca_id",
+      "value": ""
+    },
+    {
+      "key": "servico_id",
+      "value": ""
+    },
+    {
+      "key": "ordem_servico_id",
+      "value": ""
+    }
   ],
   "item": [
     {
@@ -20,7 +58,16 @@
           "name": "Health check",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{base_url}}/v1/health", "host": ["{{base_url}}"], "path": ["v1", "health"] }
+            "url": {
+              "raw": "{{base_url}}/v1/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "health"
+              ]
+            }
           }
         }
       ]
@@ -46,12 +93,27 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"admin@oficina.com\",\n  \"senha\": \"senha123\"\n}"
             },
-            "url": { "raw": "{{base_url}}/v1/auth/login", "host": ["{{base_url}}"], "path": ["v1", "auth", "login"] }
+            "url": {
+              "raw": "{{base_url}}/v1/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
           }
         },
         {
@@ -72,24 +134,54 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
             },
-            "url": { "raw": "{{base_url}}/v1/auth/refresh", "host": ["{{base_url}}"], "path": ["v1", "auth", "refresh"] }
+            "url": {
+              "raw": "{{base_url}}/v1/auth/refresh",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "refresh"
+              ]
+            }
           }
         },
         {
           "name": "Logout",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
             },
-            "url": { "raw": "{{base_url}}/v1/auth/logout", "host": ["{{base_url}}"], "path": ["v1", "auth", "logout"] }
+            "url": {
+              "raw": "{{base_url}}/v1/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "logout"
+              ]
+            }
           }
         }
       ]
@@ -115,12 +207,28 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"cliente@exemplo.com\",\n  \"senha\": \"senha123\"\n}"
             },
-            "url": { "raw": "{{base_url}}/v1/auth/cliente/login", "host": ["{{base_url}}"], "path": ["v1", "auth", "cliente", "login"] }
+            "url": {
+              "raw": "{{base_url}}/v1/auth/cliente/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "cliente",
+                "login"
+              ]
+            }
           },
           "response": []
         },
@@ -142,24 +250,56 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"refresh_token\": \"{{cliente_refresh_token}}\"\n}"
             },
-            "url": { "raw": "{{base_url}}/v1/auth/cliente/refresh", "host": ["{{base_url}}"], "path": ["v1", "auth", "cliente", "refresh"] }
+            "url": {
+              "raw": "{{base_url}}/v1/auth/cliente/refresh",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "cliente",
+                "refresh"
+              ]
+            }
           }
         },
         {
           "name": "Logout",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"refresh_token\": \"{{cliente_refresh_token}}\"\n}"
             },
-            "url": { "raw": "{{base_url}}/v1/auth/cliente/logout", "host": ["{{base_url}}"], "path": ["v1", "auth", "cliente", "logout"] }
+            "url": {
+              "raw": "{{base_url}}/v1/auth/cliente/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "cliente",
+                "logout"
+              ]
+            }
           }
         }
       ]
@@ -185,14 +325,29 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"nome\": \"Ana Souza\",\n  \"email\": \"ana@oficina.com\",\n  \"senha\": \"senha123\",\n  \"papel\": \"MECANICO\"\n}"
             },
-            "url": { "raw": "{{base_url}}/v1/usuarios", "host": ["{{base_url}}"], "path": ["v1", "usuarios"] }
+            "url": {
+              "raw": "{{base_url}}/v1/usuarios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "usuarios"
+              ]
+            }
           }
         },
         {
@@ -200,8 +355,14 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -209,8 +370,14 @@
             },
             "url": {
               "raw": "{{base_url}}/v1/usuarios/{{usuario_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["v1", "usuarios", "{{usuario_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "usuarios",
+                "{{usuario_id}}"
+              ]
             }
           },
           "response": []
@@ -220,8 +387,14 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -229,8 +402,14 @@
             },
             "url": {
               "raw": "{{base_url}}/v1/usuarios/{{usuario_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["v1", "usuarios", "{{usuario_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "usuarios",
+                "{{usuario_id}}"
+              ]
             }
           },
           "response": []
@@ -239,11 +418,23 @@
           "name": "Inativar usuário",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/v1/usuarios/{{usuario_id}}/inativar",
-              "host": ["{{base_url}}"],
-              "path": ["v1", "usuarios", "{{usuario_id}}", "inativar"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "usuarios",
+                "{{usuario_id}}",
+                "inativar"
+              ]
             }
           }
         },
@@ -251,11 +442,23 @@
           "name": "Ativar usuário",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/v1/usuarios/{{usuario_id}}/ativar",
-              "host": ["{{base_url}}"],
-              "path": ["v1", "usuarios", "{{usuario_id}}", "ativar"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "usuarios",
+                "{{usuario_id}}",
+                "ativar"
+              ]
             }
           }
         }
@@ -268,8 +471,23 @@
           "name": "Dados do usuário logado",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
-            "url": { "raw": "{{base_url}}/v1/usuarios/me", "host": ["{{base_url}}"], "path": ["v1", "usuarios", "me"] }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/usuarios/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "usuarios",
+                "me"
+              ]
+            }
           }
         },
         {
@@ -277,14 +495,920 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"senha_nova\": \"novaSenha123\"\n}"
             },
-            "url": { "raw": "{{base_url}}/v1/usuarios/me/senha", "host": ["{{base_url}}"], "path": ["v1", "usuarios", "me", "senha"] }
+            "url": {
+              "raw": "{{base_url}}/v1/usuarios/me/senha",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "usuarios",
+                "me",
+                "senha"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Clientes",
+      "item": [
+        {
+          "name": "Criar cliente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('cliente_id', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documento\": \"12345678909\",\n  \"tipo_pessoa\": \"PF\",\n  \"nome\": \"Maria Silva\",\n  \"email\": \"maria@oficina.com\",\n  \"senha\": \"senha123\",\n  \"telefone\": \"11999998888\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/clientes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "clientes"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Buscar cliente por ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/clientes/{{cliente_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "clientes",
+                "{{cliente_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Buscar cliente por documento",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/clientes/documento/12345678909",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "clientes",
+                "documento",
+                "12345678909"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Atualizar cliente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Maria S. Silva\",\n  \"email\": \"maria@oficina.com\",\n  \"telefone\": \"11999998888\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/clientes/{{cliente_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "clientes",
+                "{{cliente_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Ativar cliente",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/clientes/{{cliente_id}}/ativar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "clientes",
+                "{{cliente_id}}",
+                "ativar"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Inativar cliente",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/clientes/{{cliente_id}}/inativar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "clientes",
+                "{{cliente_id}}",
+                "inativar"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Alterar a própria senha (cliente)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cliente_access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"senha_nova\": \"novaSenha123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/clientes/me/senha",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "clientes",
+                "me",
+                "senha"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Veiculos",
+      "item": [
+        {
+          "name": "Cadastrar veículo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('veiculo_id', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"placa\": \"ABC1D23\",\n  \"marca\": \"Fiat\",\n  \"modelo\": \"Uno\",\n  \"ano\": 2020,\n  \"cor\": \"Prata\",\n  \"quilometragem_atual\": 15000\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/veiculos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "veiculos"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Buscar veículo por ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/veiculos/{{veiculo_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "veiculos",
+                "{{veiculo_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Buscar veículo por placa",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/veiculos/placa/ABC1D23",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "veiculos",
+                "placa",
+                "ABC1D23"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Atualizar veículo",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"marca\": \"Fiat\",\n  \"modelo\": \"Uno\",\n  \"cor\": \"Prata\",\n  \"quilometragem_atual\": 15500\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/veiculos/{{veiculo_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "veiculos",
+                "{{veiculo_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Ativar veículo",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/veiculos/{{veiculo_id}}/ativar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "veiculos",
+                "{{veiculo_id}}",
+                "ativar"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Inativar veículo",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/veiculos/{{veiculo_id}}/inativar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "veiculos",
+                "{{veiculo_id}}",
+                "inativar"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pecas",
+      "item": [
+        {
+          "name": "Cadastrar peça",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('peca_id', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Pastilha de freio\",\n  \"marca\": \"Bosch\",\n  \"descricao\": \"Pastilha de freio dianteira\",\n  \"preco\": 89.90,\n  \"quantidade_em_estoque\": 20,\n  \"estoque_minimo\": 5\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/pecas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "pecas"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Buscar peça por ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/pecas/{{peca_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "pecas",
+                "{{peca_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Atualizar peça",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Pastilha de freio\",\n  \"marca\": \"Bosch\",\n  \"descricao\": \"Pastilha de freio dianteira\",\n  \"preco\": 89.90,\n  \"estoque_minimo\": 5\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/pecas/{{peca_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "pecas",
+                "{{peca_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Repor estoque de peça",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantidade\": 10\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/pecas/{{peca_id}}/repor-estoque",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "pecas",
+                "{{peca_id}}",
+                "repor-estoque"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Ativar peça",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/pecas/{{peca_id}}/ativar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "pecas",
+                "{{peca_id}}",
+                "ativar"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Inativar peça",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/pecas/{{peca_id}}/inativar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "pecas",
+                "{{peca_id}}",
+                "inativar"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Servicos",
+      "item": [
+        {
+          "name": "Criar serviço",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('servico_id', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Troca de óleo\",\n  \"descricao\": \"Troca de óleo e filtro\",\n  \"preco_base\": 150.50,\n  \"tempo_estimado_minutos\": 60\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/servicos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "servicos"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Listar serviços",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/servicos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "servicos"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Buscar serviço por ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/servicos/{{servico_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "servicos",
+                "{{servico_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Atualizar serviço",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Alinhamento\",\n  \"descricao\": \"Alinhamento e balanceamento\",\n  \"preco_base\": 200.75,\n  \"tempo_estimado_minutos\": 90\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/servicos/{{servico_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "servicos",
+                "{{servico_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Ativar serviço",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/servicos/{{servico_id}}/ativar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "servicos",
+                "{{servico_id}}",
+                "ativar"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Inativar serviço",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/servicos/{{servico_id}}/inativar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "servicos",
+                "{{servico_id}}",
+                "inativar"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ordens de Servico",
+      "item": [
+        {
+          "name": "Abrir ordem de serviço",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('ordem_servico_id', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cliente_id\": {{cliente_id}},\n  \"veiculo_id\": {{veiculo_id}},\n  \"quilometragem_entrada\": 52300,\n  \"observacoes\": \"Cliente relatou ruído no motor\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Iniciar diagnóstico",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/iniciar-diagnostico",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "{{ordem_servico_id}}",
+                "iniciar-diagnostico"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Informar diagnóstico",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"diagnostico\": \"Falha na bomba de combustível\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/diagnostico",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "{{ordem_servico_id}}",
+                "diagnostico"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Relatorios",
+      "item": [
+        {
+          "name": "Transição de status de Ordens de Serviço",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/relatorios/ordens-servico/transicao-status?start_date=2026-01-01&final_date=2026-12-31&from_status=RECEBIDA&to_status=ENTREGUE&unit=h",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "relatorios",
+                "ordens-servico",
+                "transicao-status"
+              ],
+              "query": [
+                {
+                  "key": "start_date",
+                  "value": "2026-01-01"
+                },
+                {
+                  "key": "final_date",
+                  "value": "2026-12-31"
+                },
+                {
+                  "key": "from_status",
+                  "value": "RECEBIDA"
+                },
+                {
+                  "key": "to_status",
+                  "value": "ENTREGUE"
+                },
+                {
+                  "key": "unit",
+                  "value": "h"
+                }
+              ]
+            }
           }
         }
       ]
