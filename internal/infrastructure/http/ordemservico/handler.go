@@ -142,7 +142,7 @@ func (h *Handler) InformarDiagnostico(c *gin.Context) {
 }
 
 // @Summary Inicia a execução de uma Ordem de Serviço
-// @Description Altera uma Ordem de Serviço APROVADA para EM_EXECUCAO e registra o histórico. Restrito a usuário interno autenticado.
+// @Description Altera uma Ordem de Serviço APROVADA para EM_EXECUCAO e registra o histórico. Restrito a mecânico ou administrador.
 // @Tags Ordens de Serviço
 // @Produce json
 // @Security BearerAuth

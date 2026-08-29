@@ -1120,7 +1120,7 @@ paths:
   /v1/ordens-servico/{id}/iniciar-execucao:
     patch:
       description: Altera uma Ordem de Serviço APROVADA para EM_EXECUCAO e registra
-        o histórico. Restrito a usuário interno autenticado.
+        o histórico. Restrito a mecânico ou administrador.
       parameters:
       - description: ID da Ordem de Serviço
         in: path

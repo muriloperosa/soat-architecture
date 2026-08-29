@@ -932,7 +932,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Altera uma Ordem de Serviço APROVADA para EM_EXECUCAO e registra o histórico. Restrito a usuário interno autenticado.",
+                "description": "Altera uma Ordem de Serviço APROVADA para EM_EXECUCAO e registra o histórico. Restrito a mecânico ou administrador.",
                 "produces": [
                     "application/json"
                 ],
