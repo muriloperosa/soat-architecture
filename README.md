@@ -30,9 +30,12 @@ Um hook de `pre-push` local, instalado via `make hooks-install`, roda mocks, lin
 
 ## Executar Localmente
 
+Pré-requisitos: Docker e Docker Compose.
+
 Sobe o ambiente inteiro com um único comando, sem exigir Go instalado localmente:
 
 ```bash
+chmod +x .dev/scripts/setup.sh
 .dev/scripts/setup.sh
 ```
 
