@@ -18,10 +18,10 @@ import (
 	persistrelatorio "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/relatorio"
 )
 
-// seedOrdemServico insere uma OS diretamente via SQL (sem passar pelos use
+// seedOrdemServicoComNumero insere uma OS diretamente via SQL (sem passar pelos use
 // cases, que hoje só cobrem até informar-diagnóstico), pra permitir simular
 // livremente sequências de historicos_status com timestamps arbitrários.
-func seedOrdemServico(t *testing.T, numero string, clienteID, veiculoID, criadoPor uint64) uint64 {
+func seedOrdemServicoComNumero(t *testing.T, numero string, clienteID, veiculoID, criadoPor uint64) uint64 {
 	t.Helper()
 	if err := testDB.Exec(
 		`INSERT INTO ordens_servico (numero, cliente_id, veiculo_id, quilometragem_entrada, status, criado_por)
@@ -52,7 +52,7 @@ func seedClienteEVeiculo(t *testing.T, admin uint64, sufixo string) (clienteID, 
 	t.Helper()
 	cliente, err := testContainer.CriarClienteUseCase.Executar(context.Background(), appcliente.CriarClienteInput{
 		Documento: "52998224725",
-		Tipo:      domaincliente.TipoPessoaFisica,
+		Tipo:      string(domaincliente.TipoPessoaFisica),
 		Nome:      "Cliente " + sufixo,
 		Email:     "cliente" + sufixo + "@email.com",
 		Telefone:  "11999998888",
@@ -88,7 +88,7 @@ func TestRelatorioRepository_CalcularTransicaoStatus(t *testing.T) {
 	base := time.Date(2026, time.March, 1, 8, 0, 0, 0, time.UTC)
 
 	// OS 1: completou RECEBIDA -> ENTREGUE dentro do período, em 1h (salto de várias etapas).
-	os1 := seedOrdemServico(t, "OS-REL-0001", clienteID, veiculoID, admin.ID)
+	os1 := seedOrdemServicoComNumero(t, "OS-REL-0001", clienteID, veiculoID, admin.ID)
 	seedHistorico(t, os1, "RECEBIDA", admin.ID, base)
 	seedHistorico(t, os1, "EM_DIAGNOSTICO", admin.ID, base.Add(10*time.Minute))
 	seedHistorico(t, os1, "AGUARDANDO_APROVACAO", admin.ID, base.Add(20*time.Minute))
@@ -98,23 +98,23 @@ func TestRelatorioRepository_CalcularTransicaoStatus(t *testing.T) {
 	seedHistorico(t, os1, "ENTREGUE", admin.ID, base.Add(60*time.Minute))
 
 	// OS 2: completou RECEBIDA -> ENTREGUE dentro do período, em 3h.
-	os2 := seedOrdemServico(t, "OS-REL-0002", clienteID, veiculoID, admin.ID)
+	os2 := seedOrdemServicoComNumero(t, "OS-REL-0002", clienteID, veiculoID, admin.ID)
 	seedHistorico(t, os2, "RECEBIDA", admin.ID, base.Add(2*time.Hour))
 	seedHistorico(t, os2, "ENTREGUE", admin.ID, base.Add(5*time.Hour))
 
 	// OS 3: chegou em RECEBIDA mas nunca chegou em ENTREGUE — não deve contar.
-	os3 := seedOrdemServico(t, "OS-REL-0003", clienteID, veiculoID, admin.ID)
+	os3 := seedOrdemServicoComNumero(t, "OS-REL-0003", clienteID, veiculoID, admin.ID)
 	seedHistorico(t, os3, "RECEBIDA", admin.ID, base)
 	seedHistorico(t, os3, "EM_DIAGNOSTICO", admin.ID, base.Add(10*time.Minute))
 
 	// OS 4: chegou em ENTREGUE antes de RECEBIDA (ordem invertida no histórico,
 	// dado inconsistente hipotético) — self-join exige alterado_em > t_from, não deve contar.
-	os4 := seedOrdemServico(t, "OS-REL-0004", clienteID, veiculoID, admin.ID)
+	os4 := seedOrdemServicoComNumero(t, "OS-REL-0004", clienteID, veiculoID, admin.ID)
 	seedHistorico(t, os4, "ENTREGUE", admin.ID, base.Add(-time.Hour))
 	seedHistorico(t, os4, "RECEBIDA", admin.ID, base)
 
 	// OS 5: completou a transição, mas fora do período de busca (t_to fora do range).
-	os5 := seedOrdemServico(t, "OS-REL-0005", clienteID, veiculoID, admin.ID)
+	os5 := seedOrdemServicoComNumero(t, "OS-REL-0005", clienteID, veiculoID, admin.ID)
 	seedHistorico(t, os5, "RECEBIDA", admin.ID, base.Add(48*time.Hour))
 	seedHistorico(t, os5, "ENTREGUE", admin.ID, base.Add(49*time.Hour))
 
@@ -154,7 +154,7 @@ func TestRelatorioRepository_CalcularTransicaoStatus_SemOrdensNoPeriodo(t *testi
 	repo := persistrelatorio.NewRelatorioRepository(testDB)
 	base := time.Date(2026, time.April, 1, 8, 0, 0, 0, time.UTC)
 
-	os1 := seedOrdemServico(t, "OS-REL-0006", clienteID, veiculoID, admin.ID)
+	os1 := seedOrdemServicoComNumero(t, "OS-REL-0006", clienteID, veiculoID, admin.ID)
 	seedHistorico(t, os1, "RECEBIDA", admin.ID, base)
 	seedHistorico(t, os1, "ENTREGUE", admin.ID, base.Add(time.Hour))
 
@@ -188,7 +188,7 @@ func TestRelatorioTransicaoStatusRoute_ComSucesso(t *testing.T) {
 	clienteID, veiculoID := seedClienteEVeiculo(t, admin.ID, "E01")
 
 	agora := time.Now().UTC()
-	os1 := seedOrdemServico(t, "OS-REL-HTTP-0001", clienteID, veiculoID, admin.ID)
+	os1 := seedOrdemServicoComNumero(t, "OS-REL-HTTP-0001", clienteID, veiculoID, admin.ID)
 	seedHistorico(t, os1, "RECEBIDA", admin.ID, agora.Add(-90*time.Minute))
 	seedHistorico(t, os1, "ENTREGUE", admin.ID, agora.Add(-30*time.Minute))
 

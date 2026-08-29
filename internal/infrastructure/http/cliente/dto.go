@@ -6,7 +6,7 @@ type CriarClienteRequest struct {
 	Email      string `json:"email" binding:"required" example:"maria@oficina.com"`
 	Senha      string `json:"senha" binding:"required" example:"senha123"`
 	Documento  string `json:"documento" binding:"required" example:"12345678909"`
-	TipoPessoa string `json:"tipo_pessoa" binding:"required" example:"PF"`
+	TipoPessoa string `json:"tipo_pessoa" binding:"required" example:"PF" enums:"PF,PJ"`
 	Telefone   string `json:"telefone" binding:"required" example:"11999998888"`
 }
 
@@ -28,7 +28,7 @@ type ClienteResponse struct {
 	Nome               string `json:"nome" example:"Maria Silva"`
 	Email              string `json:"email" example:"maria@oficina.com"`
 	Documento          string `json:"documento" example:"12345678909"`
-	TipoPessoa         string `json:"tipo_pessoa" example:"PF"`
+	TipoPessoa         string `json:"tipo_pessoa" example:"PF" enums:"PF,PJ"`
 	Telefone           string `json:"telefone" example:"11999998888"`
 	Ativo              bool   `json:"ativo" example:"true"`
 	RequerAlterarSenha bool   `json:"requer_alterar_senha" example:"true"`

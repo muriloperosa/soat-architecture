@@ -18,11 +18,11 @@ func TestLogoutUseCase_Executar_TokenExistente_Revoga(t *testing.T) {
 	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
 	bruto, _ := infraauth.NewAuthenticatorJWT("s", time.Minute).GerarRefreshToken()
 	rt := &domainauth.RefreshToken{
-		ID: 1, TokenHash: infraauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
+		ID: 1, TokenHash: domainauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
 	}
 	uc := appauth.NewLogoutUseCase(refreshTokensRepo)
 
-	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, infraauth.HashRefreshToken(bruto)).Return(rt, nil)
+	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, domainauth.HashRefreshToken(bruto)).Return(rt, nil)
 	refreshTokensRepo.EXPECT().Revogar(mock.Anything, uint64(1)).Return(nil)
 
 	err := uc.Executar(context.Background(), appauth.LogoutInput{RefreshTokenBruto: bruto})
@@ -35,12 +35,12 @@ func TestLogoutUseCase_Executar_TokenJaRevogado_NoOpSemErro(t *testing.T) {
 	bruto, _ := infraauth.NewAuthenticatorJWT("s", time.Minute).GerarRefreshToken()
 	agora := time.Now()
 	rt := &domainauth.RefreshToken{
-		ID: 1, TokenHash: infraauth.HashRefreshToken(bruto),
+		ID: 1, TokenHash: domainauth.HashRefreshToken(bruto),
 		ExpiraEm: time.Now().Add(time.Hour), RevogadoEm: &agora,
 	}
 	uc := appauth.NewLogoutUseCase(refreshTokensRepo)
 
-	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, infraauth.HashRefreshToken(bruto)).Return(rt, nil)
+	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, domainauth.HashRefreshToken(bruto)).Return(rt, nil)
 
 	err := uc.Executar(context.Background(), appauth.LogoutInput{RefreshTokenBruto: bruto})
 
@@ -51,7 +51,7 @@ func TestLogoutUseCase_Executar_TokenInexistente_NoOpSemErro(t *testing.T) {
 	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
 	uc := appauth.NewLogoutUseCase(refreshTokensRepo)
 
-	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, infraauth.HashRefreshToken("inexistente")).Return(nil, errors.New("nao encontrado"))
+	refreshTokensRepo.EXPECT().BuscarPorHash(mock.Anything, domainauth.HashRefreshToken("inexistente")).Return(nil, errors.New("nao encontrado"))
 
 	err := uc.Executar(context.Background(), appauth.LogoutInput{RefreshTokenBruto: "inexistente"})
 

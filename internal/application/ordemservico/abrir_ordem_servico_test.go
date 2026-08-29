@@ -81,6 +81,47 @@ func TestAbrirOrdemServicoUseCase_VeiculoInexistente(t *testing.T) {
 	require.ErrorIs(t, err, domainveiculo.ErrVeiculoNaoEncontrado)
 }
 
+func TestAbrirOrdemServicoUseCase_ClienteRetornadoNulo(t *testing.T) {
+	ordemRepo := ordemservicomocks.NewOrdemServicoRepository(t)
+	clienteRepo := clientemocks.NewClienteRepository(t)
+	veiculoRepo := veiculomocks.NewRepository(t)
+	clienteRepo.EXPECT().BuscarPorID(mock.Anything, uint64(10)).Return(nil, nil)
+
+	uc := app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo)
+	out, err := uc.Executar(context.Background(), app.AbrirOrdemServicoInput{ClienteID: 10, VeiculoID: 20, UsuarioID: 30})
+
+	require.Empty(t, out)
+	require.ErrorIs(t, err, domaincliente.ErrClienteNaoEncontrado)
+}
+
+func TestAbrirOrdemServicoUseCase_VeiculoRetornadoNulo(t *testing.T) {
+	ordemRepo := ordemservicomocks.NewOrdemServicoRepository(t)
+	clienteRepo := clientemocks.NewClienteRepository(t)
+	veiculoRepo := veiculomocks.NewRepository(t)
+	clienteRepo.EXPECT().BuscarPorID(mock.Anything, uint64(10)).Return(clienteValido(t), nil)
+	veiculoRepo.EXPECT().BuscarPorID(mock.Anything, uint64(20)).Return(nil, nil)
+
+	uc := app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo)
+	out, err := uc.Executar(context.Background(), app.AbrirOrdemServicoInput{ClienteID: 10, VeiculoID: 20, UsuarioID: 30})
+
+	require.Empty(t, out)
+	require.ErrorIs(t, err, domainveiculo.ErrVeiculoNaoEncontrado)
+}
+
+func TestAbrirOrdemServicoUseCase_DadosInvalidos(t *testing.T) {
+	ordemRepo := ordemservicomocks.NewOrdemServicoRepository(t)
+	clienteRepo := clientemocks.NewClienteRepository(t)
+	veiculoRepo := veiculomocks.NewRepository(t)
+	clienteRepo.EXPECT().BuscarPorID(mock.Anything, uint64(10)).Return(clienteValido(t), nil)
+	veiculoRepo.EXPECT().BuscarPorID(mock.Anything, uint64(20)).Return(veiculoValido(t), nil)
+
+	uc := app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo)
+	out, err := uc.Executar(context.Background(), app.AbrirOrdemServicoInput{ClienteID: 10, VeiculoID: 20, UsuarioID: 0})
+
+	require.Empty(t, out)
+	require.ErrorIs(t, err, domainordemservico.ErrCriadoPorObrigatorio)
+}
+
 func TestAbrirOrdemServicoUseCase_ErroAoPersistir(t *testing.T) {
 	ordemRepo := ordemservicomocks.NewOrdemServicoRepository(t)
 	clienteRepo := clientemocks.NewClienteRepository(t)

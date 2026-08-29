@@ -8,7 +8,6 @@ import (
 	"time"
 
 	appusuario "github.com/muriloperosa/soat-architecture/internal/application/usuario"
-	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/config"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/wiring"
@@ -44,7 +43,7 @@ func main() {
 		Nome:         *nome,
 		Email:        *email,
 		SenhaInicial: *senha,
-		Papel:        shared.PapelUsuario(*papel),
+		Papel:        *papel,
 	})
 	if err != nil {
 		log.Fatalf("erro ao criar usuario: %v", err)

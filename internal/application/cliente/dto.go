@@ -5,7 +5,7 @@ import domain "github.com/muriloperosa/soat-architecture/internal/domain/cliente
 // CriarClienteInput é o DTO de entrada do CriarClienteUseCase.
 type CriarClienteInput struct {
 	Documento string
-	Tipo      domain.TipoPessoa
+	Tipo      string
 	Nome      string
 	Email     string
 	Telefone  string

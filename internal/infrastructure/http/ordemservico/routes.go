@@ -13,6 +13,8 @@ func RegisterOrdemServicoRoutes(rg *gin.RouterGroup, container *wiring.Container
 		container.AbrirOrdemServicoUC,
 		container.IniciarDiagnosticoUC,
 		container.InformarDiagnosticoUC,
+		container.IniciarExecucaoUC,
+		container.EntregarOrdemServicoUC,
 	)
 
 	ordensServico := rg.Group(
@@ -22,11 +24,14 @@ func RegisterOrdemServicoRoutes(rg *gin.RouterGroup, container *wiring.Container
 	)
 
 	ordensServico.POST("", handler.Abrir)
+	ordensServico.PATCH("/:id/entregar", handler.Entregar)
 
-	diagnostico := ordensServico.Group(
+	ordensServicoExec := ordensServico.Group(
 		"",
 		middleware.AuthorizationMiddleware(domainauth.TipoInterno, shared.PapelMecanico, shared.PapelAdmin),
 	)
-	diagnostico.PATCH("/:id/iniciar-diagnostico", handler.IniciarDiagnostico)
-	diagnostico.PUT("/:id/diagnostico", handler.InformarDiagnostico)
+
+	ordensServicoExec.PATCH("/:id/iniciar-diagnostico", handler.IniciarDiagnostico)
+	ordensServicoExec.PUT("/:id/diagnostico", handler.InformarDiagnostico)
+	ordensServicoExec.PATCH("/:id/iniciar-execucao", handler.IniciarExecucao)
 }

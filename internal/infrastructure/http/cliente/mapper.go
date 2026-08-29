@@ -9,7 +9,7 @@ import (
 func toCriarInput(criadoPor uint64, req CriarClienteRequest) app.CriarClienteInput {
 	return app.CriarClienteInput{
 		Documento: req.Documento,
-		Tipo:      domain.TipoPessoa(req.TipoPessoa),
+		Tipo:      req.TipoPessoa,
 		Nome:      req.Nome,
 		Email:     req.Email,
 		Telefone:  req.Telefone,

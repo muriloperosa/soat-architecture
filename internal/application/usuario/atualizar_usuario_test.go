@@ -24,7 +24,7 @@ func TestAtualizarUsuarioUseCase_Executar_UsuarioExiste_AtualizaNomeEPapel(t *te
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(1)).Return(existente, nil)
 	repo.EXPECT().Atualizar(mock.Anything, mock.AnythingOfType("*usuario.Usuario")).Return(nil)
 
-	out, err := uc.Executar(context.Background(), appusuario.AtualizarUsuarioInput{ID: 1, Nome: "Ana S. Costa", Email: "ana@oficina.com", Papel: shared.PapelAtendente})
+	out, err := uc.Executar(context.Background(), appusuario.AtualizarUsuarioInput{ID: 1, Nome: "Ana S. Costa", Email: "ana@oficina.com", Papel: string(shared.PapelAtendente)})
 
 	require.NoError(t, err)
 	require.Equal(t, "Ana S. Costa", out.Nome)
@@ -37,7 +37,7 @@ func TestAtualizarUsuarioUseCase_Executar_UsuarioNaoExiste_RetornaNotFound(t *te
 
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(99)).Return(nil, domainusuario.ErrUsuarioNaoEncontrado)
 
-	_, err := uc.Executar(context.Background(), appusuario.AtualizarUsuarioInput{ID: 99, Nome: "X", Email: "x@oficina.com", Papel: shared.PapelAdmin})
+	_, err := uc.Executar(context.Background(), appusuario.AtualizarUsuarioInput{ID: 99, Nome: "X", Email: "x@oficina.com", Papel: string(shared.PapelAdmin)})
 
 	require.ErrorIs(t, err, domainusuario.ErrUsuarioNaoEncontrado)
 }
@@ -48,7 +48,7 @@ func TestAtualizarUsuarioUseCase_Executar_ErroDoBancoAoBuscar_RetornaInternalErr
 
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(1)).Return(nil, errors.New("conexao recusada"))
 
-	_, err := uc.Executar(context.Background(), appusuario.AtualizarUsuarioInput{ID: 1, Nome: "Ana S. Costa", Email: "ana@oficina.com", Papel: shared.PapelAtendente})
+	_, err := uc.Executar(context.Background(), appusuario.AtualizarUsuarioInput{ID: 1, Nome: "Ana S. Costa", Email: "ana@oficina.com", Papel: string(shared.PapelAtendente)})
 
 	var appErr *shared.AppError
 	require.ErrorAs(t, err, &appErr)
@@ -65,7 +65,7 @@ func TestAtualizarUsuarioUseCase_Executar_DadosInvalidos_PropagaErroDeValidacao(
 
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(1)).Return(existente, nil)
 
-	_, err = uc.Executar(context.Background(), appusuario.AtualizarUsuarioInput{ID: 1, Nome: "", Email: "ana@oficina.com", Papel: shared.PapelAtendente})
+	_, err = uc.Executar(context.Background(), appusuario.AtualizarUsuarioInput{ID: 1, Nome: "", Email: "ana@oficina.com", Papel: string(shared.PapelAtendente)})
 
 	require.ErrorIs(t, err, domainusuario.ErrNomeObrigatorio)
 }
@@ -81,7 +81,7 @@ func TestAtualizarUsuarioUseCase_Executar_ErroDoBancoAoAtualizar_RetornaInternal
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(1)).Return(existente, nil)
 	repo.EXPECT().Atualizar(mock.Anything, mock.AnythingOfType("*usuario.Usuario")).Return(errors.New("conexao recusada"))
 
-	_, err = uc.Executar(context.Background(), appusuario.AtualizarUsuarioInput{ID: 1, Nome: "Ana S. Costa", Email: "ana@oficina.com", Papel: shared.PapelAtendente})
+	_, err = uc.Executar(context.Background(), appusuario.AtualizarUsuarioInput{ID: 1, Nome: "Ana S. Costa", Email: "ana@oficina.com", Papel: string(shared.PapelAtendente)})
 
 	var appErr *shared.AppError
 	require.ErrorAs(t, err, &appErr)
@@ -100,7 +100,7 @@ func TestAtualizarUsuarioUseCase_Executar_TrocaEmailParaUmLivre_Atualiza(t *test
 	repo.EXPECT().BuscarPorEmail(mock.Anything, "ana.nova@oficina.com").Return(nil, domainusuario.ErrUsuarioNaoEncontrado)
 	repo.EXPECT().Atualizar(mock.Anything, mock.AnythingOfType("*usuario.Usuario")).Return(nil)
 
-	out, err := uc.Executar(context.Background(), appusuario.AtualizarUsuarioInput{ID: 1, Nome: "Ana Souza", Email: "ana.nova@oficina.com", Papel: shared.PapelMecanico})
+	out, err := uc.Executar(context.Background(), appusuario.AtualizarUsuarioInput{ID: 1, Nome: "Ana Souza", Email: "ana.nova@oficina.com", Papel: string(shared.PapelMecanico)})
 
 	require.NoError(t, err)
 	require.Equal(t, "ana.nova@oficina.com", out.Email)
@@ -121,7 +121,7 @@ func TestAtualizarUsuarioUseCase_Executar_TrocaEmailJaUsadoPorOutroUsuario_Retor
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(1)).Return(existente, nil)
 	repo.EXPECT().BuscarPorEmail(mock.Anything, "bia@oficina.com").Return(outroUsuario, nil)
 
-	_, err = uc.Executar(context.Background(), appusuario.AtualizarUsuarioInput{ID: 1, Nome: "Ana Souza", Email: "bia@oficina.com", Papel: shared.PapelMecanico})
+	_, err = uc.Executar(context.Background(), appusuario.AtualizarUsuarioInput{ID: 1, Nome: "Ana Souza", Email: "bia@oficina.com", Papel: string(shared.PapelMecanico)})
 
 	var appErr *shared.AppError
 	require.ErrorAs(t, err, &appErr)
@@ -139,7 +139,7 @@ func TestAtualizarUsuarioUseCase_Executar_ErroDoBancoAoVerificarEmail_RetornaInt
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(1)).Return(existente, nil)
 	repo.EXPECT().BuscarPorEmail(mock.Anything, "ana.nova@oficina.com").Return(nil, errors.New("conexao recusada"))
 
-	_, err = uc.Executar(context.Background(), appusuario.AtualizarUsuarioInput{ID: 1, Nome: "Ana Souza", Email: "ana.nova@oficina.com", Papel: shared.PapelMecanico})
+	_, err = uc.Executar(context.Background(), appusuario.AtualizarUsuarioInput{ID: 1, Nome: "Ana Souza", Email: "ana.nova@oficina.com", Papel: string(shared.PapelMecanico)})
 
 	var appErr *shared.AppError
 	require.ErrorAs(t, err, &appErr)
@@ -164,7 +164,7 @@ func TestAtualizarUsuarioUseCase_Executar_ComSenhaNova_RedefineEForcaTroca(t *te
 		}).
 		Return(nil)
 
-	out, err := uc.Executar(context.Background(), appusuario.AtualizarUsuarioInput{ID: 1, Nome: "Ana Souza", Email: "ana@oficina.com", SenhaNova: "senhaDoAdmin123", Papel: shared.PapelMecanico})
+	out, err := uc.Executar(context.Background(), appusuario.AtualizarUsuarioInput{ID: 1, Nome: "Ana Souza", Email: "ana@oficina.com", SenhaNova: "senhaDoAdmin123", Papel: string(shared.PapelMecanico)})
 
 	require.NoError(t, err)
 	require.True(t, out.RequerAlterarSenha)
@@ -187,7 +187,7 @@ func TestAtualizarUsuarioUseCase_Executar_SemSenhaNova_NaoAlteraSenha(t *testing
 		}).
 		Return(nil)
 
-	_, err = uc.Executar(context.Background(), appusuario.AtualizarUsuarioInput{ID: 1, Nome: "Ana Souza", Email: "ana@oficina.com", Papel: shared.PapelMecanico})
+	_, err = uc.Executar(context.Background(), appusuario.AtualizarUsuarioInput{ID: 1, Nome: "Ana Souza", Email: "ana@oficina.com", Papel: string(shared.PapelMecanico)})
 	require.NoError(t, err)
 }
 
@@ -201,7 +201,7 @@ func TestAtualizarUsuarioUseCase_Executar_SenhaNovaFraca_RetornaErro(t *testing.
 
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(1)).Return(existente, nil)
 
-	_, err = uc.Executar(context.Background(), appusuario.AtualizarUsuarioInput{ID: 1, Nome: "Ana Souza", Email: "ana@oficina.com", SenhaNova: "curta", Papel: shared.PapelMecanico})
+	_, err = uc.Executar(context.Background(), appusuario.AtualizarUsuarioInput{ID: 1, Nome: "Ana Souza", Email: "ana@oficina.com", SenhaNova: "curta", Papel: string(shared.PapelMecanico)})
 
 	require.ErrorIs(t, err, shared.ErrSenhaFraca)
 }

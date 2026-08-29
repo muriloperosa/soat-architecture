@@ -1026,6 +1026,70 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/ordens-servico/{id}/entregar": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Altera uma Ordem de Serviço FINALIZADA para ENTREGUE e registra o histórico. Encerra o ciclo da OS. Restrito a usuário interno autenticado.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ordens de Serviço"
+                ],
+                "summary": "Entrega uma Ordem de Serviço",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da Ordem de Serviço",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ordemservico.OrdemServicoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/ordens-servico/{id}/iniciar-diagnostico": {
             "patch": {
                 "security": [
@@ -1041,6 +1105,70 @@ const docTemplate = `{
                     "Ordens de Serviço"
                 ],
                 "summary": "Inicia o diagnóstico de uma Ordem de Serviço",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da Ordem de Serviço",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ordemservico.OrdemServicoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/ordens-servico/{id}/iniciar-execucao": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Altera uma Ordem de Serviço APROVADA para EM_EXECUCAO e registra o histórico. Restrito a mecânico ou administrador.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ordens de Serviço"
+                ],
+                "summary": "Inicia a execução de uma Ordem de Serviço",
                 "parameters": [
                     {
                         "type": "integer",
@@ -3134,6 +3262,10 @@ const docTemplate = `{
                 },
                 "tipo_pessoa": {
                     "type": "string",
+                    "enum": [
+                        "PF",
+                        "PJ"
+                    ],
                     "example": "PF"
                 }
             }
@@ -3171,6 +3303,10 @@ const docTemplate = `{
                 },
                 "tipo_pessoa": {
                     "type": "string",
+                    "enum": [
+                        "PF",
+                        "PJ"
+                    ],
                     "example": "PF"
                 }
             }
@@ -3602,21 +3738,6 @@ const docTemplate = `{
                 }
             }
         },
-        "shared.PapelUsuario": {
-            "type": "string",
-            "enum": [
-                "ADMINISTRADOR",
-                "MECANICO",
-                "ATENDENTE",
-                "CLIENTE"
-            ],
-            "x-enum-varnames": [
-                "PapelAdmin",
-                "PapelMecanico",
-                "PapelAtendente",
-                "PapelCliente"
-            ]
-        },
         "usuario.AlterarSenhaRequest": {
             "type": "object",
             "properties": {
@@ -3643,10 +3764,12 @@ const docTemplate = `{
                     "example": "Ana Souza"
                 },
                 "papel": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/shared.PapelUsuario"
-                        }
+                    "type": "string",
+                    "enum": [
+                        "ADMINISTRADOR",
+                        "MECANICO",
+                        "ATENDENTE",
+                        "CLIENTE"
                     ],
                     "example": "ATENDENTE"
                 },
@@ -3674,10 +3797,12 @@ const docTemplate = `{
                     "example": "Ana Souza"
                 },
                 "papel": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/shared.PapelUsuario"
-                        }
+                    "type": "string",
+                    "enum": [
+                        "ADMINISTRADOR",
+                        "MECANICO",
+                        "ATENDENTE",
+                        "CLIENTE"
                     ],
                     "example": "MECANICO"
                 },
@@ -3707,10 +3832,12 @@ const docTemplate = `{
                     "example": "Ana Souza"
                 },
                 "papel": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/shared.PapelUsuario"
-                        }
+                    "type": "string",
+                    "enum": [
+                        "ADMINISTRADOR",
+                        "MECANICO",
+                        "ATENDENTE",
+                        "CLIENTE"
                     ],
                     "example": "MECANICO"
                 },

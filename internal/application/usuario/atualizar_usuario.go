@@ -37,7 +37,7 @@ func (uc *AtualizarUsuarioUseCase) Executar(ctx context.Context, input Atualizar
 		}
 	}
 
-	if err := u.Atualizar(input.Nome, input.Email, input.Papel); err != nil {
+	if err := u.Atualizar(input.Nome, input.Email, shared.PapelUsuario(input.Papel)); err != nil {
 		return UsuarioOutput{}, err
 	}
 
