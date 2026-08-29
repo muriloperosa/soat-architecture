@@ -27,6 +27,21 @@ func TestVeiculoLifecycle_TodosOsEndpoints(t *testing.T) {
 		t.Fatalf("Cadastrar: resposta inesperada: %+v", criado)
 	}
 
+	var listagem httpveiculo.ListarVeiculosResponse
+	rec = doRequest(t, http.MethodGet, "/v1/veiculos", loginAdmin.AccessToken, nil, &listagem)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("Listar: status %d, body %q", rec.Code, rec.Body.String())
+	}
+
+	if listagem.Total != 1 || len(listagem.Items) != 1 || listagem.Items[0].ID != criado.ID {
+		t.Fatalf("Listar: resposta inesperada: %+v", listagem)
+	}
+
+	if listagem.Offset != 0 || listagem.Limit != 20 || listagem.Order != "id" || listagem.Direction != "ASC" {
+		t.Fatalf("Listar: paginação inesperada: %+v", listagem)
+	}
+
 	var consultado httpveiculo.VeiculoResponse
 	rec = doRequest(t, http.MethodGet, fmt.Sprintf("/v1/veiculos/%d", criado.ID), loginAdmin.AccessToken, nil, &consultado)
 	if rec.Code != http.StatusOK || consultado.ID != criado.ID || consultado.QuilometragemAtual != 15000 {
@@ -107,5 +122,103 @@ func TestVeiculoConsultarPorPlaca_NaoEncontrado_Retorna404(t *testing.T) {
 	rec := doRequest(t, http.MethodGet, "/v1/veiculos/placa/ZZZ9Z99", loginAdmin.AccessToken, nil, nil)
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("ConsultarPorPlaca inexistente deveria ser 404, veio %d, body %q", rec.Code, rec.Body.String())
+	}
+}
+
+func TestVeiculoListar_ComPaginacaoEFiltro_Retorna200(t *testing.T) {
+	resetDB(t)
+
+	seedUsuario(t, "Admin Oficina", "admin@oficina.com", "senha123", shared.PapelAdmin)
+
+	loginAdmin := doLogin(t, "admin@oficina.com", "senha123")
+
+	veiculos := []httpveiculo.CadastrarVeiculoRequest{
+		{
+			Placa:              "ABC1D23",
+			Marca:              "Fiat",
+			Modelo:             "Uno",
+			QuilometragemAtual: 15000,
+			Ano:                2020,
+			Cor:                "Prata",
+		},
+		{
+			Placa:              "DEF4G56",
+			Marca:              "Fiat",
+			Modelo:             "Argo",
+			QuilometragemAtual: 20000,
+			Ano:                2022,
+			Cor:                "Preto",
+		},
+		{
+			Placa:              "GHI7J89",
+			Marca:              "Volkswagen",
+			Modelo:             "Gol",
+			QuilometragemAtual: 30000,
+			Ano:                2021,
+			Cor:                "Branco",
+		},
+	}
+
+	for _, req := range veiculos {
+		rec := doRequest(t, http.MethodPost, "/v1/veiculos", loginAdmin.AccessToken, req, nil)
+
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("setup cadastro veículo falhou: status %d, body %q", rec.Code, rec.Body.String())
+		}
+	}
+
+	var resp httpveiculo.ListarVeiculosResponse
+
+	rec := doRequest(
+		t,
+		http.MethodGet,
+		"/v1/veiculos?marca=Fiat&limit=1&offset=0&order=ano&direction=DESC",
+		loginAdmin.AccessToken,
+		nil,
+		&resp,
+	)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("Listar: status %d, body %q", rec.Code, rec.Body.String())
+	}
+
+	if resp.Total != 2 {
+		t.Fatalf("Listar: total esperado 2, veio %d", resp.Total)
+	}
+
+	if len(resp.Items) != 1 {
+		t.Fatalf("Listar: esperado 1 item, vieram %d", len(resp.Items))
+	}
+
+	if resp.Items[0].Marca != "Fiat" {
+		t.Fatalf("Listar: marca esperada Fiat, veio %q", resp.Items[0].Marca)
+	}
+
+	if resp.Items[0].Ano != 2022 {
+		t.Fatalf("Listar: esperado veículo mais recente primeiro, veio ano %d", resp.Items[0].Ano)
+	}
+
+	if resp.Offset != 0 || resp.Limit != 1 || resp.Order != "ano" || resp.Direction != "DESC" {
+		t.Fatalf("Listar: metadados inesperados: %+v", resp)
+	}
+}
+
+func TestVeiculoListar_SemRegistros_RetornaPaginaVazia(t *testing.T) {
+	resetDB(t)
+
+	seedUsuario(t, "Admin Oficina", "admin@oficina.com", "senha123", shared.PapelAdmin)
+
+	loginAdmin := doLogin(t, "admin@oficina.com", "senha123")
+
+	var resp httpveiculo.ListarVeiculosResponse
+
+	rec := doRequest(t, http.MethodGet, "/v1/veiculos", loginAdmin.AccessToken, nil, &resp)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("Listar vazio: status %d, body %q", rec.Code, rec.Body.String())
+	}
+
+	if resp.Total != 0 || len(resp.Items) != 0 {
+		t.Fatalf("Listar vazio: resposta inesperada: %+v", resp)
 	}
 }

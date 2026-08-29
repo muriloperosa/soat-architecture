@@ -92,6 +92,7 @@ type Container struct {
 	InativarVeiculoUC          *appveiculo.InativarVeiculoUseCase
 	ConsultarVeiculoPorIDUC    *appveiculo.ConsultarVeiculoPorIDUseCase
 	ConsultarVeiculoPorPlacaUC *appveiculo.ConsultarVeiculoPorPlacaUseCase
+	ListarVeiculosUC           *appveiculo.ListarVeiculosUseCase
 
 	CriarServicoUC     *appservico.CriarServicoUseCase
 	AtualizarServicoUC *appservico.AtualizarServicoUseCase
@@ -168,6 +169,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.InativarVeiculoUC = appveiculo.NewInativarVeiculoUseCase(c.VeiculoRepo)
 	c.ConsultarVeiculoPorIDUC = appveiculo.NewConsultarVeiculoPorIDUseCase(c.VeiculoRepo)
 	c.ConsultarVeiculoPorPlacaUC = appveiculo.NewConsultarVeiculoPorPlacaUseCase(c.VeiculoRepo)
+	c.ListarVeiculosUC = appveiculo.NewListarVeiculosUseCase(c.VeiculoRepo)
 
 	c.CriarServicoUC = appservico.NewCriarServicoUseCase(c.ServicoRepo)
 	c.AtualizarServicoUC = appservico.NewAtualizarServicoUseCase(c.ServicoRepo)

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	domainquery "github.com/muriloperosa/soat-architecture/internal/domain/query"
 	domain "github.com/muriloperosa/soat-architecture/internal/domain/veiculo"
 	"github.com/stretchr/testify/require"
 	gormmysql "gorm.io/driver/mysql"
@@ -224,6 +225,386 @@ func TestRepositoryBuscarPorPlacaDeveRetornarErroDoBanco(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestRepositoryListarRetornaPagina(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewRepository(db)
+
+	mock.
+		ExpectQuery("SELECT count\\(\\*\\) FROM `veiculos`").
+		WillReturnRows(
+			sqlmock.NewRows([]string{"count"}).
+				AddRow(1),
+		)
+
+	mock.
+		ExpectQuery("SELECT .* FROM `veiculos` ORDER BY id ASC LIMIT \\?").
+		WithArgs(20).
+		WillReturnRows(veiculoRows())
+
+	page, err := repository.Listar(
+		context.Background(),
+		domainquery.Params{},
+	)
+
+	require.NoError(t, err)
+
+	require.Len(t, page.Items, 1)
+	require.Equal(t, int64(1), page.Total)
+	require.Equal(t, 0, page.Offset)
+	require.Equal(t, 20, page.Limit)
+	require.Equal(t, "id", page.Order)
+	require.Equal(t, domainquery.DirectionASC, page.Direction)
+
+	v := page.Items[0]
+
+	require.Equal(t, uint64(1), v.ID())
+	require.Equal(t, "ABC1D23", v.Placa().String())
+	require.Equal(t, "Fiat", v.Marca())
+	require.Equal(t, "Uno", v.Modelo())
+	require.Equal(t, uint32(15000), v.QuilometragemAtual())
+	require.Equal(t, uint16(2020), v.Ano())
+	require.Equal(t, "Prata", v.Cor().String())
+	require.True(t, v.Ativo())
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestRepositoryListarVazioRetornaPaginaVazia(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewRepository(db)
+
+	mock.
+		ExpectQuery("SELECT count\\(\\*\\) FROM `veiculos`").
+		WillReturnRows(
+			sqlmock.NewRows([]string{"count"}).
+				AddRow(0),
+		)
+
+	mock.
+		ExpectQuery("SELECT .* FROM `veiculos` ORDER BY id ASC LIMIT \\?").
+		WithArgs(20).
+		WillReturnRows(
+			sqlmock.NewRows([]string{
+				"id",
+				"placa",
+				"marca",
+				"modelo",
+				"quilometragem_atual",
+				"ano",
+				"cor",
+				"criado_por",
+				"ativo",
+				"data_cadastro",
+				"data_atualizacao",
+			}),
+		)
+
+	page, err := repository.Listar(
+		context.Background(),
+		domainquery.Params{},
+	)
+
+	require.NoError(t, err)
+	require.NotNil(t, page.Items)
+	require.Empty(t, page.Items)
+
+	require.Equal(t, int64(0), page.Total)
+	require.Equal(t, 0, page.Offset)
+	require.Equal(t, 20, page.Limit)
+	require.Equal(t, "id", page.Order)
+	require.Equal(t, domainquery.DirectionASC, page.Direction)
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestRepositoryListarAplicaPaginacaoEOrdenacao(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewRepository(db)
+
+	params := domainquery.Params{
+		Offset:    5,
+		Limit:     5,
+		Order:     "ano",
+		Direction: domainquery.DirectionDESC,
+	}
+
+	mock.
+		ExpectQuery("SELECT count\\(\\*\\) FROM `veiculos`").
+		WillReturnRows(
+			sqlmock.NewRows([]string{"count"}).
+				AddRow(10),
+		)
+
+	mock.
+		ExpectQuery(
+			"SELECT .* FROM `veiculos` ORDER BY ano DESC LIMIT \\? OFFSET \\?",
+		).
+		WithArgs(5, 5).
+		WillReturnRows(veiculoRows())
+
+	page, err := repository.Listar(
+		context.Background(),
+		params,
+	)
+
+	require.NoError(t, err)
+
+	require.Len(t, page.Items, 1)
+	require.Equal(t, int64(10), page.Total)
+	require.Equal(t, 5, page.Offset)
+	require.Equal(t, 5, page.Limit)
+	require.Equal(t, "ano", page.Order)
+	require.Equal(t, domainquery.DirectionDESC, page.Direction)
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestRepositoryListarAplicaFiltroPorMarca(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewRepository(db)
+
+	params := domainquery.Params{
+		Filters: []domainquery.Filter{
+			{
+				Field:    "marca",
+				Operator: domainquery.OperatorLike,
+				Value:    "Fiat",
+			},
+		},
+	}
+
+	mock.
+		ExpectQuery(
+			"SELECT count\\(\\*\\) FROM `veiculos` WHERE marca LIKE \\?",
+		).
+		WithArgs("%Fiat%").
+		WillReturnRows(
+			sqlmock.NewRows([]string{"count"}).
+				AddRow(1),
+		)
+
+	mock.
+		ExpectQuery(
+			"SELECT .* FROM `veiculos` WHERE marca LIKE \\? ORDER BY id ASC LIMIT \\?",
+		).
+		WithArgs("%Fiat%", 20).
+		WillReturnRows(veiculoRows())
+
+	page, err := repository.Listar(
+		context.Background(),
+		params,
+	)
+
+	require.NoError(t, err)
+	require.Len(t, page.Items, 1)
+	require.Equal(t, int64(1), page.Total)
+
+	require.Equal(t, "Fiat", page.Items[0].Marca())
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestRepositoryListarAplicaFiltroPorAno(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewRepository(db)
+
+	params := domainquery.Params{
+		Filters: []domainquery.Filter{
+			{
+				Field:    "ano",
+				Operator: domainquery.OperatorEqual,
+				Value:    "2020",
+			},
+		},
+	}
+
+	mock.
+		ExpectQuery(
+			"SELECT count\\(\\*\\) FROM `veiculos` WHERE ano = \\?",
+		).
+		WithArgs(uint64(2020)).
+		WillReturnRows(
+			sqlmock.NewRows([]string{"count"}).
+				AddRow(1),
+		)
+
+	mock.
+		ExpectQuery(
+			"SELECT .* FROM `veiculos` WHERE ano = \\? ORDER BY id ASC LIMIT \\?",
+		).
+		WithArgs(uint64(2020), 20).
+		WillReturnRows(veiculoRows())
+
+	page, err := repository.Listar(
+		context.Background(),
+		params,
+	)
+
+	require.NoError(t, err)
+	require.Len(t, page.Items, 1)
+	require.Equal(t, uint16(2020), page.Items[0].Ano())
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestRepositoryListarAplicaFiltroPorQuilometragemAtual(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewRepository(db)
+
+	params := domainquery.Params{
+		Filters: []domainquery.Filter{
+			{
+				Field:    "quilometragem_atual",
+				Value:    "15000",
+				Operator: domainquery.OperatorEqual,
+			},
+		},
+	}
+
+	mock.
+		ExpectQuery(
+			"SELECT count\\(\\*\\) FROM `veiculos` WHERE quilometragem_atual = \\?",
+		).
+		WithArgs(uint64(15000)).
+		WillReturnRows(
+			sqlmock.NewRows([]string{"count"}).
+				AddRow(1),
+		)
+
+	mock.
+		ExpectQuery(
+			"SELECT .* FROM `veiculos` WHERE quilometragem_atual = \\? ORDER BY id ASC LIMIT \\?",
+		).
+		WithArgs(uint64(15000), 20).
+		WillReturnRows(veiculoRows())
+
+	page, err := repository.Listar(
+		context.Background(),
+		params,
+	)
+
+	require.NoError(t, err)
+	require.Len(t, page.Items, 1)
+
+	require.Equal(
+		t,
+		uint32(15000),
+		page.Items[0].QuilometragemAtual(),
+	)
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestRepositoryListarAplicaFiltroPorAtivo(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewRepository(db)
+
+	params := domainquery.Params{
+		Filters: []domainquery.Filter{
+			{
+				Field:    "ativo",
+				Value:    "true",
+				Operator: domainquery.OperatorEqual,
+			},
+		},
+	}
+
+	mock.
+		ExpectQuery(
+			"SELECT count\\(\\*\\) FROM `veiculos` WHERE ativo = \\?",
+		).
+		WithArgs(true).
+		WillReturnRows(
+			sqlmock.NewRows([]string{"count"}).
+				AddRow(1),
+		)
+
+	mock.
+		ExpectQuery(
+			"SELECT .* FROM `veiculos` WHERE ativo = \\? ORDER BY id ASC LIMIT \\?",
+		).
+		WithArgs(true, 20).
+		WillReturnRows(veiculoRows())
+
+	page, err := repository.Listar(
+		context.Background(),
+		params,
+	)
+
+	require.NoError(t, err)
+	require.Len(t, page.Items, 1)
+	require.True(t, page.Items[0].Ativo())
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestRepositoryListarDeveRetornarErroNaContagem(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewRepository(db)
+
+	erroBanco := errors.New("erro ao contar veiculos")
+
+	mock.
+		ExpectQuery("SELECT count\\(\\*\\) FROM `veiculos`").
+		WillReturnError(erroBanco)
+
+	page, err := repository.Listar(
+		context.Background(),
+		domainquery.Params{},
+	)
+
+	require.ErrorIs(t, err, erroBanco)
+	require.Empty(t, page.Items)
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestRepositoryListarDeveRetornarErroAoBuscarRegistros(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewRepository(db)
+
+	erroBanco := errors.New("erro ao listar veiculos")
+
+	mock.
+		ExpectQuery("SELECT count\\(\\*\\) FROM `veiculos`").
+		WillReturnRows(
+			sqlmock.NewRows([]string{"count"}).
+				AddRow(1),
+		)
+
+	mock.
+		ExpectQuery("SELECT .* FROM `veiculos` ORDER BY id ASC LIMIT \\?").
+		WithArgs(20).
+		WillReturnError(erroBanco)
+
+	page, err := repository.Listar(
+		context.Background(),
+		domainquery.Params{},
+	)
+
+	require.ErrorIs(t, err, erroBanco)
+	require.Empty(t, page.Items)
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestRepositoryListarLimitMaiorQueMaximoRetornaErro(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewRepository(db)
+
+	page, err := repository.Listar(
+		context.Background(),
+		domainquery.Params{
+			Limit: 101,
+		},
+	)
+
+	require.Error(t, err)
+	require.Empty(t, page.Items)
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestRepositoryAtualizar(t *testing.T) {
 	db, mock := newRepositoryTestDB(t)
 	repository := NewRepository(db)
@@ -231,7 +612,9 @@ func TestRepositoryAtualizar(t *testing.T) {
 	v := novoVeiculoValido(t)
 	v.AtribuirID(1)
 
-	mock.ExpectExec("UPDATE .*").WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.
+		ExpectExec("UPDATE .*").
+		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	err := repository.Atualizar(context.Background(), v)
 
@@ -246,7 +629,9 @@ func TestRepositoryAtualizarDeveRetornarVeiculoNaoEncontrado(t *testing.T) {
 	v := novoVeiculoValido(t)
 	v.AtribuirID(999)
 
-	mock.ExpectExec("UPDATE .*").WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.
+		ExpectExec("UPDATE .*").
+		WillReturnResult(sqlmock.NewResult(0, 0))
 
 	err := repository.Atualizar(context.Background(), v)
 
@@ -263,7 +648,9 @@ func TestRepositoryAtualizarDeveRetornarErroDoBanco(t *testing.T) {
 
 	erroBanco := errors.New("erro ao atualizar veiculo")
 
-	mock.ExpectExec("UPDATE .*").WillReturnError(erroBanco)
+	mock.
+		ExpectExec("UPDATE .*").
+		WillReturnError(erroBanco)
 
 	err := repository.Atualizar(context.Background(), v)
 

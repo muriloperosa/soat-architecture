@@ -1,6 +1,9 @@
 package veiculo
 
-import appveiculo "github.com/muriloperosa/soat-architecture/internal/application/veiculo"
+import (
+	appveiculo "github.com/muriloperosa/soat-architecture/internal/application/veiculo"
+	"github.com/muriloperosa/soat-architecture/internal/domain/query"
+)
 
 func toCadastrarInput(criadoPor uint64, req CadastrarVeiculoRequest) appveiculo.CadastrarVeiculoInput {
 	return appveiculo.CadastrarVeiculoInput{
@@ -35,5 +38,22 @@ func toVeiculoResponse(out appveiculo.VeiculoOutput) VeiculoResponse {
 		Cor:                out.Cor,
 		CriadoPor:          out.CriadoPor,
 		Ativo:              out.Ativo,
+	}
+}
+
+func toListResponse(page query.Page[appveiculo.VeiculoOutput]) ListarVeiculosResponse {
+	items := make([]VeiculoResponse, 0, len(page.Items))
+
+	for _, item := range page.Items {
+		items = append(items, toVeiculoResponse(item))
+	}
+
+	return ListarVeiculosResponse{
+		Items:     items,
+		Total:     page.Total,
+		Offset:    page.Offset,
+		Limit:     page.Limit,
+		Order:     page.Order,
+		Direction: string(page.Direction),
 	}
 }
