@@ -10,7 +10,7 @@ type CriarUsuarioInput struct {
 	Nome         string
 	Email        string
 	SenhaInicial string
-	Papel        shared.PapelUsuario
+	Papel        string
 }
 
 // AtualizarUsuarioInput é o DTO de entrada do AtualizarUsuarioUseCase.
@@ -21,7 +21,7 @@ type AtualizarUsuarioInput struct {
 	Nome      string
 	Email     string
 	SenhaNova string
-	Papel     shared.PapelUsuario
+	Papel     string
 }
 
 // AlterarSenhaInput é o DTO de entrada do AlterarSenhaUseCase.

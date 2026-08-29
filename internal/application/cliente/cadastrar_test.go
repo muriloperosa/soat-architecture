@@ -14,7 +14,7 @@ import (
 func criarClienteInputValido() CriarClienteInput {
 	return CriarClienteInput{
 		Documento: "529.982.247-25",
-		Tipo:      domain.TipoPessoaFisica,
+		Tipo:      string(domain.TipoPessoaFisica),
 		Nome:      "João da Silva",
 		Email:     "joao@email.com",
 		Telefone:  "(44) 99999-1234",
@@ -117,7 +117,7 @@ func TestCriarClienteUseCaseExecutarDeveRetornarErroQuandoClienteJaExistir(t *te
 
 	existente, err := domain.NewCliente(
 		input.Documento,
-		input.Tipo,
+		domain.TipoPessoa(input.Tipo),
 		input.Nome,
 		input.Email,
 		input.Telefone,

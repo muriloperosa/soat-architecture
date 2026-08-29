@@ -27,7 +27,7 @@ func (uc *CriarUsuarioUseCase) Executar(ctx context.Context, input CriarUsuarioI
 		return UsuarioOutput{}, shared.NewInternalError("erro ao verificar email", err)
 	}
 
-	u, err := domainusuario.NewUsuario(input.Nome, input.Email, input.SenhaInicial, input.Papel)
+	u, err := domainusuario.NewUsuario(input.Nome, input.Email, input.SenhaInicial, shared.PapelUsuario(input.Papel))
 	if err != nil {
 		return UsuarioOutput{}, err
 	}

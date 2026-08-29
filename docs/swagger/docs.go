@@ -2623,6 +2623,10 @@ const docTemplate = `{
                 },
                 "tipo_pessoa": {
                     "type": "string",
+                    "enum": [
+                        "PF",
+                        "PJ"
+                    ],
                     "example": "PF"
                 }
             }
@@ -2660,6 +2664,10 @@ const docTemplate = `{
                 },
                 "tipo_pessoa": {
                     "type": "string",
+                    "enum": [
+                        "PF",
+                        "PJ"
+                    ],
                     "example": "PF"
                 }
             }
@@ -2998,21 +3006,6 @@ const docTemplate = `{
                 }
             }
         },
-        "shared.PapelUsuario": {
-            "type": "string",
-            "enum": [
-                "ADMINISTRADOR",
-                "MECANICO",
-                "ATENDENTE",
-                "CLIENTE"
-            ],
-            "x-enum-varnames": [
-                "PapelAdmin",
-                "PapelMecanico",
-                "PapelAtendente",
-                "PapelCliente"
-            ]
-        },
         "usuario.AlterarSenhaRequest": {
             "type": "object",
             "properties": {
@@ -3039,10 +3032,12 @@ const docTemplate = `{
                     "example": "Ana Souza"
                 },
                 "papel": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/shared.PapelUsuario"
-                        }
+                    "type": "string",
+                    "enum": [
+                        "ADMINISTRADOR",
+                        "MECANICO",
+                        "ATENDENTE",
+                        "CLIENTE"
                     ],
                     "example": "ATENDENTE"
                 },
@@ -3070,10 +3065,12 @@ const docTemplate = `{
                     "example": "Ana Souza"
                 },
                 "papel": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/shared.PapelUsuario"
-                        }
+                    "type": "string",
+                    "enum": [
+                        "ADMINISTRADOR",
+                        "MECANICO",
+                        "ATENDENTE",
+                        "CLIENTE"
                     ],
                     "example": "MECANICO"
                 },
@@ -3103,10 +3100,12 @@ const docTemplate = `{
                     "example": "Ana Souza"
                 },
                 "papel": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/shared.PapelUsuario"
-                        }
+                    "type": "string",
+                    "enum": [
+                        "ADMINISTRADOR",
+                        "MECANICO",
+                        "ATENDENTE",
+                        "CLIENTE"
                     ],
                     "example": "MECANICO"
                 },

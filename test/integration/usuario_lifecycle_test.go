@@ -26,12 +26,12 @@ func TestUsuarioLifecycle_TodosOsEndpoints(t *testing.T) {
 	// 1. Criar — admin cria usuário novo, senha nasce provisória
 	var criado httpusuario.UsuarioResponse
 	rec := doRequest(t, http.MethodPost, "/v1/usuarios", loginAdmin.AccessToken,
-		httpusuario.CriarUsuarioRequest{Nome: "Bia Lima", Email: "bia@oficina.com", Senha: "senhaInicial123", Papel: shared.PapelMecanico},
+		httpusuario.CriarUsuarioRequest{Nome: "Bia Lima", Email: "bia@oficina.com", Senha: "senhaInicial123", Papel: string(shared.PapelMecanico)},
 		&criado)
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("Criar: status %d, body %q", rec.Code, rec.Body.String())
 	}
-	if !criado.RequerAlterarSenha || !criado.Ativo || criado.Papel != shared.PapelMecanico {
+	if !criado.RequerAlterarSenha || !criado.Ativo || criado.Papel != string(shared.PapelMecanico) {
 		t.Fatalf("Criar: resposta inesperada: %+v", criado)
 	}
 
@@ -60,12 +60,12 @@ func TestUsuarioLifecycle_TodosOsEndpoints(t *testing.T) {
 	// 4. Atualizar, admin troca nome, email e papel do usuário
 	var atualizado httpusuario.UsuarioResponse
 	rec = doRequest(t, http.MethodPut, fmt.Sprintf("/v1/usuarios/%d", criado.ID), loginAdmin.AccessToken,
-		httpusuario.AtualizarUsuarioRequest{Nome: "Bia S. Lima", Email: "bia.lima@oficina.com", Papel: shared.PapelAtendente},
+		httpusuario.AtualizarUsuarioRequest{Nome: "Bia S. Lima", Email: "bia.lima@oficina.com", Papel: string(shared.PapelAtendente)},
 		&atualizado)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("Atualizar: status %d, body %q", rec.Code, rec.Body.String())
 	}
-	if atualizado.Nome != "Bia S. Lima" || atualizado.Email != "bia.lima@oficina.com" || atualizado.Papel != shared.PapelAtendente {
+	if atualizado.Nome != "Bia S. Lima" || atualizado.Email != "bia.lima@oficina.com" || atualizado.Papel != string(shared.PapelAtendente) {
 		t.Fatalf("Atualizar: dados não bateram: %+v", atualizado)
 	}
 	// email antigo não existe mais (não duplicou linha, só mudou o valor)
@@ -107,7 +107,7 @@ func TestUsuarioLifecycle_TodosOsEndpoints(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("Me pós-Ativar: status %d", rec.Code)
 	}
-	if !mePosReativacao.Ativo || mePosReativacao.Nome != "Bia S. Lima" || mePosReativacao.Papel != shared.PapelAtendente {
+	if !mePosReativacao.Ativo || mePosReativacao.Nome != "Bia S. Lima" || mePosReativacao.Papel != string(shared.PapelAtendente) {
 		t.Fatalf("Me pós-Ativar: dados da atualização não persistiram: %+v", mePosReativacao)
 	}
 }

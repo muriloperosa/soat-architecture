@@ -20,7 +20,7 @@ func TestAuthorization_NaoAdminNaoAcessaRotaAdmin(t *testing.T) {
 	login := doLogin(t, "bia@oficina.com", "senha123")
 
 	rec := doRequest(t, http.MethodPost, "/v1/usuarios", login.AccessToken,
-		httpusuario.CriarUsuarioRequest{Nome: "Outro", Email: "outro@oficina.com", Senha: "senha123", Papel: shared.PapelAtendente},
+		httpusuario.CriarUsuarioRequest{Nome: "Outro", Email: "outro@oficina.com", Senha: "senha123", Papel: string(shared.PapelAtendente)},
 		nil)
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("POST /v1/usuarios por não-admin deveria ser 403, veio %d, body %q", rec.Code, rec.Body.String())
@@ -36,7 +36,7 @@ func TestCriarUsuario_EmailDuplicado_Retorna409(t *testing.T) {
 	seedUsuario(t, "Admin Oficina", "admin@oficina.com", "senha123", shared.PapelAdmin)
 	login := doLogin(t, "admin@oficina.com", "senha123")
 
-	body := httpusuario.CriarUsuarioRequest{Nome: "Bia Lima", Email: "bia@oficina.com", Senha: "senha123", Papel: shared.PapelMecanico}
+	body := httpusuario.CriarUsuarioRequest{Nome: "Bia Lima", Email: "bia@oficina.com", Senha: "senha123", Papel: string(shared.PapelMecanico)}
 
 	rec := doRequest(t, http.MethodPost, "/v1/usuarios", login.AccessToken, body, nil)
 	if rec.Code != http.StatusCreated {

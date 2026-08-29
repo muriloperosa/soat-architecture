@@ -31,7 +31,7 @@ func TestCriarUsuarioUseCase_Executar_EmailNovo_CriaComRequerAlterarSenha(t *tes
 		Return(nil)
 
 	out, err := uc.Executar(context.Background(), appusuario.CriarUsuarioInput{
-		Nome: "Ana Souza", Email: "ana@oficina.com", SenhaInicial: "senha123", Papel: shared.PapelMecanico,
+		Nome: "Ana Souza", Email: "ana@oficina.com", SenhaInicial: "senha123", Papel: string(shared.PapelMecanico),
 	})
 
 	require.NoError(t, err)
@@ -48,7 +48,7 @@ func TestCriarUsuarioUseCase_Executar_EmailJaExiste_RetornaConflict(t *testing.T
 	repo.EXPECT().BuscarPorEmail(mock.Anything, "ana@oficina.com").Return(existente, nil)
 
 	_, err := uc.Executar(context.Background(), appusuario.CriarUsuarioInput{
-		Nome: "Ana Souza", Email: "ana@oficina.com", SenhaInicial: "senha123", Papel: shared.PapelMecanico,
+		Nome: "Ana Souza", Email: "ana@oficina.com", SenhaInicial: "senha123", Papel: string(shared.PapelMecanico),
 	})
 
 	var appErr *shared.AppError
@@ -63,7 +63,7 @@ func TestCriarUsuarioUseCase_Executar_ErroDoBancoAoVerificarEmail_RetornaInterna
 	repo.EXPECT().BuscarPorEmail(mock.Anything, "ana@oficina.com").Return(nil, errors.New("conexao recusada"))
 
 	_, err := uc.Executar(context.Background(), appusuario.CriarUsuarioInput{
-		Nome: "Ana Souza", Email: "ana@oficina.com", SenhaInicial: "senha123", Papel: shared.PapelMecanico,
+		Nome: "Ana Souza", Email: "ana@oficina.com", SenhaInicial: "senha123", Papel: string(shared.PapelMecanico),
 	})
 
 	var appErr *shared.AppError
@@ -78,7 +78,7 @@ func TestCriarUsuarioUseCase_Executar_DadosInvalidos_PropagaErroDeValidacao(t *t
 	repo.EXPECT().BuscarPorEmail(mock.Anything, "ana@oficina.com").Return(nil, domainusuario.ErrUsuarioNaoEncontrado)
 
 	_, err := uc.Executar(context.Background(), appusuario.CriarUsuarioInput{
-		Nome: "Ana Souza", Email: "ana@oficina.com", SenhaInicial: "curta", Papel: shared.PapelMecanico,
+		Nome: "Ana Souza", Email: "ana@oficina.com", SenhaInicial: "curta", Papel: string(shared.PapelMecanico),
 	})
 
 	require.ErrorIs(t, err, shared.ErrSenhaFraca)
@@ -92,7 +92,7 @@ func TestCriarUsuarioUseCase_Executar_ErroDoBancoAoSalvar_RetornaInternalError(t
 	repo.EXPECT().Salvar(mock.Anything, mock.AnythingOfType("*usuario.Usuario")).Return(errors.New("conexao recusada"))
 
 	_, err := uc.Executar(context.Background(), appusuario.CriarUsuarioInput{
-		Nome: "Ana Souza", Email: "ana@oficina.com", SenhaInicial: "senha123", Papel: shared.PapelMecanico,
+		Nome: "Ana Souza", Email: "ana@oficina.com", SenhaInicial: "senha123", Papel: string(shared.PapelMecanico),
 	})
 
 	var appErr *shared.AppError

@@ -23,7 +23,7 @@ func TestDiagnosticoOrdemServico_PersisteEstadoHistoricoETexto(t *testing.T) {
 
 	cliente, err := testContainer.CriarClienteUseCase.Executar(t.Context(), appcliente.CriarClienteInput{
 		Documento: "52998224725",
-		Tipo:      domaincliente.TipoPessoaFisica,
+		Tipo:      string(domaincliente.TipoPessoaFisica),
 		Nome:      "Maria Silva",
 		Email:     "maria@email.com",
 		Telefone:  "11999998888",
@@ -137,7 +137,7 @@ func TestDiagnosticoOrdemServico_ValidaTransicaoETextoVazio(t *testing.T) {
 	login := doLogin(t, "admin@oficina.com", "senha123")
 
 	cliente, err := testContainer.CriarClienteUseCase.Executar(t.Context(), appcliente.CriarClienteInput{
-		Documento: "52998224725", Tipo: domaincliente.TipoPessoaFisica, Nome: "Maria Silva",
+		Documento: "52998224725", Tipo: string(domaincliente.TipoPessoaFisica), Nome: "Maria Silva",
 		Email: "maria@email.com", Telefone: "11999998888", Senha: "senhaCliente123", CriadoPor: admin.ID,
 	})
 	if err != nil {

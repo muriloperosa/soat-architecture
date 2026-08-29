@@ -28,7 +28,7 @@ func toUsuarioResponse(out appusuario.UsuarioOutput) UsuarioResponse {
 		ID:                 out.ID,
 		Nome:               out.Nome,
 		Email:              out.Email,
-		Papel:              out.Papel,
+		Papel:              string(out.Papel),
 		Ativo:              out.Ativo,
 		RequerAlterarSenha: out.RequerAlterarSenha,
 	}

@@ -2,13 +2,12 @@ package cliente
 
 import (
 	app "github.com/muriloperosa/soat-architecture/internal/application/cliente"
-	domain "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
 )
 
 func toCriarInput(criadoPor uint64, req CriarClienteRequest) app.CriarClienteInput {
 	return app.CriarClienteInput{
 		Documento: req.Documento,
-		Tipo:      domain.TipoPessoa(req.TipoPessoa),
+		Tipo:      req.TipoPessoa,
 		Nome:      req.Nome,
 		Email:     req.Email,
 		Telefone:  req.Telefone,

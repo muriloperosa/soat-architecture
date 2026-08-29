@@ -52,7 +52,7 @@ func seedClienteEVeiculo(t *testing.T, admin uint64, sufixo string) (clienteID, 
 	t.Helper()
 	cliente, err := testContainer.CriarClienteUseCase.Executar(context.Background(), appcliente.CriarClienteInput{
 		Documento: "52998224725",
-		Tipo:      domaincliente.TipoPessoaFisica,
+		Tipo:      string(domaincliente.TipoPessoaFisica),
 		Nome:      "Cliente " + sufixo,
 		Email:     "cliente" + sufixo + "@email.com",
 		Telefone:  "11999998888",

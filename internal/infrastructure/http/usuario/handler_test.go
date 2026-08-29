@@ -33,7 +33,7 @@ func TestHandler_Criar_RequestValido_Retorna201(t *testing.T) {
 	engine := gin.New()
 	engine.POST("/v1/usuarios", h.Criar)
 
-	body, _ := json.Marshal(httpusuario.CriarUsuarioRequest{Nome: "Ana Souza", Email: "ana@oficina.com", Senha: "senha123", Papel: shared.PapelMecanico})
+	body, _ := json.Marshal(httpusuario.CriarUsuarioRequest{Nome: "Ana Souza", Email: "ana@oficina.com", Senha: "senha123", Papel: string(shared.PapelMecanico)})
 	req := httptest.NewRequest(http.MethodPost, "/v1/usuarios", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -72,7 +72,7 @@ func TestHandler_Criar_ErroInternoDoUseCase_Retorna500(t *testing.T) {
 	engine := gin.New()
 	engine.POST("/v1/usuarios", h.Criar)
 
-	body, _ := json.Marshal(httpusuario.CriarUsuarioRequest{Nome: "Ana Souza", Email: "ana@oficina.com", Senha: "senha123", Papel: shared.PapelMecanico})
+	body, _ := json.Marshal(httpusuario.CriarUsuarioRequest{Nome: "Ana Souza", Email: "ana@oficina.com", Senha: "senha123", Papel: string(shared.PapelMecanico)})
 	req := httptest.NewRequest(http.MethodPost, "/v1/usuarios", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -92,7 +92,7 @@ func TestHandler_Criar_EmailJaExiste_Retorna409(t *testing.T) {
 	engine := gin.New()
 	engine.POST("/v1/usuarios", h.Criar)
 
-	body, _ := json.Marshal(httpusuario.CriarUsuarioRequest{Nome: "Ana Souza", Email: "ana@oficina.com", Senha: "senha123", Papel: shared.PapelMecanico})
+	body, _ := json.Marshal(httpusuario.CriarUsuarioRequest{Nome: "Ana Souza", Email: "ana@oficina.com", Senha: "senha123", Papel: string(shared.PapelMecanico)})
 	req := httptest.NewRequest(http.MethodPost, "/v1/usuarios", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -114,7 +114,7 @@ func TestHandler_Atualizar_UsuarioExiste_Retorna200(t *testing.T) {
 	engine := gin.New()
 	engine.PUT("/v1/usuarios/:id", h.Atualizar)
 
-	body, _ := json.Marshal(httpusuario.AtualizarUsuarioRequest{Nome: "Ana S. Costa", Email: "ana@oficina.com", Papel: shared.PapelAtendente})
+	body, _ := json.Marshal(httpusuario.AtualizarUsuarioRequest{Nome: "Ana S. Costa", Email: "ana@oficina.com", Papel: string(shared.PapelAtendente)})
 	req := httptest.NewRequest(http.MethodPut, "/v1/usuarios/1", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -131,7 +131,7 @@ func TestHandler_Atualizar_IDInvalido_Retorna400(t *testing.T) {
 	engine := gin.New()
 	engine.PUT("/v1/usuarios/:id", h.Atualizar)
 
-	body, _ := json.Marshal(httpusuario.AtualizarUsuarioRequest{Nome: "Ana S. Costa", Email: "ana@oficina.com", Papel: shared.PapelAtendente})
+	body, _ := json.Marshal(httpusuario.AtualizarUsuarioRequest{Nome: "Ana S. Costa", Email: "ana@oficina.com", Papel: string(shared.PapelAtendente)})
 	req := httptest.NewRequest(http.MethodPut, "/v1/usuarios/nao-e-numero", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -165,7 +165,7 @@ func TestHandler_Atualizar_UsuarioNaoEncontrado_Retorna404(t *testing.T) {
 	engine := gin.New()
 	engine.PUT("/v1/usuarios/:id", h.Atualizar)
 
-	body, _ := json.Marshal(httpusuario.AtualizarUsuarioRequest{Nome: "Ana S. Costa", Email: "ana@oficina.com", Papel: shared.PapelAtendente})
+	body, _ := json.Marshal(httpusuario.AtualizarUsuarioRequest{Nome: "Ana S. Costa", Email: "ana@oficina.com", Papel: string(shared.PapelAtendente)})
 	req := httptest.NewRequest(http.MethodPut, "/v1/usuarios/99", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -188,7 +188,7 @@ func TestHandler_Atualizar_ComSenhaNova_RedefineEForcaTroca(t *testing.T) {
 	engine := gin.New()
 	engine.PUT("/v1/usuarios/:id", h.Atualizar)
 
-	body, _ := json.Marshal(httpusuario.AtualizarUsuarioRequest{Nome: "Ana Souza", Email: "ana@oficina.com", SenhaNova: "senhaDoAdmin123", Papel: shared.PapelMecanico})
+	body, _ := json.Marshal(httpusuario.AtualizarUsuarioRequest{Nome: "Ana Souza", Email: "ana@oficina.com", SenhaNova: "senhaDoAdmin123", Papel: string(shared.PapelMecanico)})
 	req := httptest.NewRequest(http.MethodPut, "/v1/usuarios/1", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()

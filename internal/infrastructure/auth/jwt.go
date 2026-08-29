@@ -2,9 +2,7 @@ package auth
 
 import (
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"errors"
 	"time"
 
@@ -85,11 +83,4 @@ func (a *AuthenticatorJWT) ValidarAccessToken(tokenBruto string) (*domainauth.Ap
 		return nil, errors.New("token invalido")
 	}
 	return claims, nil
-}
-
-// HashRefreshToken calcula o hash (SHA-256) do token bruto pra persistência
-// e busca, nunca o valor bruto é armazenado.
-func HashRefreshToken(bruto string) string {
-	sum := sha256.Sum256([]byte(bruto))
-	return hex.EncodeToString(sum[:])
 }
