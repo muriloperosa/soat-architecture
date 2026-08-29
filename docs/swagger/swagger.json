@@ -2867,21 +2867,6 @@
                 }
             }
         },
-        "shared.PapelUsuario": {
-            "type": "string",
-            "enum": [
-                "ADMINISTRADOR",
-                "MECANICO",
-                "ATENDENTE",
-                "CLIENTE"
-            ],
-            "x-enum-varnames": [
-                "PapelAdmin",
-                "PapelMecanico",
-                "PapelAtendente",
-                "PapelCliente"
-            ]
-        },
         "usuario.AlterarSenhaRequest": {
             "type": "object",
             "properties": {
@@ -2908,11 +2893,7 @@
                     "example": "Ana Souza"
                 },
                 "papel": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/shared.PapelUsuario"
-                        }
-                    ],
+                    "type": "string",
                     "example": "ATENDENTE"
                 },
                 "senha_nova": {
@@ -2939,11 +2920,7 @@
                     "example": "Ana Souza"
                 },
                 "papel": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/shared.PapelUsuario"
-                        }
-                    ],
+                    "type": "string",
                     "example": "MECANICO"
                 },
                 "senha": {
@@ -2972,11 +2949,7 @@
                     "example": "Ana Souza"
                 },
                 "papel": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/shared.PapelUsuario"
-                        }
-                    ],
+                    "type": "string",
                     "example": "MECANICO"
                 },
                 "requer_alterar_senha": {

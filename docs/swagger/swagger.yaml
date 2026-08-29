@@ -364,18 +364,6 @@ definitions:
         example: 60
         type: integer
     type: object
-  shared.PapelUsuario:
-    enum:
-    - ADMINISTRADOR
-    - MECANICO
-    - ATENDENTE
-    - CLIENTE
-    type: string
-    x-enum-varnames:
-    - PapelAdmin
-    - PapelMecanico
-    - PapelAtendente
-    - PapelCliente
   usuario.AlterarSenhaRequest:
     properties:
       senha_nova:
@@ -391,9 +379,8 @@ definitions:
         example: Ana Souza
         type: string
       papel:
-        allOf:
-        - $ref: '#/definitions/shared.PapelUsuario'
         example: ATENDENTE
+        type: string
       senha_nova:
         example: novaSenha123
         type: string
@@ -411,9 +398,8 @@ definitions:
         example: Ana Souza
         type: string
       papel:
-        allOf:
-        - $ref: '#/definitions/shared.PapelUsuario'
         example: MECANICO
+        type: string
       senha:
         example: senha123
         type: string
@@ -438,9 +424,8 @@ definitions:
         example: Ana Souza
         type: string
       papel:
-        allOf:
-        - $ref: '#/definitions/shared.PapelUsuario'
         example: MECANICO
+        type: string
       requer_alterar_senha:
         example: true
         type: boolean
