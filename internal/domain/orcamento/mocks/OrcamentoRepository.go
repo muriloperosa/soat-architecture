@@ -128,6 +128,65 @@ func (_c *OrcamentoRepository_BuscarPorOrdemServicoID_Call) RunAndReturn(run fun
 	return _c
 }
 
+// BuscarPorOrdensServicoIDs provides a mock function with given fields: ctx, ordensServicoIDs
+func (_m *OrcamentoRepository) BuscarPorOrdensServicoIDs(ctx context.Context, ordensServicoIDs []uint64) ([]*orcamento.Orcamento, error) {
+	ret := _m.Called(ctx, ordensServicoIDs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BuscarPorOrdensServicoIDs")
+	}
+
+	var r0 []*orcamento.Orcamento
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, []uint64) ([]*orcamento.Orcamento, error)); ok {
+		return rf(ctx, ordensServicoIDs)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, []uint64) []*orcamento.Orcamento); ok {
+		r0 = rf(ctx, ordensServicoIDs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*orcamento.Orcamento)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, []uint64) error); ok {
+		r1 = rf(ctx, ordensServicoIDs)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// OrcamentoRepository_BuscarPorOrdensServicoIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BuscarPorOrdensServicoIDs'
+type OrcamentoRepository_BuscarPorOrdensServicoIDs_Call struct {
+	*mock.Call
+}
+
+// BuscarPorOrdensServicoIDs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - ordensServicoIDs []uint64
+func (_e *OrcamentoRepository_Expecter) BuscarPorOrdensServicoIDs(ctx interface{}, ordensServicoIDs interface{}) *OrcamentoRepository_BuscarPorOrdensServicoIDs_Call {
+	return &OrcamentoRepository_BuscarPorOrdensServicoIDs_Call{Call: _e.mock.On("BuscarPorOrdensServicoIDs", ctx, ordensServicoIDs)}
+}
+
+func (_c *OrcamentoRepository_BuscarPorOrdensServicoIDs_Call) Run(run func(ctx context.Context, ordensServicoIDs []uint64)) *OrcamentoRepository_BuscarPorOrdensServicoIDs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].([]uint64))
+	})
+	return _c
+}
+
+func (_c *OrcamentoRepository_BuscarPorOrdensServicoIDs_Call) Return(_a0 []*orcamento.Orcamento, _a1 error) *OrcamentoRepository_BuscarPorOrdensServicoIDs_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *OrcamentoRepository_BuscarPorOrdensServicoIDs_Call) RunAndReturn(run func(context.Context, []uint64) ([]*orcamento.Orcamento, error)) *OrcamentoRepository_BuscarPorOrdensServicoIDs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Salvar provides a mock function with given fields: ctx, _a1
 func (_m *OrcamentoRepository) Salvar(ctx context.Context, _a1 *orcamento.Orcamento) error {
 	ret := _m.Called(ctx, _a1)

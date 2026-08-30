@@ -291,17 +291,122 @@ definitions:
     - cliente_id
     - veiculo_id
     type: object
+  ordemservico.HistoricoStatusResponse:
+    properties:
+      alterado_em:
+        type: string
+      alterado_por:
+        example: 1
+        type: integer
+      id:
+        example: 1
+        type: integer
+      motivo:
+        example: ""
+        type: string
+      status:
+        example: RECEBIDA
+        type: string
+    type: object
   ordemservico.InformarDiagnosticoRequest:
     properties:
       diagnostico:
         example: Falha na bomba de combustível
         type: string
     type: object
+  ordemservico.ListarOrdensServicoResponse:
+    properties:
+      direction:
+        example: DESC
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/ordemservico.OrdemServicoResumoResponse'
+        type: array
+      order:
+        example: data_cadastro
+        type: string
+      page:
+        example: 1
+        type: integer
+      page_size:
+        example: 20
+        type: integer
+      total:
+        example: 42
+        type: integer
+      total_pages:
+        example: 3
+        type: integer
+    type: object
+  ordemservico.OrcamentoResumoResponse:
+    properties:
+      id:
+        example: 1
+        type: integer
+      observacoes:
+        example: Orçamento inicial
+        type: string
+      valor_item_pecas:
+        example: 150
+        type: number
+      valor_item_servicos:
+        example: 300
+        type: number
+      valor_total:
+        example: 450
+        type: number
+    type: object
   ordemservico.OrdemServicoResponse:
     properties:
       cliente_id:
         example: 1
         type: integer
+      criado_por:
+        example: 1
+        type: integer
+      data_atualizacao:
+        type: string
+      data_cadastro:
+        type: string
+      diagnostico:
+        example: ""
+        type: string
+      historico_status:
+        items:
+          $ref: '#/definitions/ordemservico.HistoricoStatusResponse'
+        type: array
+      id:
+        example: 1
+        type: integer
+      numero:
+        example: OS-20260826-a1b2c3d4e5f6
+        type: string
+      observacoes:
+        example: Cliente relatou ruído no motor
+        type: string
+      quilometragem_entrada:
+        example: 52300
+        type: integer
+      status:
+        example: RECEBIDA
+        type: string
+      veiculo_id:
+        example: 1
+        type: integer
+    type: object
+  ordemservico.OrdemServicoResumoResponse:
+    properties:
+      cliente_id:
+        example: 1
+        type: integer
+      criado_por:
+        example: 1
+        type: integer
+      data_atualizacao:
+        type: string
+      data_cadastro:
+        type: string
       diagnostico:
         example: ""
         type: string
@@ -314,6 +419,8 @@ definitions:
       observacoes:
         example: Cliente relatou ruído no motor
         type: string
+      orcamento:
+        $ref: '#/definitions/ordemservico.OrcamentoResumoResponse'
       quilometragem_entrada:
         example: 52300
         type: integer
@@ -1300,6 +1407,80 @@ paths:
       tags:
       - Health
   /v1/ordens-servico:
+    get:
+      description: Lista Ordens de Serviço com paginação, ordenação e filtros diretos
+        por campo. Usuários do tipo cliente visualizam somente as próprias Ordens
+        de Serviço.
+      parameters:
+      - default: 1
+        description: Número da página
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: id
+        description: Campo de ordenação
+        enum:
+        - id
+        - numero
+        - cliente_id
+        - veiculo_id
+        - quilometragem_entrada
+        - status
+        - criado_por
+        - data_cadastro
+        - data_atualizacao
+        in: query
+        name: order
+        type: string
+      - default: ASC
+        description: Direção da ordenação
+        enum:
+        - ASC
+        - DESC
+        in: query
+        name: direction
+        type: string
+      - description: Status ou lista de status separados por vírgula
+        in: query
+        name: status
+        type: string
+      - description: ID ou lista de IDs de clientes separados por vírgula
+        in: query
+        name: cliente_id
+        type: string
+      - description: ID ou lista de IDs de veículos separados por vírgula
+        in: query
+        name: veiculo_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ordemservico.ListarOrdensServicoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Lista Ordens de Serviço
+      tags:
+      - Ordens de Serviço
     post:
       consumes:
       - application/json
@@ -1342,6 +1523,44 @@ paths:
       security:
       - BearerAuth: []
       summary: Abre uma Ordem de Serviço
+      tags:
+      - Ordens de Serviço
+  /v1/ordens-servico/{id}:
+    get:
+      description: Usuários internos podem consultar qualquer OS. Clientes podem consultar
+        somente Ordens de Serviço vinculadas ao próprio cadastro.
+      parameters:
+      - description: ID da Ordem de Serviço
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ordemservico.OrdemServicoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Busca uma Ordem de Serviço por ID
       tags:
       - Ordens de Serviço
   /v1/ordens-servico/{id}/diagnostico:
@@ -1811,6 +2030,40 @@ paths:
       summary: Remove um serviço do orçamento
       tags:
       - Orçamentos
+  /v1/ordens-servico/numero/{numero}:
+    get:
+      description: Usuários internos podem consultar qualquer OS. Clientes podem consultar
+        somente Ordens de Serviço vinculadas ao próprio cadastro.
+      parameters:
+      - description: Número da Ordem de Serviço
+        in: path
+        name: numero
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ordemservico.OrdemServicoResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Busca uma Ordem de Serviço por número
+      tags:
+      - Ordens de Serviço
   /v1/pecas:
     get:
       description: Lista peças do estoque com paginação, ordenação e filtros.

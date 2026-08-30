@@ -47,6 +47,29 @@ func (r *Repository) BuscarPorOrdemServicoID(ctx context.Context, ordemServicoID
 	return toDomain(model), nil
 }
 
+// BuscarPorOrdensServicoIDs busca os orçamentos associados às OS informadas em
+// uma única consulta. Os itens não são carregados porque a listagem de OS usa
+// somente o resumo financeiro do orçamento.
+func (r *Repository) BuscarPorOrdensServicoIDs(ctx context.Context, ordensServicoIDs []uint64) ([]*domain.Orcamento, error) {
+	if len(ordensServicoIDs) == 0 {
+		return []*domain.Orcamento{}, nil
+	}
+
+	models := make([]OrcamentoModel, 0)
+	if err := r.db.WithContext(ctx).
+		Where("ordem_servico_id IN ?", ordensServicoIDs).
+		Find(&models).Error; err != nil {
+		return nil, err
+	}
+
+	orcamentos := make([]*domain.Orcamento, 0, len(models))
+	for _, model := range models {
+		orcamentos = append(orcamentos, toDomain(model))
+	}
+
+	return orcamentos, nil
+}
+
 // Atualizar persiste os dados escalares do orçamento e sincroniza os itens:
 // insere os itens novos (ID == 0) e remove do banco os itens que não estão
 // mais presentes no agregado (removidos via RemoverItemServico/RemoverItemPeca).

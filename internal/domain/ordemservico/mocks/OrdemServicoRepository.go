@@ -6,6 +6,7 @@ import (
 	context "context"
 
 	ordemservico "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
+	query "github.com/muriloperosa/soat-architecture/internal/domain/query"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -183,6 +184,63 @@ func (_c *OrdemServicoRepository_BuscarPorNumero_Call) Return(_a0 *ordemservico.
 }
 
 func (_c *OrdemServicoRepository_BuscarPorNumero_Call) RunAndReturn(run func(context.Context, string) (*ordemservico.OrdemServico, error)) *OrdemServicoRepository_BuscarPorNumero_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Listar provides a mock function with given fields: ctx, params
+func (_m *OrdemServicoRepository) Listar(ctx context.Context, params query.Params) (query.Page[*ordemservico.OrdemServico], error) {
+	ret := _m.Called(ctx, params)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Listar")
+	}
+
+	var r0 query.Page[*ordemservico.OrdemServico]
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, query.Params) (query.Page[*ordemservico.OrdemServico], error)); ok {
+		return rf(ctx, params)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, query.Params) query.Page[*ordemservico.OrdemServico]); ok {
+		r0 = rf(ctx, params)
+	} else {
+		r0 = ret.Get(0).(query.Page[*ordemservico.OrdemServico])
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, query.Params) error); ok {
+		r1 = rf(ctx, params)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// OrdemServicoRepository_Listar_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Listar'
+type OrdemServicoRepository_Listar_Call struct {
+	*mock.Call
+}
+
+// Listar is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params query.Params
+func (_e *OrdemServicoRepository_Expecter) Listar(ctx interface{}, params interface{}) *OrdemServicoRepository_Listar_Call {
+	return &OrdemServicoRepository_Listar_Call{Call: _e.mock.On("Listar", ctx, params)}
+}
+
+func (_c *OrdemServicoRepository_Listar_Call) Run(run func(ctx context.Context, params query.Params)) *OrdemServicoRepository_Listar_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(query.Params))
+	})
+	return _c
+}
+
+func (_c *OrdemServicoRepository_Listar_Call) Return(_a0 query.Page[*ordemservico.OrdemServico], _a1 error) *OrdemServicoRepository_Listar_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *OrdemServicoRepository_Listar_Call) RunAndReturn(run func(context.Context, query.Params) (query.Page[*ordemservico.OrdemServico], error)) *OrdemServicoRepository_Listar_Call {
 	_c.Call.Return(run)
 	return _c
 }

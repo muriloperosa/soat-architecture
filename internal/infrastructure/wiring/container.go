@@ -108,11 +108,14 @@ type Container struct {
 	AtivarServicoUC    *appservico.AtivarServicoUseCase
 	InativarServicoUC  *appservico.InativarServicoUseCase
 
-	AbrirOrdemServicoUC    *appordemservico.AbrirOrdemServicoUseCase
-	IniciarDiagnosticoUC   *appordemservico.IniciarDiagnosticoUseCase
-	InformarDiagnosticoUC  *appordemservico.InformarDiagnosticoUseCase
-	IniciarExecucaoUC      *appordemservico.IniciarExecucaoUseCase
-	EntregarOrdemServicoUC *appordemservico.EntregarOrdemServicoUseCase
+	AbrirOrdemServicoUC              *appordemservico.AbrirOrdemServicoUseCase
+	IniciarDiagnosticoUC             *appordemservico.IniciarDiagnosticoUseCase
+	InformarDiagnosticoUC            *appordemservico.InformarDiagnosticoUseCase
+	IniciarExecucaoUC                *appordemservico.IniciarExecucaoUseCase
+	EntregarOrdemServicoUC           *appordemservico.EntregarOrdemServicoUseCase
+	ConsultarOrdemServicoPorIDUC     *appordemservico.ConsultarOrdemServicoPorIDUseCase
+	ConsultarOrdemServicoPorNumeroUC *appordemservico.ConsultarOrdemServicoPorNumeroUseCase
+	ListarOrdensServicoUC            *appordemservico.ListarOrdensServicoUseCase
 
 	GerarOrcamentoUC            *apporcamento.GerarOrcamentoUseCase
 	AdicionarServicoOrcamentoUC *apporcamento.AdicionarServicoOrcamentoUseCase
@@ -206,6 +209,9 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.InformarDiagnosticoUC = appordemservico.NewInformarDiagnosticoUseCase(c.OrdemServicoRepo)
 	c.IniciarExecucaoUC = appordemservico.NewIniciarExecucaoUseCase(c.OrdemServicoRepo)
 	c.EntregarOrdemServicoUC = appordemservico.NewEntregarOrdemServicoUseCase(c.OrdemServicoRepo)
+	c.ConsultarOrdemServicoPorIDUC = appordemservico.NewConsultarOrdemServicoPorIDUseCase(c.OrdemServicoRepo)
+	c.ConsultarOrdemServicoPorNumeroUC = appordemservico.NewConsultarOrdemServicoPorNumeroUseCase(c.OrdemServicoRepo)
+	c.ListarOrdensServicoUC = appordemservico.NewListarOrdensServicoUseCase(c.OrdemServicoRepo, c.OrcamentoRepo)
 
 	c.GerarOrcamentoUC = apporcamento.NewGerarOrcamentoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo)
 	c.AdicionarServicoOrcamentoUC = apporcamento.NewAdicionarServicoOrcamentoUseCase(c.OrcamentoRepo, c.ServicoRepo)
