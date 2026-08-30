@@ -211,7 +211,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.EntregarOrdemServicoUC = appordemservico.NewEntregarOrdemServicoUseCase(c.OrdemServicoRepo)
 	c.ConsultarOrdemServicoPorIDUC = appordemservico.NewConsultarOrdemServicoPorIDUseCase(c.OrdemServicoRepo)
 	c.ConsultarOrdemServicoPorNumeroUC = appordemservico.NewConsultarOrdemServicoPorNumeroUseCase(c.OrdemServicoRepo)
-	c.ListarOrdensServicoUC = appordemservico.NewListarOrdensServicoUseCase(c.OrdemServicoRepo)
+	c.ListarOrdensServicoUC = appordemservico.NewListarOrdensServicoUseCase(c.OrdemServicoRepo, c.OrcamentoRepo)
 
 	c.GerarOrcamentoUC = apporcamento.NewGerarOrcamentoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo)
 	c.AdicionarServicoOrcamentoUC = apporcamento.NewAdicionarServicoOrcamentoUseCase(c.OrcamentoRepo, c.ServicoRepo)

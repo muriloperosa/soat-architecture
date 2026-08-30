@@ -3,6 +3,7 @@ package ordemservico
 import (
 	app "github.com/muriloperosa/soat-architecture/internal/application/ordemservico"
 	appquery "github.com/muriloperosa/soat-architecture/internal/application/query"
+	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httpquery"
 )
 
@@ -32,7 +33,7 @@ func toEntregarInput(ordemServicoID, usuarioID uint64) app.EntregarOrdemServicoI
 	return app.EntregarOrdemServicoInput{OrdemServicoID: ordemServicoID, UsuarioID: usuarioID}
 }
 
-func toListarInput(params httpquery.Params) app.ListarOrdensServicoInput {
+func toListarInput(params httpquery.Params, solicitanteID uint64, tipoSolicitante domainauth.TipoUsuario) app.ListarOrdensServicoInput {
 	var filters []appquery.FilterInput
 	if len(params.Filters) > 0 {
 		filters = make([]appquery.FilterInput, 0, len(params.Filters))
@@ -41,9 +42,13 @@ func toListarInput(params httpquery.Params) app.ListarOrdensServicoInput {
 		}
 	}
 
-	return app.ListarOrdensServicoInput{ParamsInput: appquery.ParamsInput{
-		Page: params.Page, Order: params.Order, Direction: params.Direction, Filters: filters,
-	}}
+	return app.ListarOrdensServicoInput{
+		ParamsInput: appquery.ParamsInput{
+			Page: params.Page, Order: params.Order, Direction: params.Direction, Filters: filters,
+		},
+		SolicitanteID:   solicitanteID,
+		TipoSolicitante: tipoSolicitante,
+	}
 }
 
 func toResponse(output app.OrdemServicoOutput) OrdemServicoResponse {
@@ -68,7 +73,18 @@ func toResumoResponse(output app.OrdemServicoResumoOutput) OrdemServicoResumoRes
 		ID: output.ID, Numero: output.Numero, ClienteID: output.ClienteID, VeiculoID: output.VeiculoID,
 		QuilometragemEntrada: output.QuilometragemEntrada, Status: output.Status, Diagnostico: output.Diagnostico,
 		Observacoes: output.Observacoes, CriadoPor: output.CriadoPor, DataCadastro: output.DataCadastro,
-		DataAtualizacao: output.DataAtualizacao,
+		DataAtualizacao: output.DataAtualizacao, Orcamento: toOrcamentoResumoResponse(output.Orcamento),
+	}
+}
+
+func toOrcamentoResumoResponse(output *app.OrcamentoResumoOutput) *OrcamentoResumoResponse {
+	if output == nil {
+		return nil
+	}
+
+	return &OrcamentoResumoResponse{
+		ID: output.ID, ValorItemServicos: output.ValorItemServicos, ValorItemPecas: output.ValorItemPecas,
+		ValorTotal: output.ValorTotal, Observacoes: output.Observacoes,
 	}
 }
 

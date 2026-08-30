@@ -4,6 +4,8 @@ import (
 	"time"
 
 	appquery "github.com/muriloperosa/soat-architecture/internal/application/query"
+	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
+	domainorcamento "github.com/muriloperosa/soat-architecture/internal/domain/orcamento"
 	domain "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
 )
 
@@ -58,6 +60,14 @@ type OrdemServicoOutput struct {
 	HistoricoStatus      []HistoricoStatusOutput
 }
 
+type OrcamentoResumoOutput struct {
+	ID                uint64
+	ValorItemServicos float64
+	ValorItemPecas    float64
+	ValorTotal        float64
+	Observacoes       string
+}
+
 type OrdemServicoResumoOutput struct {
 	ID                   uint64
 	Numero               string
@@ -70,10 +80,13 @@ type OrdemServicoResumoOutput struct {
 	CriadoPor            uint64
 	DataCadastro         time.Time
 	DataAtualizacao      time.Time
+	Orcamento            *OrcamentoResumoOutput
 }
 
 type ListarOrdensServicoInput struct {
 	appquery.ParamsInput
+	SolicitanteID   uint64
+	TipoSolicitante domainauth.TipoUsuario
 }
 
 type ListarOrdensServicoOutput struct {
@@ -128,5 +141,19 @@ func toResumoOutput(os *domain.OrdemServico) OrdemServicoResumoOutput {
 		CriadoPor:            os.CriadoPor(),
 		DataCadastro:         os.DataCadastro(),
 		DataAtualizacao:      os.DataAtualizacao(),
+	}
+}
+
+func toOrcamentoResumoOutput(o *domainorcamento.Orcamento) *OrcamentoResumoOutput {
+	if o == nil {
+		return nil
+	}
+
+	return &OrcamentoResumoOutput{
+		ID:                o.ID(),
+		ValorItemServicos: o.ValorItemServicos(),
+		ValorItemPecas:    o.ValorItemPecas(),
+		ValorTotal:        o.ValorTotal(),
+		Observacoes:       o.Observacoes(),
 	}
 }

@@ -64,3 +64,25 @@ func TestSubjectID_SubjectNaoNumerico_Retorna401(t *testing.T) {
 
 	require.Equal(t, http.StatusUnauthorized, rec.Code)
 }
+
+func TestSubject_ClaimsValidos_RetornaIDEtype(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	engine := gin.New()
+	engine.Use(func(c *gin.Context) {
+		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "42", Tipo: domainauth.TipoCliente})
+		c.Next()
+	})
+	engine.GET("/me", func(c *gin.Context) {
+		id, tipo, ok := middleware.Subject(c)
+		require.True(t, ok)
+		require.Equal(t, uint64(42), id)
+		require.Equal(t, domainauth.TipoCliente, tipo)
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/me", nil)
+	rec := httptest.NewRecorder()
+	engine.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+}

@@ -25,16 +25,23 @@ func RegisterOrdemServicoRoutes(rg *gin.RouterGroup, container *wiring.Container
 	ordensServico := rg.Group(
 		"/ordens-servico",
 		middleware.AuthenticationMiddleware(container.JWTAuth, container.RefreshTokensRepo, container.UsuarioStatusRepo, container.ClienteStatusRepo),
-		middleware.AuthorizationMiddleware(domainauth.TipoInterno),
 	)
 
-	ordensServico.POST("", handler.Abrir)
+	// Consultas são acessíveis por usuário interno e cliente autenticado.
+	// Para clientes, a aplicação restringe a consulta às próprias Ordens de Serviço.
 	ordensServico.GET("", handler.Listar)
 	ordensServico.GET("/numero/:numero", handler.BuscarPorNumero)
 	ordensServico.GET("/:id", handler.BuscarPorID)
-	ordensServico.PATCH("/:id/entregar", handler.Entregar)
 
-	ordensServicoExec := ordensServico.Group(
+	ordensServicoInternas := ordensServico.Group(
+		"",
+		middleware.AuthorizationMiddleware(domainauth.TipoInterno),
+	)
+
+	ordensServicoInternas.POST("", handler.Abrir)
+	ordensServicoInternas.PATCH("/:id/entregar", handler.Entregar)
+
+	ordensServicoExec := ordensServicoInternas.Group(
 		"",
 		middleware.AuthorizationMiddleware(domainauth.TipoInterno, shared.PapelMecanico, shared.PapelAdmin),
 	)

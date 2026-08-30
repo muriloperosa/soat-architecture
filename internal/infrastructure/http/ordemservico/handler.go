@@ -48,7 +48,7 @@ func NewHandler(
 }
 
 // @Summary Lista Ordens de Serviço
-// @Description Lista Ordens de Serviço com paginação, ordenação e filtros diretos por campo.
+// @Description Lista Ordens de Serviço com paginação, ordenação e filtros diretos por campo. Usuários do tipo cliente visualizam somente as próprias Ordens de Serviço.
 // @Tags Ordens de Serviço
 // @Produce json
 // @Security BearerAuth
@@ -65,13 +65,21 @@ func NewHandler(
 // @Failure 500 {object} httperror.ErrorResponse
 // @Router /v1/ordens-servico [get]
 func (h *Handler) Listar(c *gin.Context) {
+	solicitanteID, tipoSolicitante, ok := middleware.Subject(c)
+	if !ok {
+		return
+	}
+
 	params, err := h.queryParser.Parse(c)
 	if err != nil {
 		httperror.RespondError(c, err)
 		return
 	}
 
-	output, err := h.listar.Executar(c.Request.Context(), toListarInput(params))
+	output, err := h.listar.Executar(
+		c.Request.Context(),
+		toListarInput(params, solicitanteID, tipoSolicitante),
+	)
 	if err != nil {
 		httperror.RespondError(c, err)
 		return
@@ -81,6 +89,7 @@ func (h *Handler) Listar(c *gin.Context) {
 }
 
 // @Summary Busca uma Ordem de Serviço por ID
+// @Description Usuários internos podem consultar qualquer OS. Clientes podem consultar somente Ordens de Serviço vinculadas ao próprio cadastro.
 // @Tags Ordens de Serviço
 // @Produce json
 // @Security BearerAuth
@@ -97,7 +106,17 @@ func (h *Handler) BuscarPorID(c *gin.Context) {
 		return
 	}
 
-	output, err := h.consultarPorID.Executar(c.Request.Context(), id)
+	solicitanteID, tipoSolicitante, ok := middleware.Subject(c)
+	if !ok {
+		return
+	}
+
+	output, err := h.consultarPorID.Executar(
+		c.Request.Context(),
+		id,
+		solicitanteID,
+		tipoSolicitante,
+	)
 	if err != nil {
 		httperror.RespondError(c, err)
 		return
@@ -107,6 +126,7 @@ func (h *Handler) BuscarPorID(c *gin.Context) {
 }
 
 // @Summary Busca uma Ordem de Serviço por número
+// @Description Usuários internos podem consultar qualquer OS. Clientes podem consultar somente Ordens de Serviço vinculadas ao próprio cadastro.
 // @Tags Ordens de Serviço
 // @Produce json
 // @Security BearerAuth
@@ -117,7 +137,17 @@ func (h *Handler) BuscarPorID(c *gin.Context) {
 // @Failure 404 {object} httperror.ErrorResponse
 // @Router /v1/ordens-servico/numero/{numero} [get]
 func (h *Handler) BuscarPorNumero(c *gin.Context) {
-	output, err := h.consultarPorNumero.Executar(c.Request.Context(), c.Param("numero"))
+	solicitanteID, tipoSolicitante, ok := middleware.Subject(c)
+	if !ok {
+		return
+	}
+
+	output, err := h.consultarPorNumero.Executar(
+		c.Request.Context(),
+		c.Param("numero"),
+		solicitanteID,
+		tipoSolicitante,
+	)
 	if err != nil {
 		httperror.RespondError(c, err)
 		return
