@@ -16,6 +16,7 @@ type Handler struct {
 	adicionarPeca    *app.AdicionarPecaOrcamentoUseCase
 	removerServico   *app.RemoverServicoOrcamentoUseCase
 	removerPeca      *app.RemoverPecaOrcamentoUseCase
+	finalizar        *app.FinalizarOrcamentoUseCase
 }
 
 func NewHandler(
@@ -24,6 +25,7 @@ func NewHandler(
 	adicionarPeca *app.AdicionarPecaOrcamentoUseCase,
 	removerServico *app.RemoverServicoOrcamentoUseCase,
 	removerPeca *app.RemoverPecaOrcamentoUseCase,
+	finalizar *app.FinalizarOrcamentoUseCase,
 ) *Handler {
 	return &Handler{
 		gerar:            gerar,
@@ -31,6 +33,7 @@ func NewHandler(
 		adicionarPeca:    adicionarPeca,
 		removerServico:   removerServico,
 		removerPeca:      removerPeca,
+		finalizar:        finalizar,
 	}
 }
 
@@ -208,6 +211,42 @@ func (h *Handler) RemoverPeca(c *gin.Context) {
 	}
 
 	output, err := h.removerPeca.Executar(c.Request.Context(), toRemoverPecaInput(ordemServicoID, itemPecaID))
+	if err != nil {
+		httperror.RespondError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, toResponse(output))
+}
+
+// @Summary Finaliza o orçamento e envia para aprovação
+// @Description Move a OS de EM_DIAGNOSTICO para AGUARDANDO_APROVACAO e, como efeito da transição, envia (simulado) o e-mail do orçamento ao cliente. Restrito a mecânico ou administrador.
+// @Tags Orçamentos
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID da Ordem de Serviço"
+// @Success 200 {object} OrcamentoResponse
+// @Failure 400 {object} httperror.ErrorResponse
+// @Failure 401 {object} httperror.ErrorResponse
+// @Failure 403 {object} httperror.ErrorResponse
+// @Failure 404 {object} httperror.ErrorResponse
+// @Failure 500 {object} httperror.ErrorResponse
+// @Router /v1/ordens-servico/{id}/orcamento/finalizar [patch]
+func (h *Handler) Finalizar(c *gin.Context) {
+	ordemServicoID, ok := httprequest.ParseUintParam(c, "id")
+	if !ok {
+		return
+	}
+
+	usuarioID, ok := middleware.SubjectID(c)
+	if !ok {
+		return
+	}
+
+	output, err := h.finalizar.Executar(c.Request.Context(), app.FinalizarOrcamentoInput{
+		OrdemServicoID: ordemServicoID,
+		UsuarioID:      usuarioID,
+	})
 	if err != nil {
 		httperror.RespondError(c, err)
 		return

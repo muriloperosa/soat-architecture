@@ -248,6 +248,47 @@ func TestValidarTransicaoParaAguardandoAprovacao_ExigeDiagnostico(t *testing.T) 
 	require.NoError(t, os.ValidarTransicaoPara(ordemservico.StatusAguardandoAprovacao))
 }
 
+func TestEnviarParaAprovacao_ComSucesso(t *testing.T) {
+	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
+	require.NoError(t, err)
+	os.AtribuirID(42)
+	require.NoError(t, os.IniciarDiagnostico(7))
+	require.NoError(t, os.InformarDiagnostico("Falha na bomba de combustível"))
+	antes := os.DataAtualizacao()
+
+	err = os.EnviarParaAprovacao(7)
+
+	require.NoError(t, err)
+	require.Equal(t, ordemservico.StatusAguardandoAprovacao, os.Status())
+	require.False(t, os.DataAtualizacao().Before(antes))
+	historico := os.HistoricoStatus()
+	require.Len(t, historico, 3)
+	require.Equal(t, ordemservico.StatusAguardandoAprovacao, historico[2].Status())
+	require.Equal(t, uint64(42), historico[2].OrdemServicoID())
+	require.Equal(t, uint64(7), historico[2].AlteradoPor())
+}
+
+func TestEnviarParaAprovacao_ExigeDiagnostico(t *testing.T) {
+	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
+	require.NoError(t, err)
+	require.NoError(t, os.IniciarDiagnostico(7))
+
+	err = os.EnviarParaAprovacao(7)
+
+	require.ErrorIs(t, err, ordemservico.ErrDiagnosticoObrigatorio)
+	require.Equal(t, ordemservico.StatusEmDiagnostico, os.Status())
+}
+
+func TestEnviarParaAprovacao_SomenteOSEmDiagnostico(t *testing.T) {
+	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
+	require.NoError(t, err)
+
+	err = os.EnviarParaAprovacao(7)
+
+	require.ErrorIs(t, err, ordemservico.ErrTransicaoStatusInvalida)
+	require.Equal(t, ordemservico.StatusRecebida, os.Status())
+}
+
 func osAprovada(t *testing.T, id uint64) *ordemservico.OrdemServico {
 	t.Helper()
 	numero, err := ordemservico.NewNumeroOrdemServico("OS-2026-0077")
