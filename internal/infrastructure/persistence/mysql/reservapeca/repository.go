@@ -14,8 +14,6 @@ type Repository struct {
 	db *gorm.DB
 }
 
-var _ domain.Repository = (*Repository)(nil)
-
 func NewRepository(db *gorm.DB) domain.Repository {
 	return &Repository{db: db}
 }

@@ -15,8 +15,6 @@ type Repository struct {
 	queryBuilder *mysqlquery.Builder
 }
 
-var _ domain.OrdemServicoRepository = (*Repository)(nil)
-
 func NewOrdemServicoRepository(db *gorm.DB) domain.OrdemServicoRepository {
 	return &Repository{
 		db:           db,

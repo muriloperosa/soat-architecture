@@ -7,6 +7,7 @@ import (
 
 	appauth "github.com/muriloperosa/soat-architecture/internal/application/auth"
 	appcliente "github.com/muriloperosa/soat-architecture/internal/application/cliente"
+	apporcamento "github.com/muriloperosa/soat-architecture/internal/application/orcamento"
 	appordemservico "github.com/muriloperosa/soat-architecture/internal/application/ordemservico"
 	apppeca "github.com/muriloperosa/soat-architecture/internal/application/peca"
 	apprelatorio "github.com/muriloperosa/soat-architecture/internal/application/relatorio"
@@ -15,6 +16,7 @@ import (
 	appveiculo "github.com/muriloperosa/soat-architecture/internal/application/veiculo"
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 	domaincliente "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
+	domainorcamento "github.com/muriloperosa/soat-architecture/internal/domain/orcamento"
 	domainordemservico "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
 	domainpeca "github.com/muriloperosa/soat-architecture/internal/domain/peca"
 	domainrelatorio "github.com/muriloperosa/soat-architecture/internal/domain/relatorio"
@@ -25,9 +27,11 @@ import (
 	domainveiculo "github.com/muriloperosa/soat-architecture/internal/domain/veiculo"
 	infraauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/auth"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/config"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/email"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql"
 	mysqlauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/auth"
 	mysqlcliente "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/cliente"
+	mysqlorcamento "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/orcamento"
 	mysqlordemservico "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/ordemservico"
 	mysqlpeca "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/peca"
 	mysqlrelatorio "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/relatorio"
@@ -50,9 +54,11 @@ type Container struct {
 	PecaRepo          domainpeca.Repository
 	ReservaPecaRepo   domainreservapeca.Repository
 	TransactionRunner shared.TransactionRunner
+	EmailSender       shared.EmailSender
 	VeiculoRepo       domainveiculo.Repository
 	ServicoRepo       domainservico.ServicoRepository
 	OrdemServicoRepo  domainordemservico.OrdemServicoRepository
+	OrcamentoRepo     domainorcamento.OrcamentoRepository
 	RelatorioRepo     domainrelatorio.RelatorioTransicaoStatusRepository
 
 	LoginInternoUC *appauth.LoginUseCase
@@ -111,6 +117,13 @@ type Container struct {
 	ConsultarOrdemServicoPorNumeroUC *appordemservico.ConsultarOrdemServicoPorNumeroUseCase
 	ListarOrdensServicoUC            *appordemservico.ListarOrdensServicoUseCase
 
+	GerarOrcamentoUC            *apporcamento.GerarOrcamentoUseCase
+	AdicionarServicoOrcamentoUC *apporcamento.AdicionarServicoOrcamentoUseCase
+	AdicionarPecaOrcamentoUC    *apporcamento.AdicionarPecaOrcamentoUseCase
+	RemoverServicoOrcamentoUC   *apporcamento.RemoverServicoOrcamentoUseCase
+	RemoverPecaOrcamentoUC      *apporcamento.RemoverPecaOrcamentoUseCase
+	FinalizarOrcamentoUC        *apporcamento.FinalizarOrcamentoUseCase
+
 	ConsultarTransicaoStatusUC *apprelatorio.ConsultarTransicaoStatusUseCase
 }
 
@@ -122,9 +135,11 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.PecaRepo = mysqlpeca.NewRepository(db)
 	c.ReservaPecaRepo = mysqlreservapeca.NewRepository(db)
 	c.TransactionRunner = mysql.NewTransactionRunner(db)
+	c.EmailSender = email.NewLogSender()
 	c.VeiculoRepo = mysqlveiculo.NewRepository(db)
 	c.ServicoRepo = mysqlservico.NewServicoRepository(db)
 	c.OrdemServicoRepo = mysqlordemservico.NewOrdemServicoRepository(db)
+	c.OrcamentoRepo = mysqlorcamento.NewOrcamentoRepository(db)
 	c.RelatorioRepo = mysqlrelatorio.NewRelatorioRepository(db)
 	if cfg == nil {
 		return c
@@ -197,6 +212,13 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.ConsultarOrdemServicoPorIDUC = appordemservico.NewConsultarOrdemServicoPorIDUseCase(c.OrdemServicoRepo)
 	c.ConsultarOrdemServicoPorNumeroUC = appordemservico.NewConsultarOrdemServicoPorNumeroUseCase(c.OrdemServicoRepo)
 	c.ListarOrdensServicoUC = appordemservico.NewListarOrdensServicoUseCase(c.OrdemServicoRepo)
+
+	c.GerarOrcamentoUC = apporcamento.NewGerarOrcamentoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo)
+	c.AdicionarServicoOrcamentoUC = apporcamento.NewAdicionarServicoOrcamentoUseCase(c.OrcamentoRepo, c.ServicoRepo)
+	c.AdicionarPecaOrcamentoUC = apporcamento.NewAdicionarPecaOrcamentoUseCase(c.OrcamentoRepo, c.PecaRepo)
+	c.RemoverServicoOrcamentoUC = apporcamento.NewRemoverServicoOrcamentoUseCase(c.OrcamentoRepo)
+	c.RemoverPecaOrcamentoUC = apporcamento.NewRemoverPecaOrcamentoUseCase(c.OrcamentoRepo)
+	c.FinalizarOrcamentoUC = apporcamento.NewFinalizarOrcamentoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo, c.ClienteRepository, c.EmailSender)
 
 	c.ConsultarTransicaoStatusUC = apprelatorio.NewConsultarTransicaoStatusUseCase(c.RelatorioRepo)
 
