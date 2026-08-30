@@ -163,6 +163,26 @@ func (o *OrdemServico) InformarDiagnostico(texto string) error {
 	return nil
 }
 
+// EnviarParaAprovacao move uma OS em diagnóstico para aguardando aprovação
+// (exige diagnóstico preenchido, ver ValidarTransicaoPara) e registra quem
+// realizou a transição.
+func (o *OrdemServico) EnviarParaAprovacao(alteradoPor uint64) error {
+	if err := o.ValidarTransicaoPara(StatusAguardandoAprovacao); err != nil {
+		return err
+	}
+
+	historico, err := NewHistoricoStatus(StatusAguardandoAprovacao, alteradoPor, "", time.Now())
+	if err != nil {
+		return err
+	}
+	historico.atribuirOrdemServicoID(o.id)
+
+	o.status = StatusAguardandoAprovacao
+	o.dataAtualizacao = historico.AlteradoEm()
+	o.historicoStatus = append(o.historicoStatus, historico)
+	return nil
+}
+
 // IniciarExecucao move uma OS aprovada para execução e registra quem realizou a transição.
 func (o *OrdemServico) IniciarExecucao(alteradoPor uint64) error {
 	if err := o.ValidarTransicaoPara(StatusEmExecucao); err != nil {
