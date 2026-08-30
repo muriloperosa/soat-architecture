@@ -9,6 +9,8 @@ var (
 	ErrServicoInativo               = shared.NewValidationError("serviço inativo não pode ser incluído no orçamento")
 	ErrPecaObrigatoria              = shared.NewValidationError("peça é obrigatória")
 	ErrDescricaoObrigatoria         = shared.NewValidationError("descrição é obrigatória")
+	ErrDescricaoInvalida            = shared.NewValidationError("descrição excede o tamanho máximo permitido (500 caracteres)")
+	ErrObservacoesInvalidas         = shared.NewValidationError("observações excedem o tamanho máximo permitido (500 caracteres)")
 	ErrQuantidadeInvalida           = shared.NewValidationError("quantidade deve ser maior que zero")
 	ErrValorInvalido                = shared.NewValidationError("valor não pode ser negativo")
 	ErrItemServicoNaoEncontrado     = shared.NewNotFoundError("item de serviço não encontrado no orçamento")

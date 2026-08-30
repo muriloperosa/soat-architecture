@@ -2,6 +2,10 @@ package orcamento
 
 import "strings"
 
+// tamanhoMaximoDescricao espelha o VARCHAR(500) da coluna
+// orcamentos_pecas.descricao (migration 000010).
+const tamanhoMaximoDescricao = 500
+
 // ItemPeca é uma peça incluída no Orçamento. Descrição e valor são
 // preservados no momento da inclusão: alterações futuras no cadastro da
 // Peça não alteram itens já incluídos em orçamentos existentes. Não
@@ -25,6 +29,9 @@ func NewItemPeca(pecaID uint64, descricao string, quantidade int, valor float64)
 	descricao = strings.TrimSpace(descricao)
 	if descricao == "" {
 		return ItemPeca{}, ErrDescricaoObrigatoria
+	}
+	if len(descricao) > tamanhoMaximoDescricao {
+		return ItemPeca{}, ErrDescricaoInvalida
 	}
 
 	if quantidade <= 0 {

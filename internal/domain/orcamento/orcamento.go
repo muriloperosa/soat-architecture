@@ -7,6 +7,10 @@ import (
 	"time"
 )
 
+// tamanhoMaximoObservacoes espelha o VARCHAR(500) da coluna
+// orcamentos.observacoes (migration 000008).
+const tamanhoMaximoObservacoes = 500
+
 // Orcamento representa a estimativa de custo de uma Ordem de Serviço. Uma OS
 // possui no máximo um Orçamento. O Orçamento não possui status próprio: a
 // aprovação/rejeição pertence ao status da OS.
@@ -33,12 +37,17 @@ func NewOrcamento(ordemServicoID uint64, observacoes string, criadoPor uint64) (
 		return nil, ErrCriadoPorObrigatorio
 	}
 
+	observacoes = strings.TrimSpace(observacoes)
+	if len(observacoes) > tamanhoMaximoObservacoes {
+		return nil, ErrObservacoesInvalidas
+	}
+
 	agora := time.Now()
 	return &Orcamento{
 		ordemServicoID: ordemServicoID,
 		itensServico:   []ItemServico{},
 		itensPeca:      []ItemPeca{},
-		observacoes:    strings.TrimSpace(observacoes),
+		observacoes:    observacoes,
 		criadoPor:      criadoPor,
 		criadoEm:       agora,
 		atualizadoEm:   agora,

@@ -1,6 +1,7 @@
 package orcamento_test
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -46,6 +47,20 @@ func TestNewOrcamentoValidaInvariantes(t *testing.T) {
 			require.ErrorIs(t, err, teste.erroEsperado)
 		})
 	}
+}
+
+func TestNewOrcamento_ObservacoesExcedeTamanhoMaximo(t *testing.T) {
+	o, err := orcamento.NewOrcamento(10, strings.Repeat("a", 501), 3)
+
+	require.Nil(t, o)
+	require.ErrorIs(t, err, orcamento.ErrObservacoesInvalidas)
+}
+
+func TestNewOrcamento_ObservacoesNoLimite(t *testing.T) {
+	o, err := orcamento.NewOrcamento(10, strings.Repeat("a", 500), 3)
+
+	require.NoError(t, err)
+	require.Len(t, o.Observacoes(), 500)
 }
 
 func TestAdicionarItemServico_CalculaTotais(t *testing.T) {
@@ -107,6 +122,7 @@ func TestAdicionarItemPeca_ValidaDados(t *testing.T) {
 	require.ErrorIs(t, o.AdicionarItemPeca(1, "   ", 1, 10), orcamento.ErrDescricaoObrigatoria)
 	require.ErrorIs(t, o.AdicionarItemPeca(1, "Filtro", 0, 10), orcamento.ErrQuantidadeInvalida)
 	require.ErrorIs(t, o.AdicionarItemPeca(1, "Filtro", 1, -10), orcamento.ErrValorInvalido)
+	require.ErrorIs(t, o.AdicionarItemPeca(1, strings.Repeat("a", 501), 1, 10), orcamento.ErrDescricaoInvalida)
 	require.Empty(t, o.ItensPeca())
 }
 
