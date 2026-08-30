@@ -30,6 +30,7 @@ func resetDB(t *testing.T) {
 	require(testDB.Exec("DELETE FROM ordens_servico").Error)
 	require(testDB.Exec("DELETE FROM clientes").Error)
 	require(testDB.Exec("DELETE FROM pecas").Error)
+	require(testDB.Exec("DELETE FROM servicos").Error)
 	require(testDB.Exec("DELETE FROM veiculos").Error)
 	require(testDB.Exec("DELETE FROM usuarios").Error)
 }

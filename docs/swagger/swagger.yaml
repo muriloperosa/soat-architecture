@@ -172,6 +172,107 @@ definitions:
         example: validation
         type: string
     type: object
+  orcamento.AdicionarPecaOrcamentoRequest:
+    properties:
+      peca_id:
+        example: 1
+        type: integer
+      quantidade:
+        example: 2
+        type: integer
+    required:
+    - peca_id
+    - quantidade
+    type: object
+  orcamento.AdicionarServicoOrcamentoRequest:
+    properties:
+      quantidade:
+        example: 1
+        type: integer
+      servico_id:
+        example: 1
+        type: integer
+    required:
+    - quantidade
+    - servico_id
+    type: object
+  orcamento.GerarOrcamentoRequest:
+    properties:
+      observacoes:
+        example: Aguardando aprovação do cliente
+        type: string
+    type: object
+  orcamento.ItemPecaResponse:
+    properties:
+      descricao:
+        example: Filtro de óleo
+        type: string
+      id:
+        example: 1
+        type: integer
+      peca_id:
+        example: 1
+        type: integer
+      quantidade:
+        example: 2
+        type: integer
+      subtotal:
+        example: 100
+        type: number
+      valor:
+        example: 50
+        type: number
+    type: object
+  orcamento.ItemServicoResponse:
+    properties:
+      id:
+        example: 1
+        type: integer
+      quantidade:
+        example: 1
+        type: integer
+      servico_id:
+        example: 1
+        type: integer
+      subtotal:
+        example: 150
+        type: number
+      tempo_estimado_minutos:
+        example: 60
+        type: integer
+      valor:
+        example: 150
+        type: number
+    type: object
+  orcamento.OrcamentoResponse:
+    properties:
+      id:
+        example: 1
+        type: integer
+      itens_peca:
+        items:
+          $ref: '#/definitions/orcamento.ItemPecaResponse'
+        type: array
+      itens_servico:
+        items:
+          $ref: '#/definitions/orcamento.ItemServicoResponse'
+        type: array
+      observacoes:
+        example: Aguardando aprovação do cliente
+        type: string
+      ordem_servico_id:
+        example: 1
+        type: integer
+      valor_item_pecas:
+        example: 100
+        type: number
+      valor_item_servicos:
+        example: 150
+        type: number
+      valor_total:
+        example: 250
+        type: number
+    type: object
   ordemservico.AbrirOrdemServicoRequest:
     properties:
       cliente_id:
@@ -1419,6 +1520,297 @@ paths:
       summary: Inicia a execução de uma Ordem de Serviço
       tags:
       - Ordens de Serviço
+  /v1/ordens-servico/{id}/orcamento:
+    post:
+      consumes:
+      - application/json
+      description: Cria o orçamento de uma OS. Uma OS possui no máximo um orçamento.
+        Restrito a mecânico ou administrador.
+      parameters:
+      - description: ID da Ordem de Serviço
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Dados do orçamento
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/orcamento.GerarOrcamentoRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/orcamento.OrcamentoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Gera o orçamento de uma Ordem de Serviço
+      tags:
+      - Orçamentos
+  /v1/ordens-servico/{id}/orcamento/finalizar:
+    patch:
+      description: Move a OS de EM_DIAGNOSTICO para AGUARDANDO_APROVACAO e, como efeito
+        da transição, envia (simulado) o e-mail do orçamento ao cliente. Restrito
+        a mecânico ou administrador.
+      parameters:
+      - description: ID da Ordem de Serviço
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/orcamento.OrcamentoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Finaliza o orçamento e envia para aprovação
+      tags:
+      - Orçamentos
+  /v1/ordens-servico/{id}/orcamento/itens-peca:
+    post:
+      consumes:
+      - application/json
+      description: Inclui uma peça do estoque no orçamento da OS, copiando a descrição
+        e o valor vigentes. Restrito a mecânico ou administrador.
+      parameters:
+      - description: ID da Ordem de Serviço
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Peça e quantidade
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/orcamento.AdicionarPecaOrcamentoRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/orcamento.OrcamentoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Adiciona uma peça ao orçamento
+      tags:
+      - Orçamentos
+  /v1/ordens-servico/{id}/orcamento/itens-peca/{itemId}:
+    delete:
+      description: Remove um item de peça do orçamento da OS. Restrito a mecânico
+        ou administrador.
+      parameters:
+      - description: ID da Ordem de Serviço
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ID do item de peça
+        in: path
+        name: itemId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/orcamento.OrcamentoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Remove uma peça do orçamento
+      tags:
+      - Orçamentos
+  /v1/ordens-servico/{id}/orcamento/itens-servico:
+    post:
+      consumes:
+      - application/json
+      description: Inclui um serviço do catálogo no orçamento da OS, copiando o valor
+        e o tempo estimado vigentes. Restrito a mecânico ou administrador.
+      parameters:
+      - description: ID da Ordem de Serviço
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Serviço e quantidade
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/orcamento.AdicionarServicoOrcamentoRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/orcamento.OrcamentoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Adiciona um serviço ao orçamento
+      tags:
+      - Orçamentos
+  /v1/ordens-servico/{id}/orcamento/itens-servico/{itemId}:
+    delete:
+      description: Remove um item de serviço do orçamento da OS. Restrito a mecânico
+        ou administrador.
+      parameters:
+      - description: ID da Ordem de Serviço
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ID do item de serviço
+        in: path
+        name: itemId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/orcamento.OrcamentoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Remove um serviço do orçamento
+      tags:
+      - Orçamentos
   /v1/pecas:
     get:
       description: Lista peças do estoque com paginação, ordenação e filtros.

@@ -13,11 +13,10 @@ if [ -f .env ]; then
   set +a
 fi
 
-# Stack isolada (app-dast + mysql-dast), projeto compose separado do dev
-# (nao referencia compose.yml), portas de host próprias (nao colidem com
+# Stack isolada (app-dast + mysql-dast), projeto compose separado do dev, portas de host próprias (nao colidem com
 # app/mysql de dev mesmo se estiverem rodando) pra "down -v" no fim nunca
 # encostar no ambiente de desenvolvimento nem reaproveitar dados entre scans.
-COMPOSE="docker compose -p soat-architecture-dast -f compose.tools.yml"
+COMPOSE="docker compose -p soat-architecture-dast -f compose.tools.yml  -f compose.yml"
 DAST_DB_HOST_PORT="${DAST_DB_HOST_PORT:-3307}"
 DAST_APP_HOST_PORT="${DAST_APP_HOST_PORT:-8081}"
 BASE_URL="http://localhost:${DAST_APP_HOST_PORT}/v1"

@@ -1,7 +1,29 @@
 # Stack sob demanda (profile "tools"), separada de compose.yml (stack de
-# dev): SonarQube/sonar-scanner (make sonar-*) e a stack isolada de DAST
-# app-dast+mysql-dast+zap (make sec-dast). Nunca sobe junto com "make up".
+# dev): SonarQube/sonar-scanner (make sonar-*), a stack isolada de DAST
+# app-dast+mysql-dast+zap (make sec-dast) e o toolbox usado pelo script de
+# preparação de ambiente (.dev/scripts/setup.sh). Nunca sobe junto com
+# a aplicação.
 services:
+  toolbox:
+    build:
+      context: .
+      target: build
+    profiles:
+      - tools
+    env_file:
+      - .env
+    environment:
+      DB_HOST: mysql
+      TESTCONTAINERS_HOST_OVERRIDE: host.docker.internal
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/app
+    working_dir: /app
+    entrypoint: []
+    depends_on:
+      mysql:
+        condition: service_healthy
+
   sonarqube:
     image: sonarqube:community
     env_file:
@@ -72,6 +94,7 @@ services:
     command:
       - >
         zap-api-scan.py -t http://app-dast:${APP_PORT:-8080}/swagger/doc.json -f openapi
+        -O http://app-dast:${APP_PORT:-8080}
         -r ${ZAP_REPORT_PREFIX:-zap-report}.html -J ${ZAP_REPORT_PREFIX:-zap-report}.json
         -c zap-rules.tsv
         -z "-config replacer.full_list(0).description=auth
