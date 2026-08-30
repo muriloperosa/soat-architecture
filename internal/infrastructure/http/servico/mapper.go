@@ -1,6 +1,10 @@
 package servico
 
-import appservico "github.com/muriloperosa/soat-architecture/internal/application/servico"
+import (
+	appquery "github.com/muriloperosa/soat-architecture/internal/application/query"
+	appservico "github.com/muriloperosa/soat-architecture/internal/application/servico"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httpquery"
+)
 
 // toCriarInput converte o DTO HTTP de criação pro DTO de entrada do
 // CriarServicoUseCase. criadoPor vem do subject do JWT, não do corpo.
@@ -39,10 +43,45 @@ func toServicoResponse(out appservico.ServicoOutput) ServicoResponse {
 	}
 }
 
-func toServicoResponseList(outs []appservico.ServicoOutput) []ServicoResponse {
-	resps := make([]ServicoResponse, 0, len(outs))
-	for _, out := range outs {
-		resps = append(resps, toServicoResponse(out))
+func toListarInput(params httpquery.Params) appservico.ListarServicosInput {
+	var filters []appquery.FilterInput
+
+	if len(params.Filters) > 0 {
+		filters = make([]appquery.FilterInput, 0, len(params.Filters))
+
+		for _, filter := range params.Filters {
+			filters = append(filters, appquery.FilterInput{
+				Field:    filter.Field,
+				Operator: filter.Operator,
+				Value:    filter.Value,
+			})
+		}
 	}
-	return resps
+
+	return appservico.ListarServicosInput{
+		ParamsInput: appquery.ParamsInput{
+			Page:      params.Page,
+			Order:     params.Order,
+			Direction: params.Direction,
+			Filters:   filters,
+		},
+	}
+}
+
+func toListResponse(output appservico.ListarServicosOutput) ListarServicosResponse {
+	items := make([]ServicoResponse, 0, len(output.Items))
+
+	for _, item := range output.Items {
+		items = append(items, toServicoResponse(item))
+	}
+
+	return ListarServicosResponse{
+		Items:      items,
+		Total:      output.Total,
+		Page:       output.Page,
+		PageSize:   output.PageSize,
+		TotalPages: output.TotalPages,
+		Order:      output.Order,
+		Direction:  output.Direction,
+	}
 }

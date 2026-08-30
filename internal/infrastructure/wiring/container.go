@@ -80,12 +80,14 @@ type Container struct {
 	AtivarClienteUseCase                *appcliente.AtivarClienteUseCase
 	InativarClienteUseCase              *appcliente.InativarClienteUseCase
 	AlterarSenhaClienteUseCase          *appcliente.AlterarSenhaClienteUseCase
+	ListarClientesUseCase               *appcliente.ListarClientesUseCase
 
 	CadastrarPecaUC            *apppeca.CadastrarPecaUseCase
 	AtualizarPecaUC            *apppeca.AtualizarPecaUseCase
 	AtivarPecaUC               *apppeca.AtivarPecaUseCase
 	InativarPecaUC             *apppeca.InativarPecaUseCase
 	ConsultarPecaPorIDUC       *apppeca.ConsultarPecaPorIDUseCase
+	ListarPecasUC              *apppeca.ListarPecasUseCase
 	ReporEstoquePecaUC         *apppeca.ReporEstoqueUseCase
 	ConsultarDisponibilidadeUC *apppeca.ConsultarDisponibilidadeUseCase
 	ReservarPecaUC             *apppeca.ReservarPecaUseCase
@@ -97,6 +99,7 @@ type Container struct {
 	InativarVeiculoUC          *appveiculo.InativarVeiculoUseCase
 	ConsultarVeiculoPorIDUC    *appveiculo.ConsultarVeiculoPorIDUseCase
 	ConsultarVeiculoPorPlacaUC *appveiculo.ConsultarVeiculoPorPlacaUseCase
+	ListarVeiculosUC           *appveiculo.ListarVeiculosUseCase
 
 	CriarServicoUC     *appservico.CriarServicoUseCase
 	AtualizarServicoUC *appservico.AtualizarServicoUseCase
@@ -166,12 +169,14 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.AtivarClienteUseCase = appcliente.NewAtivarClienteUseCase(c.ClienteRepository)
 	c.InativarClienteUseCase = appcliente.NewInativarClienteUseCase(c.ClienteRepository)
 	c.AlterarSenhaClienteUseCase = appcliente.NewAlterarSenhaClienteUseCase(c.ClienteRepository)
+	c.ListarClientesUseCase = appcliente.NewListarClientesUseCase(c.ClienteRepository)
 
 	c.CadastrarPecaUC = apppeca.NewCadastrarPecaUseCase(c.PecaRepo)
 	c.AtualizarPecaUC = apppeca.NewAtualizarPecaUseCase(c.PecaRepo)
 	c.AtivarPecaUC = apppeca.NewAtivarPecaUseCase(c.PecaRepo)
 	c.InativarPecaUC = apppeca.NewInativarPecaUseCase(c.PecaRepo)
 	c.ConsultarPecaPorIDUC = apppeca.NewConsultarPecaPorIDUseCase(c.PecaRepo)
+	c.ListarPecasUC = apppeca.NewListarPecasUseCase(c.PecaRepo)
 	c.ReporEstoquePecaUC = apppeca.NewReporEstoqueUseCase(c.PecaRepo)
 	c.ConsultarDisponibilidadeUC = apppeca.NewConsultarDisponibilidadeUseCase(c.PecaRepo, c.ReservaPecaRepo)
 	c.ReservarPecaUC = apppeca.NewReservarPecaUseCase(c.PecaRepo, c.ReservaPecaRepo, c.TransactionRunner)
@@ -183,6 +188,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.InativarVeiculoUC = appveiculo.NewInativarVeiculoUseCase(c.VeiculoRepo)
 	c.ConsultarVeiculoPorIDUC = appveiculo.NewConsultarVeiculoPorIDUseCase(c.VeiculoRepo)
 	c.ConsultarVeiculoPorPlacaUC = appveiculo.NewConsultarVeiculoPorPlacaUseCase(c.VeiculoRepo)
+	c.ListarVeiculosUC = appveiculo.NewListarVeiculosUseCase(c.VeiculoRepo)
 
 	c.CriarServicoUC = appservico.NewCriarServicoUseCase(c.ServicoRepo)
 	c.AtualizarServicoUC = appservico.NewAtualizarServicoUseCase(c.ServicoRepo)

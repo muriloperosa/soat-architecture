@@ -1,6 +1,7 @@
 package peca
 
 import (
+	appquery "github.com/muriloperosa/soat-architecture/internal/application/query"
 	domain "github.com/muriloperosa/soat-architecture/internal/domain/peca"
 	domainreservapeca "github.com/muriloperosa/soat-architecture/internal/domain/reservapeca"
 )
@@ -106,4 +107,27 @@ func toOutput(p *domain.Peca) PecaOutput {
 		CriadoPor:           p.CriadoPor(),
 		Ativo:               p.Ativo(),
 	}
+}
+
+// FiltroPecasInput representa um filtro aceito pelo caso de uso de listagem.
+type FiltroPecasInput struct {
+	Field    string
+	Operator string
+	Value    string
+}
+
+// ListarPecasInput é o contrato de entrada do caso de uso de listagem.
+type ListarPecasInput struct {
+	appquery.ParamsInput
+}
+
+// ListarPecasOutput é o contrato de saída do caso de uso de listagem.
+type ListarPecasOutput struct {
+	Items      []PecaOutput
+	Total      int64
+	Page       int
+	PageSize   int
+	TotalPages int
+	Order      string
+	Direction  string
 }

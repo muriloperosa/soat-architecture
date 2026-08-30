@@ -128,6 +128,31 @@ definitions:
     - telefone
     - tipo_pessoa
     type: object
+  cliente.ListarClientesResponse:
+    properties:
+      direction:
+        example: ASC
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/cliente.ClienteResponse'
+        type: array
+      order:
+        example: nome
+        type: string
+      page:
+        example: 1
+        type: integer
+      page_size:
+        example: 20
+        type: integer
+      total:
+        example: 42
+        type: integer
+      total_pages:
+        example: 3
+        type: integer
+    type: object
   health.HealthCheckResponse:
     properties:
       status:
@@ -348,6 +373,31 @@ definitions:
     - nome
     - preco
     type: object
+  peca.ListarPecasResponse:
+    properties:
+      direction:
+        example: ASC
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/peca.PecaResponse'
+        type: array
+      order:
+        example: nome
+        type: string
+      page:
+        example: 1
+        type: integer
+      page_size:
+        example: 20
+        type: integer
+      total:
+        example: 42
+        type: integer
+      total_pages:
+        example: 3
+        type: integer
+    type: object
   peca.PecaResponse:
     properties:
       ativo:
@@ -446,6 +496,31 @@ definitions:
     - nome
     - preco_base
     - tempo_estimado_minutos
+    type: object
+  servico.ListarServicosResponse:
+    properties:
+      direction:
+        example: ASC
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/servico.ServicoResponse'
+        type: array
+      order:
+        example: nome
+        type: string
+      page:
+        example: 1
+        type: integer
+      page_size:
+        example: 20
+        type: integer
+      total:
+        example: 42
+        type: integer
+      total_pages:
+        example: 3
+        type: integer
     type: object
   servico.ServicoResponse:
     properties:
@@ -597,6 +672,31 @@ definitions:
     - marca
     - modelo
     - placa
+    type: object
+  veiculo.ListarVeiculosResponse:
+    properties:
+      direction:
+        example: ASC
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/veiculo.VeiculoResponse'
+        type: array
+      order:
+        example: id
+        type: string
+      page:
+        example: 1
+        type: integer
+      page_size:
+        example: 20
+        type: integer
+      total:
+        example: 42
+        type: integer
+      total_pages:
+        example: 3
+        type: integer
     type: object
   veiculo.VeiculoResponse:
     properties:
@@ -805,6 +905,118 @@ paths:
       tags:
       - Auth Interno
   /v1/clientes:
+    get:
+      description: Lista clientes com paginação, ordenação e filtros diretos por campo.
+        Texto usa LIKE, listas separadas por vírgula usam IN, booleanos usam igualdade
+        e duas datas ISO 8601 formam um intervalo. Use o sufixo _not para negar filtros
+        textuais.
+      parameters:
+      - default: 1
+        description: Número da página
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: id
+        description: Campo de ordenação
+        enum:
+        - id
+        - documento
+        - tipo
+        - nome
+        - email
+        - telefone
+        - ativo
+        - requer_alterar_senha
+        - criado_por
+        - data_cadastro
+        - data_atualizacao
+        in: query
+        name: order
+        type: string
+      - default: ASC
+        description: Direção da ordenação
+        enum:
+        - ASC
+        - DESC
+        in: query
+        name: direction
+        type: string
+      - description: ID ou lista de IDs separada por vírgula
+        example: 1,2,3
+        in: query
+        name: id
+        type: string
+      - description: Documento contendo o valor
+        in: query
+        name: documento
+        type: string
+      - description: Tipo de pessoa contendo o valor
+        enum:
+        - PF
+        - PJ
+        in: query
+        name: tipo
+        type: string
+      - description: Nome contendo o valor
+        example: Maria
+        in: query
+        name: nome
+        type: string
+      - description: Nome que não deve conter o valor
+        example: Teste
+        in: query
+        name: nome_not
+        type: string
+      - description: E-mail contendo o valor
+        in: query
+        name: email
+        type: string
+      - description: Telefone contendo o valor
+        in: query
+        name: telefone
+        type: string
+      - description: Situação ativa do cliente
+        in: query
+        name: ativo
+        type: boolean
+      - description: ID ou lista de IDs dos criadores
+        in: query
+        name: criado_por
+        type: string
+      - description: Data ISO 8601 ou intervalo separado por vírgula
+        example: 2026-08-20,2026-08-22
+        in: query
+        name: data_cadastro
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/cliente.ListarClientesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Lista clientes
+      tags:
+      - Clientes
     post:
       consumes:
       - application/json
@@ -1600,6 +1812,113 @@ paths:
       tags:
       - Orçamentos
   /v1/pecas:
+    get:
+      description: Lista peças do estoque com paginação, ordenação e filtros.
+      parameters:
+      - default: 1
+        description: Número da página
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: id
+        description: Campo para ordenação
+        enum:
+        - id
+        - codigo
+        - nome
+        - marca
+        - descricao
+        - preco
+        - quantidade_em_estoque
+        - estoque_minimo
+        - criado_por
+        - ativo
+        - data_cadastro
+        - data_atualizacao
+        in: query
+        name: order
+        type: string
+      - default: ASC
+        description: Direção da ordenação
+        enum:
+        - ASC
+        - DESC
+        in: query
+        name: direction
+        type: string
+      - description: Filtra pelo ID
+        in: query
+        name: id
+        type: integer
+      - description: Filtra pelo código
+        in: query
+        name: codigo
+        type: string
+      - description: Filtra pelo nome
+        in: query
+        name: nome
+        type: string
+      - description: Filtra pela marca
+        in: query
+        name: marca
+        type: string
+      - description: Filtra pela descrição
+        in: query
+        name: descricao
+        type: string
+      - description: Filtra pelo preço
+        in: query
+        name: preco
+        type: number
+      - description: Filtra pela quantidade em estoque
+        in: query
+        name: quantidade_em_estoque
+        type: integer
+      - description: Filtra pelo estoque mínimo
+        in: query
+        name: estoque_minimo
+        type: integer
+      - description: Filtra pelo usuário que cadastrou
+        in: query
+        name: criado_por
+        type: integer
+      - description: Filtra pelo status ativo
+        in: query
+        name: ativo
+        type: boolean
+      - description: Filtra pela data de cadastro
+        in: query
+        name: data_cadastro
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/peca.ListarPecasResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Lista peças
+      tags:
+      - Pecas
     post:
       consumes:
       - application/json
@@ -1890,22 +2209,102 @@ paths:
       - Relatórios
   /v1/servicos:
     get:
-      description: Lista o catálogo completo de serviços. Restrito a usuário interno.
+      description: Lista serviços com paginação, ordenação e filtros diretos por campo.
+        Texto usa LIKE, listas separadas por vírgula usam IN e booleanos usam igualdade.
+        Duas datas ISO 8601 formam um intervalo. Use o sufixo _not para negar filtros.
+      parameters:
+      - default: 1
+        description: Número da página
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: id
+        description: Campo de ordenação
+        enum:
+        - id
+        - nome
+        - descricao
+        - preco_base
+        - tempo_estimado_minutos
+        - criado_por
+        - ativo
+        - data_cadastro
+        - data_atualizacao
+        in: query
+        name: order
+        type: string
+      - default: ASC
+        description: Direção da ordenação
+        enum:
+        - ASC
+        - DESC
+        in: query
+        name: direction
+        type: string
+      - description: ID ou lista de IDs separada por vírgula
+        example: 1,2,3
+        in: query
+        name: id
+        type: string
+      - description: Nome contendo o valor
+        example: óleo
+        in: query
+        name: nome
+        type: string
+      - description: Nome que não deve conter o valor
+        example: Teste
+        in: query
+        name: nome_not
+        type: string
+      - description: Descrição contendo o valor
+        in: query
+        name: descricao
+        type: string
+      - description: Preço base ou lista de preços
+        example: "150.50"
+        in: query
+        name: preco_base
+        type: string
+      - description: Tempo estimado ou lista de tempos
+        example: 30,60,90
+        in: query
+        name: tempo_estimado_minutos
+        type: string
+      - description: ID ou lista de IDs dos criadores
+        in: query
+        name: criado_por
+        type: string
+      - description: Situação ativa do serviço
+        in: query
+        name: ativo
+        type: boolean
+      - description: Data ISO 8601 ou intervalo separado por vírgula
+        example: 2026-08-20,2026-08-22
+        in: query
+        name: data_cadastro
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/servico.ServicoResponse'
-            type: array
+            $ref: '#/definitions/servico.ListarServicosResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/httperror.ErrorResponse'
         "403":
           description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/httperror.ErrorResponse'
       security:
@@ -2316,6 +2715,139 @@ paths:
       tags:
       - Usuarios
   /v1/veiculos:
+    get:
+      description: Lista veículos com paginação, ordenação e filtros diretos por campo.
+        Campos de texto usam LIKE, listas separadas por vírgula usam IN e booleanos
+        usam igualdade. Duas datas ISO 8601 formam um intervalo. Use o sufixo _not
+        para negar filtros.
+      parameters:
+      - default: 1
+        description: Número da página
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: id
+        description: Campo de ordenação
+        enum:
+        - id
+        - placa
+        - marca
+        - modelo
+        - quilometragem_atual
+        - ano
+        - cor
+        - criado_por
+        - ativo
+        - data_cadastro
+        - data_atualizacao
+        in: query
+        name: order
+        type: string
+      - default: ASC
+        description: Direção da ordenação
+        enum:
+        - ASC
+        - DESC
+        in: query
+        name: direction
+        type: string
+      - description: ID ou lista de IDs separada por vírgula
+        example: 1,2,3
+        in: query
+        name: id
+        type: string
+      - description: Placa contendo o valor
+        example: ABC1D23
+        in: query
+        name: placa
+        type: string
+      - description: Placa que não deve conter o valor
+        example: ABC
+        in: query
+        name: placa_not
+        type: string
+      - description: Marca contendo o valor
+        example: Fiat
+        in: query
+        name: marca
+        type: string
+      - description: Marca que não deve conter o valor
+        example: Ford
+        in: query
+        name: marca_not
+        type: string
+      - description: Modelo contendo o valor
+        example: Uno
+        in: query
+        name: modelo
+        type: string
+      - description: Modelo que não deve conter o valor
+        example: Palio
+        in: query
+        name: modelo_not
+        type: string
+      - description: Quilometragem atual ou lista de valores
+        example: 15000,30000
+        in: query
+        name: quilometragem_atual
+        type: string
+      - description: Ano ou lista de anos
+        example: 2020,2021,2022
+        in: query
+        name: ano
+        type: string
+      - description: Cor contendo o valor
+        example: Prata
+        in: query
+        name: cor
+        type: string
+      - description: Cor que não deve conter o valor
+        example: Preto
+        in: query
+        name: cor_not
+        type: string
+      - description: ID ou lista de IDs dos usuários que cadastraram o veículo
+        in: query
+        name: criado_por
+        type: string
+      - description: Situação ativa do veículo
+        in: query
+        name: ativo
+        type: boolean
+      - description: Data ISO 8601 ou intervalo separado por vírgula
+        example: 2026-08-20,2026-08-22
+        in: query
+        name: data_cadastro
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/veiculo.ListarVeiculosResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Lista veículos
+      tags:
+      - Veiculos
     post:
       consumes:
       - application/json

@@ -5,13 +5,14 @@ import (
 
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httpquery"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/middleware"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/wiring"
 )
 
 // RegisterPecaRoutes registra as rotas de gestão de peças de estoque.
 func RegisterPecaRoutes(rg *gin.RouterGroup, c *wiring.Container) {
-	h := NewHandler(c.CadastrarPecaUC, c.AtualizarPecaUC, c.AtivarPecaUC, c.InativarPecaUC, c.ConsultarPecaPorIDUC, c.ReporEstoquePecaUC)
+	h := NewHandler(c.CadastrarPecaUC, c.AtualizarPecaUC, c.AtivarPecaUC, c.InativarPecaUC, c.ConsultarPecaPorIDUC, c.ListarPecasUC, c.ReporEstoquePecaUC, httpquery.NewParser())
 
 	autenticado := rg.Group("/pecas", middleware.AuthenticationMiddleware(c.JWTAuth, c.RefreshTokensRepo, c.UsuarioStatusRepo, c.ClienteStatusRepo))
 
@@ -24,4 +25,5 @@ func RegisterPecaRoutes(rg *gin.RouterGroup, c *wiring.Container) {
 
 	consulta := autenticado.Group("", middleware.AuthorizationMiddleware(domainauth.TipoInterno))
 	consulta.GET("/:id", h.ConsultarPorID)
+	consulta.GET("", h.Listar)
 }

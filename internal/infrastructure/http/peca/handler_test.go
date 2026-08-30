@@ -14,7 +14,9 @@ import (
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 	domainpeca "github.com/muriloperosa/soat-architecture/internal/domain/peca"
 	"github.com/muriloperosa/soat-architecture/internal/domain/peca/mocks"
+	domainquery "github.com/muriloperosa/soat-architecture/internal/domain/query"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httpquery"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/middleware"
 	httppeca "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/peca"
 	"github.com/stretchr/testify/mock"
@@ -28,6 +30,10 @@ func comSubjectAutenticado(engine *gin.Engine) {
 	})
 }
 
+func novoQueryParser() *httpquery.Parser {
+	return httpquery.NewParser()
+}
+
 func TestHandler_Cadastrar_RequestValido_Retorna201(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := mocks.NewRepository(t)
@@ -35,7 +41,7 @@ func TestHandler_Cadastrar_RequestValido_Retorna201(t *testing.T) {
 		Run(func(ctx context.Context, p *domainpeca.Peca) { p.AtribuirID(1) }).
 		Return(nil)
 
-	h := httppeca.NewHandler(apppeca.NewCadastrarPecaUseCase(repo), nil, nil, nil, nil, nil)
+	h := httppeca.NewHandler(apppeca.NewCadastrarPecaUseCase(repo), nil, nil, nil, nil, nil, nil, nil)
 	engine := gin.New()
 	comSubjectAutenticado(engine)
 	engine.POST("/v1/pecas", h.Cadastrar)
@@ -59,7 +65,7 @@ func TestHandler_Cadastrar_BodyInvalido_Retorna400(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := mocks.NewRepository(t)
 
-	h := httppeca.NewHandler(apppeca.NewCadastrarPecaUseCase(repo), nil, nil, nil, nil, nil)
+	h := httppeca.NewHandler(apppeca.NewCadastrarPecaUseCase(repo), nil, nil, nil, nil, nil, nil, nil)
 	engine := gin.New()
 	comSubjectAutenticado(engine)
 	engine.POST("/v1/pecas", h.Cadastrar)
@@ -76,7 +82,7 @@ func TestHandler_Cadastrar_ErroDeValidacaoDoDominio_Retorna400(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := mocks.NewRepository(t)
 
-	h := httppeca.NewHandler(apppeca.NewCadastrarPecaUseCase(repo), nil, nil, nil, nil, nil)
+	h := httppeca.NewHandler(apppeca.NewCadastrarPecaUseCase(repo), nil, nil, nil, nil, nil, nil, nil)
 	engine := gin.New()
 	comSubjectAutenticado(engine)
 	engine.POST("/v1/pecas", h.Cadastrar)
@@ -106,7 +112,7 @@ func TestHandler_Atualizar_RequestValido_Retorna200(t *testing.T) {
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(1)).Return(pecaExistente(t), nil)
 	repo.EXPECT().Atualizar(mock.Anything, mock.AnythingOfType("*peca.Peca")).Return(nil)
 
-	h := httppeca.NewHandler(nil, apppeca.NewAtualizarPecaUseCase(repo), nil, nil, nil, nil)
+	h := httppeca.NewHandler(nil, apppeca.NewAtualizarPecaUseCase(repo), nil, nil, nil, nil, nil, nil)
 	engine := gin.New()
 	engine.PUT("/v1/pecas/:id", h.Atualizar)
 
@@ -128,7 +134,7 @@ func TestHandler_Atualizar_PecaNaoEncontrada_Retorna404(t *testing.T) {
 	repo := mocks.NewRepository(t)
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(999)).Return(nil, domainpeca.ErrPecaNaoEncontrada)
 
-	h := httppeca.NewHandler(nil, apppeca.NewAtualizarPecaUseCase(repo), nil, nil, nil, nil)
+	h := httppeca.NewHandler(nil, apppeca.NewAtualizarPecaUseCase(repo), nil, nil, nil, nil, nil, nil)
 	engine := gin.New()
 	engine.PUT("/v1/pecas/:id", h.Atualizar)
 
@@ -149,7 +155,7 @@ func TestHandler_Ativar_ComSucesso_Retorna204(t *testing.T) {
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(1)).Return(p, nil)
 	repo.EXPECT().Atualizar(mock.Anything, p).Return(nil)
 
-	h := httppeca.NewHandler(nil, nil, apppeca.NewAtivarPecaUseCase(repo), nil, nil, nil)
+	h := httppeca.NewHandler(nil, nil, apppeca.NewAtivarPecaUseCase(repo), nil, nil, nil, nil, nil)
 	engine := gin.New()
 	engine.PATCH("/v1/pecas/:id/ativar", h.Ativar)
 
@@ -165,7 +171,7 @@ func TestHandler_Ativar_PecaNaoEncontrada_Retorna404(t *testing.T) {
 	repo := mocks.NewRepository(t)
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(999)).Return(nil, domainpeca.ErrPecaNaoEncontrada)
 
-	h := httppeca.NewHandler(nil, nil, apppeca.NewAtivarPecaUseCase(repo), nil, nil, nil)
+	h := httppeca.NewHandler(nil, nil, apppeca.NewAtivarPecaUseCase(repo), nil, nil, nil, nil, nil)
 	engine := gin.New()
 	engine.PATCH("/v1/pecas/:id/ativar", h.Ativar)
 
@@ -183,7 +189,7 @@ func TestHandler_Inativar_ComSucesso_Retorna204(t *testing.T) {
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(1)).Return(p, nil)
 	repo.EXPECT().Atualizar(mock.Anything, p).Return(nil)
 
-	h := httppeca.NewHandler(nil, nil, nil, apppeca.NewInativarPecaUseCase(repo), nil, nil)
+	h := httppeca.NewHandler(nil, nil, nil, apppeca.NewInativarPecaUseCase(repo), nil, nil, nil, nil)
 	engine := gin.New()
 	engine.PATCH("/v1/pecas/:id/inativar", h.Inativar)
 
@@ -199,7 +205,7 @@ func TestHandler_ConsultarPorID_ComSucesso_Retorna200(t *testing.T) {
 	repo := mocks.NewRepository(t)
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(1)).Return(pecaExistente(t), nil)
 
-	h := httppeca.NewHandler(nil, nil, nil, nil, apppeca.NewConsultarPecaPorIDUseCase(repo), nil)
+	h := httppeca.NewHandler(nil, nil, nil, nil, apppeca.NewConsultarPecaPorIDUseCase(repo), nil, nil, nil)
 	engine := gin.New()
 	engine.GET("/v1/pecas/:id", h.ConsultarPorID)
 
@@ -219,7 +225,7 @@ func TestHandler_ConsultarPorID_PecaNaoEncontrada_Retorna404(t *testing.T) {
 	repo := mocks.NewRepository(t)
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(999)).Return(nil, domainpeca.ErrPecaNaoEncontrada)
 
-	h := httppeca.NewHandler(nil, nil, nil, nil, apppeca.NewConsultarPecaPorIDUseCase(repo), nil)
+	h := httppeca.NewHandler(nil, nil, nil, nil, apppeca.NewConsultarPecaPorIDUseCase(repo), nil, nil, nil)
 	engine := gin.New()
 	engine.GET("/v1/pecas/:id", h.ConsultarPorID)
 
@@ -237,7 +243,7 @@ func TestHandler_ReporEstoque_ComSucesso_Retorna200(t *testing.T) {
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(1)).Return(p, nil)
 	repo.EXPECT().Atualizar(mock.Anything, p).Return(nil)
 
-	h := httppeca.NewHandler(nil, nil, nil, nil, nil, apppeca.NewReporEstoqueUseCase(repo))
+	h := httppeca.NewHandler(nil, nil, nil, nil, nil, nil, apppeca.NewReporEstoqueUseCase(repo), nil)
 	engine := gin.New()
 	engine.PATCH("/v1/pecas/:id/repor-estoque", h.ReporEstoque)
 
@@ -258,7 +264,7 @@ func TestHandler_ReporEstoque_BodyInvalido_Retorna400(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := mocks.NewRepository(t)
 
-	h := httppeca.NewHandler(nil, nil, nil, nil, nil, apppeca.NewReporEstoqueUseCase(repo))
+	h := httppeca.NewHandler(nil, nil, nil, nil, nil, nil, apppeca.NewReporEstoqueUseCase(repo), nil)
 	engine := gin.New()
 	engine.PATCH("/v1/pecas/:id/repor-estoque", h.ReporEstoque)
 
@@ -277,7 +283,7 @@ func TestHandler_ReporEstoque_ErroInternoDoUseCase_Retorna500(t *testing.T) {
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(1)).Return(p, nil)
 	repo.EXPECT().Atualizar(mock.Anything, p).Return(errors.New("conexao recusada"))
 
-	h := httppeca.NewHandler(nil, nil, nil, nil, nil, apppeca.NewReporEstoqueUseCase(repo))
+	h := httppeca.NewHandler(nil, nil, nil, nil, nil, nil, apppeca.NewReporEstoqueUseCase(repo), nil)
 	engine := gin.New()
 	engine.PATCH("/v1/pecas/:id/repor-estoque", h.ReporEstoque)
 
@@ -285,6 +291,257 @@ func TestHandler_ReporEstoque_ErroInternoDoUseCase_Retorna500(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPatch, "/v1/pecas/1/repor-estoque", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
+	engine.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusInternalServerError, rec.Code)
+}
+
+func TestHandler_Listar_ComSucesso_Retorna200(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := mocks.NewRepository(t)
+	p := pecaExistente(t)
+
+	repo.
+		EXPECT().
+		Listar(
+			mock.Anything,
+			mock.MatchedBy(func(params domainquery.Params) bool {
+				return params.Page == 2 &&
+					params.Order == "preco" &&
+					params.Direction == domainquery.DirectionDESC
+			}),
+		).
+		Return(
+			domainquery.Page[*domainpeca.Peca]{
+				Items: []*domainpeca.Peca{
+					p,
+				},
+				Total:      20,
+				Page:       2,
+				PageSize:   20,
+				TotalPages: 1,
+				Order:      "preco",
+				Direction:  domainquery.DirectionDESC,
+			},
+			nil,
+		)
+
+	h := httppeca.NewHandler(
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		apppeca.NewListarPecasUseCase(repo),
+		nil,
+		novoQueryParser(),
+	)
+
+	engine := gin.New()
+	engine.GET("/v1/pecas", h.Listar)
+
+	req := httptest.NewRequest(
+		http.MethodGet,
+		"/v1/pecas?page=2&order=preco&direction=DESC",
+		nil,
+	)
+
+	rec := httptest.NewRecorder()
+
+	engine.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var resp httppeca.ListarPecasResponse
+
+	require.NoError(
+		t,
+		json.Unmarshal(rec.Body.Bytes(), &resp),
+	)
+
+	require.Equal(t, int64(20), resp.Total)
+	require.Equal(t, 2, resp.Page)
+	require.Equal(t, 20, resp.PageSize)
+	require.Equal(t, 1, resp.TotalPages)
+	require.Equal(t, "preco", resp.Order)
+	require.Equal(t, "DESC", resp.Direction)
+
+	require.Len(t, resp.Items, 1)
+
+	require.Equal(t, uint64(1), resp.Items[0].ID)
+	require.Equal(t, "Pastilha", resp.Items[0].Nome)
+	require.Equal(t, "Bosch", resp.Items[0].Marca)
+	require.Equal(t, 89.9, resp.Items[0].Preco)
+	require.Equal(t, 20, resp.Items[0].QuantidadeEmEstoque)
+	require.Equal(t, 5, resp.Items[0].EstoqueMinimo)
+}
+
+func TestHandler_Listar_ListaVazia_Retorna200(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := mocks.NewRepository(t)
+
+	repo.
+		EXPECT().
+		Listar(
+			mock.Anything,
+			mock.MatchedBy(func(params domainquery.Params) bool {
+				return params.Page == 1
+			}),
+		).
+		Return(
+			domainquery.Page[*domainpeca.Peca]{
+				Items:      []*domainpeca.Peca{},
+				Total:      0,
+				Page:       1,
+				PageSize:   20,
+				TotalPages: 0,
+				Order:      "id",
+				Direction:  domainquery.DirectionASC,
+			},
+			nil,
+		)
+
+	h := httppeca.NewHandler(
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		apppeca.NewListarPecasUseCase(repo),
+		nil,
+		novoQueryParser(),
+	)
+
+	engine := gin.New()
+	engine.GET("/v1/pecas", h.Listar)
+
+	req := httptest.NewRequest(
+		http.MethodGet,
+		"/v1/pecas",
+		nil,
+	)
+
+	rec := httptest.NewRecorder()
+
+	engine.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var resp httppeca.ListarPecasResponse
+
+	require.NoError(
+		t,
+		json.Unmarshal(rec.Body.Bytes(), &resp),
+	)
+
+	require.NotNil(t, resp.Items)
+	require.Empty(t, resp.Items)
+
+	require.Equal(t, int64(0), resp.Total)
+	require.Equal(t, 1, resp.Page)
+	require.Equal(t, 20, resp.PageSize)
+	require.Zero(t, resp.TotalPages)
+	require.Equal(t, "id", resp.Order)
+	require.Equal(t, "ASC", resp.Direction)
+}
+
+func TestHandler_Listar_ComFiltro_Retorna200(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := mocks.NewRepository(t)
+	p := pecaExistente(t)
+
+	repo.
+		EXPECT().
+		Listar(
+			mock.Anything,
+			mock.MatchedBy(func(params domainquery.Params) bool {
+				if len(params.Filters) != 1 {
+					return false
+				}
+
+				filter := params.Filters[0]
+
+				return filter.Field == "marca" &&
+					filter.Value == "Bosch"
+			}),
+		).
+		Return(
+			domainquery.Page[*domainpeca.Peca]{
+				Items: []*domainpeca.Peca{
+					p,
+				},
+				Total:     1,
+				Page:      2,
+				Order:     "id",
+				Direction: domainquery.DirectionASC,
+			},
+			nil,
+		)
+
+	h := httppeca.NewHandler(nil, nil, nil, nil, nil, apppeca.NewListarPecasUseCase(repo), nil, novoQueryParser())
+
+	engine := gin.New()
+	engine.GET("/v1/pecas", h.Listar)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/pecas?marca=Bosch", nil)
+
+	rec := httptest.NewRecorder()
+
+	engine.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var resp httppeca.ListarPecasResponse
+
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+
+	require.Equal(t, int64(1), resp.Total)
+	require.Len(t, resp.Items, 1)
+
+	require.Equal(t, "Bosch", resp.Items[0].Marca)
+}
+
+func TestHandler_Listar_QueryInvalida_Retorna400(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := mocks.NewRepository(t)
+
+	h := httppeca.NewHandler(nil, nil, nil, nil, nil, apppeca.NewListarPecasUseCase(repo), nil, novoQueryParser())
+
+	engine := gin.New()
+	engine.GET("/v1/pecas", h.Listar)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/pecas?page=abc", nil)
+
+	rec := httptest.NewRecorder()
+
+	engine.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestHandler_Listar_ErroInterno_Retorna500(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := mocks.NewRepository(t)
+
+	repo.
+		EXPECT().
+		Listar(mock.Anything, mock.Anything).
+		Return(domainquery.Page[*domainpeca.Peca]{}, errors.New("conexao recusada"))
+
+	h := httppeca.NewHandler(nil, nil, nil, nil, nil, apppeca.NewListarPecasUseCase(repo), nil, novoQueryParser())
+
+	engine := gin.New()
+	engine.GET("/v1/pecas", h.Listar)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/pecas", nil)
+
+	rec := httptest.NewRecorder()
+
 	engine.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusInternalServerError, rec.Code)

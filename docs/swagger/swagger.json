@@ -271,6 +271,162 @@
             }
         },
         "/v1/clientes": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lista clientes com paginação, ordenação e filtros diretos por campo. Texto usa LIKE, listas separadas por vírgula usam IN, booleanos usam igualdade e duas datas ISO 8601 formam um intervalo. Use o sufixo _not para negar filtros textuais.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clientes"
+                ],
+                "summary": "Lista clientes",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Número da página",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "id",
+                            "documento",
+                            "tipo",
+                            "nome",
+                            "email",
+                            "telefone",
+                            "ativo",
+                            "requer_alterar_senha",
+                            "criado_por",
+                            "data_cadastro",
+                            "data_atualizacao"
+                        ],
+                        "type": "string",
+                        "default": "id",
+                        "description": "Campo de ordenação",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "ASC",
+                            "DESC"
+                        ],
+                        "type": "string",
+                        "default": "ASC",
+                        "description": "Direção da ordenação",
+                        "name": "direction",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "1,2,3",
+                        "description": "ID ou lista de IDs separada por vírgula",
+                        "name": "id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Documento contendo o valor",
+                        "name": "documento",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "PF",
+                            "PJ"
+                        ],
+                        "type": "string",
+                        "description": "Tipo de pessoa contendo o valor",
+                        "name": "tipo",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "Maria",
+                        "description": "Nome contendo o valor",
+                        "name": "nome",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "Teste",
+                        "description": "Nome que não deve conter o valor",
+                        "name": "nome_not",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "E-mail contendo o valor",
+                        "name": "email",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Telefone contendo o valor",
+                        "name": "telefone",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Situação ativa do cliente",
+                        "name": "ativo",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID ou lista de IDs dos criadores",
+                        "name": "criado_por",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "2026-08-20,2026-08-22",
+                        "description": "Data ISO 8601 ou intervalo separado por vírgula",
+                        "name": "data_cadastro",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/cliente.ListarClientesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -1491,6 +1647,161 @@
             }
         },
         "/v1/pecas": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lista peças do estoque com paginação, ordenação e filtros.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pecas"
+                ],
+                "summary": "Lista peças",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Número da página",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "id",
+                            "codigo",
+                            "nome",
+                            "marca",
+                            "descricao",
+                            "preco",
+                            "quantidade_em_estoque",
+                            "estoque_minimo",
+                            "criado_por",
+                            "ativo",
+                            "data_cadastro",
+                            "data_atualizacao"
+                        ],
+                        "type": "string",
+                        "default": "id",
+                        "description": "Campo para ordenação",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "ASC",
+                            "DESC"
+                        ],
+                        "type": "string",
+                        "default": "ASC",
+                        "description": "Direção da ordenação",
+                        "name": "direction",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filtra pelo ID",
+                        "name": "id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filtra pelo código",
+                        "name": "codigo",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filtra pelo nome",
+                        "name": "nome",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filtra pela marca",
+                        "name": "marca",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filtra pela descrição",
+                        "name": "descricao",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Filtra pelo preço",
+                        "name": "preco",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filtra pela quantidade em estoque",
+                        "name": "quantidade_em_estoque",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filtra pelo estoque mínimo",
+                        "name": "estoque_minimo",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filtra pelo usuário que cadastrou",
+                        "name": "criado_por",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filtra pelo status ativo",
+                        "name": "ativo",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filtra pela data de cadastro",
+                        "name": "data_cadastro",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/peca.ListarPecasResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -1939,7 +2250,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Lista o catálogo completo de serviços. Restrito a usuário interno.",
+                "description": "Lista serviços com paginação, ordenação e filtros diretos por campo. Texto usa LIKE, listas separadas por vírgula usam IN e booleanos usam igualdade. Duas datas ISO 8601 formam um intervalo. Use o sufixo _not para negar filtros.",
                 "produces": [
                     "application/json"
                 ],
@@ -1947,14 +2258,116 @@
                     "Servicos"
                 ],
                 "summary": "Lista serviços",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Número da página",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "id",
+                            "nome",
+                            "descricao",
+                            "preco_base",
+                            "tempo_estimado_minutos",
+                            "criado_por",
+                            "ativo",
+                            "data_cadastro",
+                            "data_atualizacao"
+                        ],
+                        "type": "string",
+                        "default": "id",
+                        "description": "Campo de ordenação",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "ASC",
+                            "DESC"
+                        ],
+                        "type": "string",
+                        "default": "ASC",
+                        "description": "Direção da ordenação",
+                        "name": "direction",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "1,2,3",
+                        "description": "ID ou lista de IDs separada por vírgula",
+                        "name": "id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "óleo",
+                        "description": "Nome contendo o valor",
+                        "name": "nome",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "Teste",
+                        "description": "Nome que não deve conter o valor",
+                        "name": "nome_not",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Descrição contendo o valor",
+                        "name": "descricao",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "150.50",
+                        "description": "Preço base ou lista de preços",
+                        "name": "preco_base",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "30,60,90",
+                        "description": "Tempo estimado ou lista de tempos",
+                        "name": "tempo_estimado_minutos",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID ou lista de IDs dos criadores",
+                        "name": "criado_por",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Situação ativa do serviço",
+                        "name": "ativo",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "2026-08-20,2026-08-22",
+                        "description": "Data ISO 8601 ou intervalo separado por vírgula",
+                        "name": "data_cadastro",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/servico.ServicoResponse"
-                            }
+                            "$ref": "#/definitions/servico.ListarServicosResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
                         }
                     },
                     "401": {
@@ -1965,6 +2378,12 @@
                     },
                     "403": {
                         "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/httperror.ErrorResponse"
                         }
@@ -2592,6 +3011,190 @@
             }
         },
         "/v1/veiculos": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lista veículos com paginação, ordenação e filtros diretos por campo. Campos de texto usam LIKE, listas separadas por vírgula usam IN e booleanos usam igualdade. Duas datas ISO 8601 formam um intervalo. Use o sufixo _not para negar filtros.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Veiculos"
+                ],
+                "summary": "Lista veículos",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Número da página",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "id",
+                            "placa",
+                            "marca",
+                            "modelo",
+                            "quilometragem_atual",
+                            "ano",
+                            "cor",
+                            "criado_por",
+                            "ativo",
+                            "data_cadastro",
+                            "data_atualizacao"
+                        ],
+                        "type": "string",
+                        "default": "id",
+                        "description": "Campo de ordenação",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "ASC",
+                            "DESC"
+                        ],
+                        "type": "string",
+                        "default": "ASC",
+                        "description": "Direção da ordenação",
+                        "name": "direction",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "1,2,3",
+                        "description": "ID ou lista de IDs separada por vírgula",
+                        "name": "id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "ABC1D23",
+                        "description": "Placa contendo o valor",
+                        "name": "placa",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "ABC",
+                        "description": "Placa que não deve conter o valor",
+                        "name": "placa_not",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "Fiat",
+                        "description": "Marca contendo o valor",
+                        "name": "marca",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "Ford",
+                        "description": "Marca que não deve conter o valor",
+                        "name": "marca_not",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "Uno",
+                        "description": "Modelo contendo o valor",
+                        "name": "modelo",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "Palio",
+                        "description": "Modelo que não deve conter o valor",
+                        "name": "modelo_not",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "15000,30000",
+                        "description": "Quilometragem atual ou lista de valores",
+                        "name": "quilometragem_atual",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "2020,2021,2022",
+                        "description": "Ano ou lista de anos",
+                        "name": "ano",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "Prata",
+                        "description": "Cor contendo o valor",
+                        "name": "cor",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "Preto",
+                        "description": "Cor que não deve conter o valor",
+                        "name": "cor_not",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID ou lista de IDs dos usuários que cadastraram o veículo",
+                        "name": "criado_por",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Situação ativa do veículo",
+                        "name": "ativo",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "2026-08-20,2026-08-22",
+                        "description": "Data ISO 8601 ou intervalo separado por vírgula",
+                        "name": "data_cadastro",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/veiculo.ListarVeiculosResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -3109,6 +3712,41 @@
                 }
             }
         },
+        "cliente.ListarClientesResponse": {
+            "type": "object",
+            "properties": {
+                "direction": {
+                    "type": "string",
+                    "example": "ASC"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/cliente.ClienteResponse"
+                    }
+                },
+                "order": {
+                    "type": "string",
+                    "example": "nome"
+                },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "page_size": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 42
+                },
+                "total_pages": {
+                    "type": "integer",
+                    "example": 3
+                }
+            }
+        },
         "health.HealthCheckResponse": {
             "type": "object",
             "properties": {
@@ -3416,6 +4054,41 @@
                 }
             }
         },
+        "peca.ListarPecasResponse": {
+            "type": "object",
+            "properties": {
+                "direction": {
+                    "type": "string",
+                    "example": "ASC"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/peca.PecaResponse"
+                    }
+                },
+                "order": {
+                    "type": "string",
+                    "example": "nome"
+                },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "page_size": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 42
+                },
+                "total_pages": {
+                    "type": "integer",
+                    "example": 3
+                }
+            }
+        },
         "peca.PecaResponse": {
             "type": "object",
             "properties": {
@@ -3549,6 +4222,41 @@
                 "tempo_estimado_minutos": {
                     "type": "integer",
                     "example": 60
+                }
+            }
+        },
+        "servico.ListarServicosResponse": {
+            "type": "object",
+            "properties": {
+                "direction": {
+                    "type": "string",
+                    "example": "ASC"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/servico.ServicoResponse"
+                    }
+                },
+                "order": {
+                    "type": "string",
+                    "example": "nome"
+                },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "page_size": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 42
+                },
+                "total_pages": {
+                    "type": "integer",
+                    "example": 3
                 }
             }
         },
@@ -3753,6 +4461,41 @@
                 "quilometragem_atual": {
                     "type": "integer",
                     "example": 15000
+                }
+            }
+        },
+        "veiculo.ListarVeiculosResponse": {
+            "type": "object",
+            "properties": {
+                "direction": {
+                    "type": "string",
+                    "example": "ASC"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/veiculo.VeiculoResponse"
+                    }
+                },
+                "order": {
+                    "type": "string",
+                    "example": "id"
+                },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "page_size": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 42
+                },
+                "total_pages": {
+                    "type": "integer",
+                    "example": 3
                 }
             }
         },

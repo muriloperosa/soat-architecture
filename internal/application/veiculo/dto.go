@@ -1,6 +1,9 @@
 package veiculo
 
-import domain "github.com/muriloperosa/soat-architecture/internal/domain/veiculo"
+import (
+	appquery "github.com/muriloperosa/soat-architecture/internal/application/query"
+	domain "github.com/muriloperosa/soat-architecture/internal/domain/veiculo"
+)
 
 type CadastrarVeiculoInput struct {
 	Placa              string
@@ -44,4 +47,20 @@ func toOutput(v *domain.Veiculo) VeiculoOutput {
 		CriadoPor:          v.CriadoPor(),
 		Ativo:              v.Ativo(),
 	}
+}
+
+// ListarVeiculosInput é o contrato de entrada do caso de uso de listagem.
+type ListarVeiculosInput struct {
+	appquery.ParamsInput
+}
+
+// ListarVeiculosOutput é o contrato de saída do caso de uso de listagem.
+type ListarVeiculosOutput struct {
+	Items      []VeiculoOutput
+	Total      int64
+	Page       int
+	PageSize   int
+	TotalPages int
+	Order      string
+	Direction  string
 }

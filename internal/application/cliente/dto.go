@@ -1,6 +1,9 @@
 package cliente
 
-import domain "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
+import (
+	appquery "github.com/muriloperosa/soat-architecture/internal/application/query"
+	domain "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
+)
 
 // CriarClienteInput é o DTO de entrada do CriarClienteUseCase.
 type CriarClienteInput struct {
@@ -52,4 +55,20 @@ func toOutput(c *domain.Cliente) ClienteOutput {
 		RequerAlterarSenha: c.RequerAlterarSenha(),
 		CriadoPor:          c.CriadoPor(),
 	}
+}
+
+// ListarClientesInput é o contrato de entrada do caso de uso de listagem.
+type ListarClientesInput struct {
+	appquery.ParamsInput
+}
+
+// ListarClientesOutput é o contrato de saída do caso de uso de listagem.
+type ListarClientesOutput struct {
+	Items      []ClienteOutput
+	Total      int64
+	Page       int
+	PageSize   int
+	TotalPages int
+	Order      string
+	Direction  string
 }

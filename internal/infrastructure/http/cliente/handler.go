@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	app "github.com/muriloperosa/soat-architecture/internal/application/cliente"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httperror"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httpquery"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httprequest"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/middleware"
 )
@@ -19,6 +20,8 @@ type Handler struct {
 	ativar                *app.AtivarClienteUseCase
 	inativar              *app.InativarClienteUseCase
 	alterarSenha          *app.AlterarSenhaClienteUseCase
+	listar                *app.ListarClientesUseCase
+	queryParser           *httpquery.Parser
 }
 
 func NewHandler(
@@ -29,6 +32,8 @@ func NewHandler(
 	ativar *app.AtivarClienteUseCase,
 	inativar *app.InativarClienteUseCase,
 	alterarSenha *app.AlterarSenhaClienteUseCase,
+	listar *app.ListarClientesUseCase,
+	queryParser *httpquery.Parser,
 ) *Handler {
 	return &Handler{
 		criar:                 criar,
@@ -38,6 +43,8 @@ func NewHandler(
 		ativar:                ativar,
 		inativar:              inativar,
 		alterarSenha:          alterarSenha,
+		listar:                listar,
+		queryParser:           queryParser,
 	}
 }
 
@@ -74,6 +81,46 @@ func (h *Handler) Criar(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, toResponse(output))
+}
+
+// @Summary Lista clientes
+// @Description Lista clientes com paginação, ordenação e filtros diretos por campo. Texto usa LIKE, listas separadas por vírgula usam IN, booleanos usam igualdade e duas datas ISO 8601 formam um intervalo. Use o sufixo _not para negar filtros textuais.
+// @Tags Clientes
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Número da página" default(1) minimum(1)
+// @Param order query string false "Campo de ordenação" Enums(id,documento,tipo,nome,email,telefone,ativo,requer_alterar_senha,criado_por,data_cadastro,data_atualizacao) default(id)
+// @Param direction query string false "Direção da ordenação" Enums(ASC,DESC) default(ASC)
+// @Param id query string false "ID ou lista de IDs separada por vírgula" example(1,2,3)
+// @Param documento query string false "Documento contendo o valor"
+// @Param tipo query string false "Tipo de pessoa contendo o valor" Enums(PF,PJ)
+// @Param nome query string false "Nome contendo o valor" example(Maria)
+// @Param nome_not query string false "Nome que não deve conter o valor" example(Teste)
+// @Param email query string false "E-mail contendo o valor"
+// @Param telefone query string false "Telefone contendo o valor"
+// @Param ativo query bool false "Situação ativa do cliente"
+// @Param criado_por query string false "ID ou lista de IDs dos criadores"
+// @Param data_cadastro query string false "Data ISO 8601 ou intervalo separado por vírgula" example(2026-08-20,2026-08-22)
+// @Success 200 {object} ListarClientesResponse
+// @Failure 400 {object} httperror.ErrorResponse
+// @Failure 401 {object} httperror.ErrorResponse
+// @Failure 403 {object} httperror.ErrorResponse
+// @Failure 500 {object} httperror.ErrorResponse
+// @Router /v1/clientes [get]
+func (h *Handler) Listar(c *gin.Context) {
+	params, err := h.queryParser.Parse(c)
+	if err != nil {
+		httperror.RespondError(c, err)
+		return
+	}
+
+	output, err := h.listar.Executar(c.Request.Context(), toListarInput(params))
+	if err != nil {
+		httperror.RespondError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, toListResponse(output))
 }
 
 // @Summary Atualiza cliente

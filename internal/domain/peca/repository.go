@@ -1,6 +1,10 @@
 package peca
 
-import "context"
+import (
+	"context"
+
+	"github.com/muriloperosa/soat-architecture/internal/domain/query"
+)
 
 // Repository persiste e consulta peças. BuscarPorID e BuscarPorCodigo
 // retornam ErrPecaNaoEncontrada (sentinel, não gorm.ErrRecordNotFound cru)
@@ -10,6 +14,7 @@ type Repository interface {
 	BuscarPorID(ctx context.Context, id uint64) (*Peca, error)
 	BuscarPorCodigo(ctx context.Context, codigo string) (*Peca, error)
 	Atualizar(ctx context.Context, peca *Peca) error
+	Listar(ctx context.Context, params query.Params) (query.Page[*Peca], error)
 
 	// BuscarPorIDComBloqueio busca a peça travando a linha (SELECT ... FOR
 	// UPDATE) até o fim da transação corrente. Só faz sentido chamado

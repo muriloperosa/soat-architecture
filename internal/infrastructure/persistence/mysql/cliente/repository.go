@@ -5,18 +5,22 @@ import (
 	"errors"
 
 	domain "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
+	"github.com/muriloperosa/soat-architecture/internal/domain/query"
+	mysqlquery "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/query"
 
 	"gorm.io/gorm"
 )
 
 type Repository struct {
-	db *gorm.DB
+	db           *gorm.DB
+	queryBuilder *mysqlquery.Builder
 }
 
 var _ domain.ClienteRepository = (*Repository)(nil)
 
 func NewClienteRepository(db *gorm.DB) domain.ClienteRepository {
-	return &Repository{db: db}
+	builder := NewQueryBuilder()
+	return &Repository{db: db, queryBuilder: builder}
 }
 
 // NewRepository mantém compatibilidade. Prefira NewClienteRepository.
@@ -81,6 +85,54 @@ func (r *Repository) BuscarPorEmail(ctx context.Context, email string) (*domain.
 		return nil, err
 	}
 	return toEntity(model)
+}
+
+// Listar implements [cliente.ClienteRepository].
+func (r *Repository) Listar(
+	ctx context.Context,
+	params query.Params,
+) (query.Page[*domain.Cliente], error) {
+	normalized, err := r.queryBuilder.Normalize(params)
+	if err != nil {
+		return query.Page[*domain.Cliente]{}, err
+	}
+
+	filtered, err := r.queryBuilder.ApplyFilters(
+		r.db.WithContext(ctx).Model(&Model{}),
+		normalized.Filters,
+	)
+	if err != nil {
+		return query.Page[*domain.Cliente]{}, err
+	}
+
+	var total int64
+	if err = filtered.Count(&total).Error; err != nil {
+		return query.Page[*domain.Cliente]{}, err
+	}
+
+	models := make([]Model, 0)
+	if err = r.queryBuilder.ApplyPagination(filtered, normalized).Find(&models).Error; err != nil {
+		return query.Page[*domain.Cliente]{}, err
+	}
+
+	clientes := make([]*domain.Cliente, 0, len(models))
+	for _, model := range models {
+		cliente, mapperErr := toEntity(model)
+		if mapperErr != nil {
+			return query.Page[*domain.Cliente]{}, mapperErr
+		}
+		clientes = append(clientes, cliente)
+	}
+
+	return query.Page[*domain.Cliente]{
+		Items:      clientes,
+		Total:      total,
+		Page:       normalized.Page,
+		PageSize:   r.queryBuilder.PageSize(),
+		TotalPages: r.queryBuilder.TotalPages(total),
+		Order:      normalized.Order,
+		Direction:  normalized.Direction,
+	}, nil
 }
 
 // Atualizar implements [cliente.ClienteRepository].

@@ -3,6 +3,7 @@ package cliente
 import (
 	"github.com/gin-gonic/gin"
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httpquery"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/middleware"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/wiring"
 )
@@ -20,6 +21,8 @@ func RegisterClienteRoutes(
 		container.AtivarClienteUseCase,
 		container.InativarClienteUseCase,
 		container.AlterarSenhaClienteUseCase,
+		container.ListarClientesUseCase,
+		httpquery.NewParser(),
 	)
 
 	clientes := rg.Group(
@@ -29,6 +32,7 @@ func RegisterClienteRoutes(
 	)
 
 	clientes.POST("", handler.Criar)
+	clientes.GET("", handler.Listar)
 
 	clientes.GET("/documento/:documento", handler.BuscarPorDocumento)
 

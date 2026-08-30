@@ -5,12 +5,13 @@ import (
 
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httpquery"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/middleware"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/wiring"
 )
 
 func RegisterVeiculoRoutes(rg *gin.RouterGroup, c *wiring.Container) {
-	h := NewHandler(c.CadastrarVeiculoUC, c.AtualizarVeiculoUC, c.AtivarVeiculoUC, c.InativarVeiculoUC, c.ConsultarVeiculoPorIDUC, c.ConsultarVeiculoPorPlacaUC)
+	h := NewHandler(c.CadastrarVeiculoUC, c.AtualizarVeiculoUC, c.AtivarVeiculoUC, c.InativarVeiculoUC, c.ConsultarVeiculoPorIDUC, c.ConsultarVeiculoPorPlacaUC, c.ListarVeiculosUC, httpquery.NewParser())
 
 	autenticado := rg.Group("/veiculos", middleware.AuthenticationMiddleware(c.JWTAuth, c.RefreshTokensRepo, c.UsuarioStatusRepo, c.ClienteStatusRepo))
 
@@ -23,4 +24,5 @@ func RegisterVeiculoRoutes(rg *gin.RouterGroup, c *wiring.Container) {
 	consulta := autenticado.Group("", middleware.AuthorizationMiddleware(domainauth.TipoInterno))
 	consulta.GET("/placa/:placa", h.ConsultarPorPlaca)
 	consulta.GET("/:id", h.ConsultarPorID)
+	consulta.GET("", h.Listar)
 }
