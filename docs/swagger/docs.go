@@ -873,6 +873,110 @@ const docTemplate = `{
             }
         },
         "/v1/ordens-servico": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lista Ordens de Serviço com paginação, ordenação e filtros diretos por campo.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ordens de Serviço"
+                ],
+                "summary": "Lista Ordens de Serviço",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Número da página",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "id",
+                            "numero",
+                            "cliente_id",
+                            "veiculo_id",
+                            "quilometragem_entrada",
+                            "status",
+                            "criado_por",
+                            "data_cadastro",
+                            "data_atualizacao"
+                        ],
+                        "type": "string",
+                        "default": "id",
+                        "description": "Campo de ordenação",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "ASC",
+                            "DESC"
+                        ],
+                        "type": "string",
+                        "default": "ASC",
+                        "description": "Direção da ordenação",
+                        "name": "direction",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Status ou lista de status separados por vírgula",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID ou lista de IDs de clientes separados por vírgula",
+                        "name": "cliente_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID ou lista de IDs de veículos separados por vírgula",
+                        "name": "veiculo_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ordemservico.ListarOrdensServicoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -934,6 +1038,114 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/ordens-servico/numero/{numero}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ordens de Serviço"
+                ],
+                "summary": "Busca uma Ordem de Serviço por número",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Número da Ordem de Serviço",
+                        "name": "numero",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ordemservico.OrdemServicoResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/ordens-servico/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ordens de Serviço"
+                ],
+                "summary": "Busca uma Ordem de Serviço por ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da Ordem de Serviço",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ordemservico.OrdemServicoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/httperror.ErrorResponse"
                         }
@@ -3363,6 +3575,30 @@ const docTemplate = `{
                 }
             }
         },
+        "ordemservico.HistoricoStatusResponse": {
+            "type": "object",
+            "properties": {
+                "alterado_em": {
+                    "type": "string"
+                },
+                "alterado_por": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "motivo": {
+                    "type": "string",
+                    "example": ""
+                },
+                "status": {
+                    "type": "string",
+                    "example": "RECEBIDA"
+                }
+            }
+        },
         "ordemservico.InformarDiagnosticoRequest": {
             "type": "object",
             "properties": {
@@ -3372,12 +3608,110 @@ const docTemplate = `{
                 }
             }
         },
+        "ordemservico.ListarOrdensServicoResponse": {
+            "type": "object",
+            "properties": {
+                "direction": {
+                    "type": "string",
+                    "example": "DESC"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ordemservico.OrdemServicoResumoResponse"
+                    }
+                },
+                "order": {
+                    "type": "string",
+                    "example": "data_cadastro"
+                },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "page_size": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 42
+                },
+                "total_pages": {
+                    "type": "integer",
+                    "example": 3
+                }
+            }
+        },
         "ordemservico.OrdemServicoResponse": {
             "type": "object",
             "properties": {
                 "cliente_id": {
                     "type": "integer",
                     "example": 1
+                },
+                "criado_por": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "data_atualizacao": {
+                    "type": "string"
+                },
+                "data_cadastro": {
+                    "type": "string"
+                },
+                "diagnostico": {
+                    "type": "string",
+                    "example": ""
+                },
+                "historico_status": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ordemservico.HistoricoStatusResponse"
+                    }
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "numero": {
+                    "type": "string",
+                    "example": "OS-20260826-a1b2c3d4e5f6"
+                },
+                "observacoes": {
+                    "type": "string",
+                    "example": "Cliente relatou ruído no motor"
+                },
+                "quilometragem_entrada": {
+                    "type": "integer",
+                    "example": 52300
+                },
+                "status": {
+                    "type": "string",
+                    "example": "RECEBIDA"
+                },
+                "veiculo_id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "ordemservico.OrdemServicoResumoResponse": {
+            "type": "object",
+            "properties": {
+                "cliente_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "criado_por": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "data_atualizacao": {
+                    "type": "string"
+                },
+                "data_cadastro": {
+                    "type": "string"
                 },
                 "diagnostico": {
                     "type": "string",

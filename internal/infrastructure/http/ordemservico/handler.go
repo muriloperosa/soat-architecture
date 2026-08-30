@@ -6,11 +6,16 @@ import (
 	"github.com/gin-gonic/gin"
 	app "github.com/muriloperosa/soat-architecture/internal/application/ordemservico"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httperror"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httpquery"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httprequest"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/middleware"
 )
 
 type Handler struct {
+	consultarPorID      *app.ConsultarOrdemServicoPorIDUseCase
+	consultarPorNumero  *app.ConsultarOrdemServicoPorNumeroUseCase
+	listar              *app.ListarOrdensServicoUseCase
+	queryParser         *httpquery.Parser
 	abrir               *app.AbrirOrdemServicoUseCase
 	iniciarDiagnostico  *app.IniciarDiagnosticoUseCase
 	informarDiagnostico *app.InformarDiagnosticoUseCase
@@ -24,14 +29,101 @@ func NewHandler(
 	informarDiagnostico *app.InformarDiagnosticoUseCase,
 	iniciarExecucao *app.IniciarExecucaoUseCase,
 	entregar *app.EntregarOrdemServicoUseCase,
+	consultarPorID *app.ConsultarOrdemServicoPorIDUseCase,
+	consultarPorNumero *app.ConsultarOrdemServicoPorNumeroUseCase,
+	listar *app.ListarOrdensServicoUseCase,
+	queryParser *httpquery.Parser,
 ) *Handler {
 	return &Handler{
+		consultarPorID:      consultarPorID,
+		consultarPorNumero:  consultarPorNumero,
+		listar:              listar,
+		queryParser:         queryParser,
 		abrir:               abrir,
 		iniciarDiagnostico:  iniciarDiagnostico,
 		informarDiagnostico: informarDiagnostico,
 		iniciarExecucao:     iniciarExecucao,
 		entregar:            entregar,
 	}
+}
+
+// @Summary Lista Ordens de Serviço
+// @Description Lista Ordens de Serviço com paginação, ordenação e filtros diretos por campo.
+// @Tags Ordens de Serviço
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Número da página" default(1) minimum(1)
+// @Param order query string false "Campo de ordenação" Enums(id,numero,cliente_id,veiculo_id,quilometragem_entrada,status,criado_por,data_cadastro,data_atualizacao) default(id)
+// @Param direction query string false "Direção da ordenação" Enums(ASC,DESC) default(ASC)
+// @Param status query string false "Status ou lista de status separados por vírgula"
+// @Param cliente_id query string false "ID ou lista de IDs de clientes separados por vírgula"
+// @Param veiculo_id query string false "ID ou lista de IDs de veículos separados por vírgula"
+// @Success 200 {object} ListarOrdensServicoResponse
+// @Failure 400 {object} httperror.ErrorResponse
+// @Failure 401 {object} httperror.ErrorResponse
+// @Failure 403 {object} httperror.ErrorResponse
+// @Failure 500 {object} httperror.ErrorResponse
+// @Router /v1/ordens-servico [get]
+func (h *Handler) Listar(c *gin.Context) {
+	params, err := h.queryParser.Parse(c)
+	if err != nil {
+		httperror.RespondError(c, err)
+		return
+	}
+
+	output, err := h.listar.Executar(c.Request.Context(), toListarInput(params))
+	if err != nil {
+		httperror.RespondError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, toListResponse(output))
+}
+
+// @Summary Busca uma Ordem de Serviço por ID
+// @Tags Ordens de Serviço
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID da Ordem de Serviço"
+// @Success 200 {object} OrdemServicoResponse
+// @Failure 400 {object} httperror.ErrorResponse
+// @Failure 401 {object} httperror.ErrorResponse
+// @Failure 403 {object} httperror.ErrorResponse
+// @Failure 404 {object} httperror.ErrorResponse
+// @Router /v1/ordens-servico/{id} [get]
+func (h *Handler) BuscarPorID(c *gin.Context) {
+	id, ok := httprequest.ParseUintParam(c, "id")
+	if !ok {
+		return
+	}
+
+	output, err := h.consultarPorID.Executar(c.Request.Context(), id)
+	if err != nil {
+		httperror.RespondError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, toResponse(output))
+}
+
+// @Summary Busca uma Ordem de Serviço por número
+// @Tags Ordens de Serviço
+// @Produce json
+// @Security BearerAuth
+// @Param numero path string true "Número da Ordem de Serviço"
+// @Success 200 {object} OrdemServicoResponse
+// @Failure 401 {object} httperror.ErrorResponse
+// @Failure 403 {object} httperror.ErrorResponse
+// @Failure 404 {object} httperror.ErrorResponse
+// @Router /v1/ordens-servico/numero/{numero} [get]
+func (h *Handler) BuscarPorNumero(c *gin.Context) {
+	output, err := h.consultarPorNumero.Executar(c.Request.Context(), c.Param("numero"))
+	if err != nil {
+		httperror.RespondError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, toResponse(output))
 }
 
 // @Summary Abre uma Ordem de Serviço

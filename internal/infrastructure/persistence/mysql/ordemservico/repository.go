@@ -5,17 +5,23 @@ import (
 	"errors"
 
 	domain "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
+	domainquery "github.com/muriloperosa/soat-architecture/internal/domain/query"
+	mysqlquery "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/query"
 	"gorm.io/gorm"
 )
 
 type Repository struct {
-	db *gorm.DB
+	db           *gorm.DB
+	queryBuilder *mysqlquery.Builder
 }
 
 var _ domain.OrdemServicoRepository = (*Repository)(nil)
 
 func NewOrdemServicoRepository(db *gorm.DB) domain.OrdemServicoRepository {
-	return &Repository{db: db}
+	return &Repository{
+		db:           db,
+		queryBuilder: NewQueryBuilder(),
+	}
 }
 
 func (r *Repository) Salvar(ctx context.Context, os *domain.OrdemServico) error {
@@ -64,6 +70,53 @@ func (r *Repository) BuscarPorNumero(ctx context.Context, numero string) (*domai
 	}
 
 	return toDomain(model)
+}
+
+func (r *Repository) Listar(
+	ctx context.Context,
+	params domainquery.Params,
+) (domainquery.Page[*domain.OrdemServico], error) {
+	normalized, err := r.queryBuilder.Normalize(params)
+	if err != nil {
+		return domainquery.Page[*domain.OrdemServico]{}, err
+	}
+
+	filtered, err := r.queryBuilder.ApplyFilters(
+		r.db.WithContext(ctx).Model(&OrdemServicoModel{}),
+		normalized.Filters,
+	)
+	if err != nil {
+		return domainquery.Page[*domain.OrdemServico]{}, err
+	}
+
+	var total int64
+	if err = filtered.Count(&total).Error; err != nil {
+		return domainquery.Page[*domain.OrdemServico]{}, err
+	}
+
+	models := make([]OrdemServicoModel, 0)
+	if err = r.queryBuilder.ApplyPagination(filtered, normalized).Find(&models).Error; err != nil {
+		return domainquery.Page[*domain.OrdemServico]{}, err
+	}
+
+	ordens := make([]*domain.OrdemServico, 0, len(models))
+	for _, model := range models {
+		ordem, mapperErr := toDomain(model)
+		if mapperErr != nil {
+			return domainquery.Page[*domain.OrdemServico]{}, mapperErr
+		}
+		ordens = append(ordens, ordem)
+	}
+
+	return domainquery.Page[*domain.OrdemServico]{
+		Items:      ordens,
+		Total:      total,
+		Page:       normalized.Page,
+		PageSize:   r.queryBuilder.PageSize(),
+		TotalPages: r.queryBuilder.TotalPages(total),
+		Order:      normalized.Order,
+		Direction:  normalized.Direction,
+	}, nil
 }
 
 func (r *Repository) Atualizar(ctx context.Context, os *domain.OrdemServico) error {

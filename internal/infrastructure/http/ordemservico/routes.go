@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httpquery"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/middleware"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/wiring"
 )
@@ -15,6 +16,10 @@ func RegisterOrdemServicoRoutes(rg *gin.RouterGroup, container *wiring.Container
 		container.InformarDiagnosticoUC,
 		container.IniciarExecucaoUC,
 		container.EntregarOrdemServicoUC,
+		container.ConsultarOrdemServicoPorIDUC,
+		container.ConsultarOrdemServicoPorNumeroUC,
+		container.ListarOrdensServicoUC,
+		httpquery.NewParser(),
 	)
 
 	ordensServico := rg.Group(
@@ -24,6 +29,9 @@ func RegisterOrdemServicoRoutes(rg *gin.RouterGroup, container *wiring.Container
 	)
 
 	ordensServico.POST("", handler.Abrir)
+	ordensServico.GET("", handler.Listar)
+	ordensServico.GET("/numero/:numero", handler.BuscarPorNumero)
+	ordensServico.GET("/:id", handler.BuscarPorID)
 	ordensServico.PATCH("/:id/entregar", handler.Entregar)
 
 	ordensServicoExec := ordensServico.Group(
