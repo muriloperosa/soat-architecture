@@ -2007,6 +2007,38 @@ paths:
       summary: Remove um serviço do orçamento
       tags:
       - Orçamentos
+  /v1/ordens-servico/numero/{numero}:
+    get:
+      parameters:
+      - description: Número da Ordem de Serviço
+        in: path
+        name: numero
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ordemservico.OrdemServicoResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Busca uma Ordem de Serviço por número
+      tags:
+      - Ordens de Serviço
   /v1/pecas:
     get:
       description: Lista peças do estoque com paginação, ordenação e filtros.
