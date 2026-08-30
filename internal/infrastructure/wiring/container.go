@@ -27,6 +27,7 @@ import (
 	domainveiculo "github.com/muriloperosa/soat-architecture/internal/domain/veiculo"
 	infraauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/auth"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/config"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/email"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql"
 	mysqlauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/auth"
 	mysqlcliente "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/cliente"
@@ -53,6 +54,7 @@ type Container struct {
 	PecaRepo          domainpeca.Repository
 	ReservaPecaRepo   domainreservapeca.Repository
 	TransactionRunner shared.TransactionRunner
+	EmailSender       shared.EmailSender
 	VeiculoRepo       domainveiculo.Repository
 	ServicoRepo       domainservico.ServicoRepository
 	OrdemServicoRepo  domainordemservico.OrdemServicoRepository
@@ -114,6 +116,7 @@ type Container struct {
 	AdicionarPecaOrcamentoUC    *apporcamento.AdicionarPecaOrcamentoUseCase
 	RemoverServicoOrcamentoUC   *apporcamento.RemoverServicoOrcamentoUseCase
 	RemoverPecaOrcamentoUC      *apporcamento.RemoverPecaOrcamentoUseCase
+	FinalizarOrcamentoUC        *apporcamento.FinalizarOrcamentoUseCase
 
 	ConsultarTransicaoStatusUC *apprelatorio.ConsultarTransicaoStatusUseCase
 }
@@ -126,6 +129,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.PecaRepo = mysqlpeca.NewRepository(db)
 	c.ReservaPecaRepo = mysqlreservapeca.NewRepository(db)
 	c.TransactionRunner = mysql.NewTransactionRunner(db)
+	c.EmailSender = email.NewLogSender()
 	c.VeiculoRepo = mysqlveiculo.NewRepository(db)
 	c.ServicoRepo = mysqlservico.NewServicoRepository(db)
 	c.OrdemServicoRepo = mysqlordemservico.NewOrdemServicoRepository(db)
@@ -202,6 +206,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.AdicionarPecaOrcamentoUC = apporcamento.NewAdicionarPecaOrcamentoUseCase(c.OrcamentoRepo, c.PecaRepo)
 	c.RemoverServicoOrcamentoUC = apporcamento.NewRemoverServicoOrcamentoUseCase(c.OrcamentoRepo)
 	c.RemoverPecaOrcamentoUC = apporcamento.NewRemoverPecaOrcamentoUseCase(c.OrcamentoRepo)
+	c.FinalizarOrcamentoUC = apporcamento.NewFinalizarOrcamentoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo, c.ClienteRepository, c.EmailSender)
 
 	c.ConsultarTransicaoStatusUC = apprelatorio.NewConsultarTransicaoStatusUseCase(c.RelatorioRepo)
 

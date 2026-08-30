@@ -17,6 +17,7 @@ func RegisterOrcamentoRoutes(rg *gin.RouterGroup, container *wiring.Container) {
 		container.AdicionarPecaOrcamentoUC,
 		container.RemoverServicoOrcamentoUC,
 		container.RemoverPecaOrcamentoUC,
+		container.FinalizarOrcamentoUC,
 	)
 
 	orcamentos := rg.Group(
@@ -30,4 +31,5 @@ func RegisterOrcamentoRoutes(rg *gin.RouterGroup, container *wiring.Container) {
 	orcamentos.POST("/itens-peca", handler.AdicionarPeca)
 	orcamentos.DELETE("/itens-servico/:itemId", handler.RemoverServico)
 	orcamentos.DELETE("/itens-peca/:itemId", handler.RemoverPeca)
+	orcamentos.PATCH("/finalizar", handler.Finalizar)
 }

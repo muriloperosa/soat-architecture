@@ -11,6 +11,8 @@ import (
 	"github.com/gin-gonic/gin"
 	app "github.com/muriloperosa/soat-architecture/internal/application/orcamento"
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
+	domaincliente "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
+	clientemocks "github.com/muriloperosa/soat-architecture/internal/domain/cliente/mocks"
 	domainorcamento "github.com/muriloperosa/soat-architecture/internal/domain/orcamento"
 	orcamentomocks "github.com/muriloperosa/soat-architecture/internal/domain/orcamento/mocks"
 	domainordemservico "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
@@ -18,6 +20,7 @@ import (
 	domainservico "github.com/muriloperosa/soat-architecture/internal/domain/servico"
 	servicomocks "github.com/muriloperosa/soat-architecture/internal/domain/servico/mocks"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
+	sharedmocks "github.com/muriloperosa/soat-architecture/internal/domain/shared/mocks"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/middleware"
 	httporcamento "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/orcamento"
 	"github.com/stretchr/testify/mock"
@@ -49,7 +52,7 @@ func TestHandlerGerarRetorna201(t *testing.T) {
 		Run(func(_ context.Context, o *domainorcamento.Orcamento) { o.AtribuirID(1) }).
 		Return(nil)
 
-	handler := httporcamento.NewHandler(app.NewGerarOrcamentoUseCase(orcamentoRepo, osRepo), nil, nil, nil, nil)
+	handler := httporcamento.NewHandler(app.NewGerarOrcamentoUseCase(orcamentoRepo, osRepo), nil, nil, nil, nil, nil)
 	router := gin.New()
 	router.Use(comClaims)
 	router.POST("/v1/ordens-servico/:id/orcamento", handler.Gerar)
@@ -78,7 +81,7 @@ func TestHandlerGerarOrcamentoJaExisteRetorna409(t *testing.T) {
 	require.NoError(t, err)
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(existente, nil)
 
-	handler := httporcamento.NewHandler(app.NewGerarOrcamentoUseCase(orcamentoRepo, osRepo), nil, nil, nil, nil)
+	handler := httporcamento.NewHandler(app.NewGerarOrcamentoUseCase(orcamentoRepo, osRepo), nil, nil, nil, nil, nil)
 	router := gin.New()
 	router.Use(comClaims)
 	router.POST("/v1/ordens-servico/:id/orcamento", handler.Gerar)
@@ -114,7 +117,7 @@ func TestHandlerAdicionarServicoRetorna200(t *testing.T) {
 	require.NoError(t, comItem.AdicionarItemServico(5, 2, 100.0, 60))
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(comItem, nil).Once()
 
-	handler := httporcamento.NewHandler(nil, app.NewAdicionarServicoOrcamentoUseCase(orcamentoRepo, servicoRepo), nil, nil, nil)
+	handler := httporcamento.NewHandler(nil, app.NewAdicionarServicoOrcamentoUseCase(orcamentoRepo, servicoRepo), nil, nil, nil, nil)
 	router := gin.New()
 	router.POST("/v1/ordens-servico/:id/orcamento/itens-servico", handler.AdicionarServico)
 
@@ -142,7 +145,7 @@ func TestHandlerAdicionarServicoInexistenteRetorna404(t *testing.T) {
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(vazio, nil)
 	servicoRepo.EXPECT().BuscarPorID(mock.Anything, uint64(999)).Return(nil, domainservico.ErrServicoNaoEncontrado)
 
-	handler := httporcamento.NewHandler(nil, app.NewAdicionarServicoOrcamentoUseCase(orcamentoRepo, servicoRepo), nil, nil, nil)
+	handler := httporcamento.NewHandler(nil, app.NewAdicionarServicoOrcamentoUseCase(orcamentoRepo, servicoRepo), nil, nil, nil, nil)
 	router := gin.New()
 	router.POST("/v1/ordens-servico/:id/orcamento/itens-servico", handler.AdicionarServico)
 
@@ -179,7 +182,7 @@ func TestHandlerRemoverServicoRetorna200(t *testing.T) {
 	vazio.AtribuirID(1)
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(vazio, nil).Once()
 
-	handler := httporcamento.NewHandler(nil, nil, nil, app.NewRemoverServicoOrcamentoUseCase(orcamentoRepo), nil)
+	handler := httporcamento.NewHandler(nil, nil, nil, app.NewRemoverServicoOrcamentoUseCase(orcamentoRepo), nil, nil)
 	router := gin.New()
 	router.DELETE("/v1/ordens-servico/:id/orcamento/itens-servico/:itemId", handler.RemoverServico)
 
@@ -201,11 +204,79 @@ func TestHandlerRemoverServicoItemInexistenteRetorna404(t *testing.T) {
 	require.NoError(t, err)
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(vazio, nil)
 
-	handler := httporcamento.NewHandler(nil, nil, nil, app.NewRemoverServicoOrcamentoUseCase(orcamentoRepo), nil)
+	handler := httporcamento.NewHandler(nil, nil, nil, app.NewRemoverServicoOrcamentoUseCase(orcamentoRepo), nil, nil)
 	router := gin.New()
 	router.DELETE("/v1/ordens-servico/:id/orcamento/itens-servico/:itemId", handler.RemoverServico)
 
 	req := httptest.NewRequest(http.MethodDelete, "/v1/ordens-servico/42/orcamento/itens-servico/999", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusNotFound, rec.Code)
+}
+
+func osEmDiagnosticoComDiagnosticoHTTP(t *testing.T) *domainordemservico.OrdemServico {
+	t.Helper()
+	os, err := domainordemservico.NewOrdemServico("OS-20260827-a1b2c3d4e5f6", 10, 20, 52_300, "", "", 30)
+	require.NoError(t, err)
+	os.AtribuirID(42)
+	require.NoError(t, os.IniciarDiagnostico(30))
+	require.NoError(t, os.InformarDiagnostico("Falha na bomba de combustível"))
+	return os
+}
+
+func TestHandlerFinalizarRetorna200EEnviaEmail(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	orcamentoRepo := orcamentomocks.NewOrcamentoRepository(t)
+	osRepo := ordemservicomocks.NewOrdemServicoRepository(t)
+	clienteRepo := clientemocks.NewClienteRepository(t)
+	emailSender := sharedmocks.NewEmailSender(t)
+
+	o, err := domainorcamento.NewOrcamento(42, "", 30)
+	require.NoError(t, err)
+	require.NoError(t, o.AdicionarItemServico(5, 1, 100.0, 60))
+	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(o, nil)
+
+	os := osEmDiagnosticoComDiagnosticoHTTP(t)
+	osRepo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
+	osRepo.EXPECT().Atualizar(mock.Anything, os).Return(nil)
+
+	cliente, err := domaincliente.NewCliente("52998224725", domaincliente.TipoPessoaFisica, "Maria Silva", "maria@email.com", "11999998888", "senha123", 3)
+	require.NoError(t, err)
+	cliente.DefinirID(10)
+	clienteRepo.EXPECT().BuscarPorID(mock.Anything, uint64(10)).Return(&cliente, nil)
+
+	emailSender.EXPECT().Enviar(mock.Anything, "maria@email.com", mock.Anything, mock.Anything).Return(nil)
+
+	handler := httporcamento.NewHandler(nil, nil, nil, nil, nil, app.NewFinalizarOrcamentoUseCase(orcamentoRepo, osRepo, clienteRepo, emailSender))
+	router := gin.New()
+	router.Use(comClaims)
+	router.PATCH("/v1/ordens-servico/:id/orcamento/finalizar", handler.Finalizar)
+
+	req := httptest.NewRequest(http.MethodPatch, "/v1/ordens-servico/42/orcamento/finalizar", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, domainordemservico.StatusAguardandoAprovacao, os.Status())
+}
+
+func TestHandlerFinalizarOrcamentoInexistenteRetorna404(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	orcamentoRepo := orcamentomocks.NewOrcamentoRepository(t)
+	osRepo := ordemservicomocks.NewOrdemServicoRepository(t)
+	clienteRepo := clientemocks.NewClienteRepository(t)
+	emailSender := sharedmocks.NewEmailSender(t)
+
+	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).
+		Return(nil, domainorcamento.ErrOrcamentoNaoEncontrado)
+
+	handler := httporcamento.NewHandler(nil, nil, nil, nil, nil, app.NewFinalizarOrcamentoUseCase(orcamentoRepo, osRepo, clienteRepo, emailSender))
+	router := gin.New()
+	router.Use(comClaims)
+	router.PATCH("/v1/ordens-servico/:id/orcamento/finalizar", handler.Finalizar)
+
+	req := httptest.NewRequest(http.MethodPatch, "/v1/ordens-servico/42/orcamento/finalizar", nil)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
