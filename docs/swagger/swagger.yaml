@@ -1362,6 +1362,49 @@ paths:
       summary: Gera o orçamento de uma Ordem de Serviço
       tags:
       - Orçamentos
+  /v1/ordens-servico/{id}/orcamento/finalizar:
+    patch:
+      description: Move a OS de EM_DIAGNOSTICO para AGUARDANDO_APROVACAO e, como efeito
+        da transição, envia (simulado) o e-mail do orçamento ao cliente. Restrito
+        a mecânico ou administrador.
+      parameters:
+      - description: ID da Ordem de Serviço
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/orcamento.OrcamentoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Finaliza o orçamento e envia para aprovação
+      tags:
+      - Orçamentos
   /v1/ordens-servico/{id}/orcamento/itens-peca:
     post:
       consumes:
