@@ -879,7 +879,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Lista Ordens de Serviço com paginação, ordenação e filtros diretos por campo.",
+                "description": "Lista Ordens de Serviço com paginação, ordenação e filtros diretos por campo. Usuários do tipo cliente visualizam somente as próprias Ordens de Serviço.",
                 "produces": [
                     "application/json"
                 ],
@@ -1052,6 +1052,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
+                "description": "Usuários internos podem consultar qualquer OS. Clientes podem consultar somente Ordens de Serviço vinculadas ao próprio cadastro.",
                 "produces": [
                     "application/json"
                 ],
@@ -1103,6 +1104,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
+                "description": "Usuários internos podem consultar qualquer OS. Clientes podem consultar somente Ordens de Serviço vinculadas ao próprio cadastro.",
                 "produces": [
                     "application/json"
                 ],
@@ -4225,6 +4227,31 @@ const docTemplate = `{
                 }
             }
         },
+        "ordemservico.OrcamentoResumoResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "observacoes": {
+                    "type": "string",
+                    "example": "Orçamento inicial"
+                },
+                "valor_item_pecas": {
+                    "type": "number",
+                    "example": 150
+                },
+                "valor_item_servicos": {
+                    "type": "number",
+                    "example": 300
+                },
+                "valor_total": {
+                    "type": "number",
+                    "example": 450
+                }
+            }
+        },
         "ordemservico.OrdemServicoResponse": {
             "type": "object",
             "properties": {
@@ -4310,6 +4337,9 @@ const docTemplate = `{
                 "observacoes": {
                     "type": "string",
                     "example": "Cliente relatou ruído no motor"
+                },
+                "orcamento": {
+                    "$ref": "#/definitions/ordemservico.OrcamentoResumoResponse"
                 },
                 "quilometragem_entrada": {
                     "type": "integer",

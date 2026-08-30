@@ -339,6 +339,24 @@ definitions:
         example: 3
         type: integer
     type: object
+  ordemservico.OrcamentoResumoResponse:
+    properties:
+      id:
+        example: 1
+        type: integer
+      observacoes:
+        example: Orçamento inicial
+        type: string
+      valor_item_pecas:
+        example: 150
+        type: number
+      valor_item_servicos:
+        example: 300
+        type: number
+      valor_total:
+        example: 450
+        type: number
+    type: object
   ordemservico.OrdemServicoResponse:
     properties:
       cliente_id:
@@ -401,6 +419,8 @@ definitions:
       observacoes:
         example: Cliente relatou ruído no motor
         type: string
+      orcamento:
+        $ref: '#/definitions/ordemservico.OrcamentoResumoResponse'
       quilometragem_entrada:
         example: 52300
         type: integer
@@ -1389,7 +1409,8 @@ paths:
   /v1/ordens-servico:
     get:
       description: Lista Ordens de Serviço com paginação, ordenação e filtros diretos
-        por campo.
+        por campo. Usuários do tipo cliente visualizam somente as próprias Ordens
+        de Serviço.
       parameters:
       - default: 1
         description: Número da página
@@ -1506,6 +1527,8 @@ paths:
       - Ordens de Serviço
   /v1/ordens-servico/{id}:
     get:
+      description: Usuários internos podem consultar qualquer OS. Clientes podem consultar
+        somente Ordens de Serviço vinculadas ao próprio cadastro.
       parameters:
       - description: ID da Ordem de Serviço
         in: path
@@ -2009,6 +2032,8 @@ paths:
       - Orçamentos
   /v1/ordens-servico/numero/{numero}:
     get:
+      description: Usuários internos podem consultar qualquer OS. Clientes podem consultar
+        somente Ordens de Serviço vinculadas ao próprio cadastro.
       parameters:
       - description: Número da Ordem de Serviço
         in: path
