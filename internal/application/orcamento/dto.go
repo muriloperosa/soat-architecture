@@ -30,6 +30,11 @@ type RemoverPecaOrcamentoInput struct {
 	ItemPecaID     uint64
 }
 
+type FinalizarOrcamentoInput struct {
+	OrdemServicoID uint64
+	UsuarioID      uint64
+}
+
 type ItemServicoOutput struct {
 	ID                   uint64
 	ServicoID            uint64
