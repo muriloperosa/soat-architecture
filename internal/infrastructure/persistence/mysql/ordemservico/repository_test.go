@@ -134,21 +134,48 @@ func ordemServicoPersistida(t *testing.T) *domain.OrdemServico {
 func TestRepositoryListarComPaginacaoOrdenacaoEFiltros(t *testing.T) {
 	db, mockDB := newRepositoryTestDB(t)
 	repository := NewOrdemServicoRepository(db)
+
 	params := query.Params{
 		Page:      2,
 		Order:     "data_cadastro",
 		Direction: query.DirectionDESC,
 		Filters: []query.Filter{
-			{Field: "status", Operator: query.OperatorEqual, Value: "RECEBIDA"},
-			{Field: "cliente_id", Operator: query.OperatorEqual, Value: "10"},
+			{
+				Field:    "status",
+				Operator: query.OperatorEqual,
+				Value:    "RECEBIDA",
+			},
+			{
+				Field:    "cliente_id",
+				Operator: query.OperatorEqual,
+				Value:    "10",
+			},
 		},
 	}
 
-	mockDB.ExpectQuery("SELECT count\\(\\*\\) FROM .*ordens_servico.*").
-		WithArgs("RECEBIDA", uint64(10)).
-		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(21))
-	mockDB.ExpectQuery("SELECT \\* FROM .*ordens_servico.* ORDER BY data_cadastro DESC LIMIT .* OFFSET .*").
-		WithArgs("RECEBIDA", uint64(10)).
+	mockDB.
+		ExpectQuery(
+			"SELECT count\\(\\*\\) FROM .*ordens_servico.*WHERE.*status.*=.*\\?.*AND.*cliente_id.*=.*\\?",
+		).
+		WithArgs(
+			"RECEBIDA",
+			uint64(10),
+		).
+		WillReturnRows(
+			sqlmock.NewRows([]string{"count"}).
+				AddRow(21),
+		)
+
+	mockDB.
+		ExpectQuery(
+			"SELECT \\* FROM .*ordens_servico.*WHERE.*status.*=.*\\?.*AND.*cliente_id.*=.*\\?.*ORDER BY.*data_cadastro.*DESC.*LIMIT.*OFFSET.*",
+		).
+		WithArgs(
+			"RECEBIDA",
+			uint64(10),
+			20,
+			20,
+		).
 		WillReturnRows(ordemServicoRows())
 
 	page, err := repository.Listar(context.Background(), params)
@@ -163,6 +190,7 @@ func TestRepositoryListarComPaginacaoOrdenacaoEFiltros(t *testing.T) {
 	require.Equal(t, query.DirectionDESC, page.Direction)
 	require.Equal(t, uint64(42), page.Items[0].ID())
 	require.Empty(t, page.Items[0].HistoricoStatus())
+
 	require.NoError(t, mockDB.ExpectationsWereMet())
 }
 
