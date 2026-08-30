@@ -26,10 +26,12 @@ func clienteComEmail(t *testing.T, id uint64, email string) *domaincliente.Clien
 	return &cliente
 }
 
+// osEmDiagnosticoComDiagnostico devolve uma OS EM_DIAGNOSTICO com diagnóstico
+// preenchido, o estado exigido pra finalizar o orçamento. ordemServicoExistente
+// já deixa a OS EM_DIAGNOSTICO (ver gerar_orcamento_test.go).
 func osEmDiagnosticoComDiagnostico(t *testing.T, id uint64) *domainordemservico.OrdemServico {
 	t.Helper()
 	os := ordemServicoExistente(t, id)
-	require.NoError(t, os.IniciarDiagnostico(30))
 	require.NoError(t, os.InformarDiagnostico("Falha na bomba de combustível"))
 	return os
 }
@@ -88,11 +90,17 @@ func TestFinalizarOrcamentoUseCase_TransicaoInvalida(t *testing.T) {
 	clienteRepo := clientemocks.NewClienteRepository(t)
 	emailSender := sharedmocks.NewEmailSender(t)
 
+	// OS ainda RECEBIDA (nunca passou por IniciarDiagnostico) não permite a
+	// transição pra AGUARDANDO_APROVACAO.
+	osRecebida, err := domainordemservico.NewOrdemServico("OS-20260827-a1b2c3d4e5f6", 10, 20, 52_300, "", "", 3)
+	require.NoError(t, err)
+	osRecebida.AtribuirID(42)
+
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(orcamentoVazio(t, 42), nil)
-	osRepo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(ordemServicoExistente(t, 42), nil)
+	osRepo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(osRecebida, nil)
 
 	uc := app.NewFinalizarOrcamentoUseCase(orcamentoRepo, osRepo, clienteRepo, emailSender)
-	_, err := uc.Executar(context.Background(), app.FinalizarOrcamentoInput{OrdemServicoID: 42, UsuarioID: 30})
+	_, err = uc.Executar(context.Background(), app.FinalizarOrcamentoInput{OrdemServicoID: 42, UsuarioID: 30})
 
 	require.ErrorIs(t, err, domainordemservico.ErrTransicaoStatusInvalida)
 }

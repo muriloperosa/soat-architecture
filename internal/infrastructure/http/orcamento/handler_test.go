@@ -106,7 +106,7 @@ func TestHandlerGerarOSNaoEmDiagnosticoRetorna400(t *testing.T) {
 	os.AtribuirID(42)
 	osRepo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 
-	handler := httporcamento.NewHandler(app.NewGerarOrcamentoUseCase(orcamentoRepo, osRepo), nil, nil, nil, nil)
+	handler := httporcamento.NewHandler(app.NewGerarOrcamentoUseCase(orcamentoRepo, osRepo), nil, nil, nil, nil, nil)
 	router := gin.New()
 	router.Use(comClaims)
 	router.POST("/v1/ordens-servico/:id/orcamento", handler.Gerar)

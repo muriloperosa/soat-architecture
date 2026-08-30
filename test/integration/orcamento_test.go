@@ -173,8 +173,20 @@ func TestOrcamento_Finalizar_TransicionaOSEEnviaEmailAoCliente(t *testing.T) {
 
 	osPath := "/v1/ordens-servico/" + strconv.FormatUint(ordemServicoID, 10)
 
+	// Gerar orçamento exige a OS EM_DIAGNOSTICO com diagnóstico preenchido
+	// (mesma invariante exigida pela transição de finalizar).
+	rec := doRequest(t, http.MethodPatch, osPath+"/iniciar-diagnostico", login.AccessToken, nil, nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("iniciar diagnóstico: status %d, body %q", rec.Code, rec.Body.String())
+	}
+	rec = doRequest(t, http.MethodPut, osPath+"/diagnostico", login.AccessToken,
+		httpordemservico.InformarDiagnosticoRequest{Diagnostico: "Falha na bomba de combustível"}, nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("informar diagnóstico: status %d, body %q", rec.Code, rec.Body.String())
+	}
+
 	var gerado httporcamento.OrcamentoResponse
-	rec := doRequest(t, http.MethodPost, osPath+"/orcamento", login.AccessToken, httporcamento.GerarOrcamentoRequest{}, &gerado)
+	rec = doRequest(t, http.MethodPost, osPath+"/orcamento", login.AccessToken, httporcamento.GerarOrcamentoRequest{}, &gerado)
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("gerar orçamento: status %d, body %q", rec.Code, rec.Body.String())
 	}
@@ -184,19 +196,6 @@ func TestOrcamento_Finalizar_TransicionaOSEEnviaEmailAoCliente(t *testing.T) {
 		httporcamento.AdicionarServicoOrcamentoRequest{ServicoID: servico.ID, Quantidade: 2}, &comServico)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("adicionar item de serviço: status %d, body %q", rec.Code, rec.Body.String())
-	}
-
-	// A OS precisa estar EM_DIAGNOSTICO com diagnóstico preenchido antes de
-	// finalizar o orçamento (mesma invariante de transição da OS).
-	rec = doRequest(t, http.MethodPatch, "/v1/ordens-servico/"+strconv.FormatUint(ordemServicoID, 10)+"/iniciar-diagnostico",
-		login.AccessToken, nil, nil)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("iniciar diagnóstico: status %d, body %q", rec.Code, rec.Body.String())
-	}
-	rec = doRequest(t, http.MethodPut, "/v1/ordens-servico/"+strconv.FormatUint(ordemServicoID, 10)+"/diagnostico",
-		login.AccessToken, httpordemservico.InformarDiagnosticoRequest{Diagnostico: "Falha na bomba de combustível"}, nil)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("informar diagnóstico: status %d, body %q", rec.Code, rec.Body.String())
 	}
 
 	var finalizado httporcamento.OrcamentoResponse
