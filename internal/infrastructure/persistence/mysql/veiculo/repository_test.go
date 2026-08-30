@@ -3,6 +3,7 @@ package veiculo
 import (
 	"context"
 	"errors"
+	"regexp"
 	"testing"
 	"time"
 
@@ -250,8 +251,8 @@ func TestRepositoryListarRetornaPagina(t *testing.T) {
 
 	require.Len(t, page.Items, 1)
 	require.Equal(t, int64(1), page.Total)
-	require.Equal(t, 0, page.Offset)
-	require.Equal(t, 20, page.Limit)
+	require.Equal(t, 1, page.Page)
+	require.Equal(t, 20, page.PageSize)
 	require.Equal(t, "id", page.Order)
 	require.Equal(t, domainquery.DirectionASC, page.Direction)
 
@@ -309,8 +310,8 @@ func TestRepositoryListarVazioRetornaPaginaVazia(t *testing.T) {
 	require.Empty(t, page.Items)
 
 	require.Equal(t, int64(0), page.Total)
-	require.Equal(t, 0, page.Offset)
-	require.Equal(t, 20, page.Limit)
+	require.Equal(t, 1, page.Page)
+	require.Equal(t, 20, page.PageSize)
 	require.Equal(t, "id", page.Order)
 	require.Equal(t, domainquery.DirectionASC, page.Direction)
 
@@ -322,24 +323,23 @@ func TestRepositoryListarAplicaPaginacaoEOrdenacao(t *testing.T) {
 	repository := NewRepository(db)
 
 	params := domainquery.Params{
-		Offset:    5,
-		Limit:     5,
+		Page:      2,
 		Order:     "ano",
 		Direction: domainquery.DirectionDESC,
 	}
 
 	mock.
-		ExpectQuery("SELECT count\\(\\*\\) FROM `veiculos`").
+		ExpectQuery(regexp.QuoteMeta("SELECT count(*) FROM `veiculos`")).
 		WillReturnRows(
-			sqlmock.NewRows([]string{"count"}).
-				AddRow(10),
+			sqlmock.NewRows([]string{"count(*)"}).
+				AddRow(50),
 		)
 
 	mock.
 		ExpectQuery(
 			"SELECT .* FROM `veiculos` ORDER BY ano DESC LIMIT \\? OFFSET \\?",
 		).
-		WithArgs(5, 5).
+		WithArgs(20, 20).
 		WillReturnRows(veiculoRows())
 
 	page, err := repository.Listar(
@@ -350,9 +350,10 @@ func TestRepositoryListarAplicaPaginacaoEOrdenacao(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, page.Items, 1)
-	require.Equal(t, int64(10), page.Total)
-	require.Equal(t, 5, page.Offset)
-	require.Equal(t, 5, page.Limit)
+	require.Equal(t, int64(50), page.Total)
+	require.Equal(t, 2, page.Page)
+	require.Equal(t, 20, page.PageSize)
+	require.Equal(t, 3, page.TotalPages)
 	require.Equal(t, "ano", page.Order)
 	require.Equal(t, domainquery.DirectionDESC, page.Direction)
 
@@ -595,7 +596,7 @@ func TestRepositoryListarLimitMaiorQueMaximoRetornaErro(t *testing.T) {
 	page, err := repository.Listar(
 		context.Background(),
 		domainquery.Params{
-			Limit: 101,
+			Page: -1,
 		},
 	)
 

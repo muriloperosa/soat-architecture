@@ -38,8 +38,7 @@ func TestClienteListagem_PaginaOrdenaEFiltra(t *testing.T) {
 	}
 
 	values := url.Values{}
-	values.Set("offset", "1")
-	values.Set("limit", "1")
+	values.Set("page", "1")
 	values.Set("order", "nome")
 	values.Set("direction", "DESC")
 	values.Set("nome", "Maria")
@@ -58,13 +57,14 @@ func TestClienteListagem_PaginaOrdenaEFiltra(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("listagem falhou: status %d, body %q", rec.Code, rec.Body.String())
 	}
-	if response.Total != 2 || len(response.Items) != 1 {
+	if response.Total != 2 || len(response.Items) != 2 {
 		t.Fatalf("paginação inesperada: %+v", response)
 	}
-	if response.Items[0].Nome != "Maria Alves" {
-		t.Fatalf("ordenação/offset inesperados: %+v", response.Items)
+	if response.Items[0].Nome != "Maria Souza" || response.Items[1].Nome != "Maria Alves" {
+		t.Fatalf("ordenação inesperada: %+v", response.Items)
 	}
-	if response.Offset != 1 || response.Limit != 1 || response.Order != "nome" || response.Direction != "DESC" {
+	if response.Page != 1 || response.PageSize != 20 || response.TotalPages != 1 ||
+		response.Order != "nome" || response.Direction != "DESC" {
 		t.Fatalf("metadados inesperados: %+v", response)
 	}
 }

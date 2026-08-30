@@ -290,20 +290,11 @@ const docTemplate = `{
                 "summary": "Lista clientes",
                 "parameters": [
                     {
-                        "minimum": 0,
-                        "type": "integer",
-                        "default": 0,
-                        "description": "Quantidade de registros ignorados",
-                        "name": "offset",
-                        "in": "query"
-                    },
-                    {
-                        "maximum": 100,
                         "minimum": 1,
                         "type": "integer",
-                        "default": 20,
-                        "description": "Quantidade de registros retornados",
-                        "name": "limit",
+                        "default": 1,
+                        "description": "Número da página",
+                        "name": "page",
                         "in": "query"
                     },
                     {
@@ -1235,20 +1226,11 @@ const docTemplate = `{
                 "summary": "Lista peças",
                 "parameters": [
                     {
-                        "minimum": 0,
-                        "type": "integer",
-                        "default": 0,
-                        "description": "Quantidade de registros a ignorar",
-                        "name": "offset",
-                        "in": "query"
-                    },
-                    {
-                        "maximum": 100,
                         "minimum": 1,
                         "type": "integer",
-                        "default": 20,
-                        "description": "Quantidade máxima de registros",
-                        "name": "limit",
+                        "default": 1,
+                        "description": "Número da página",
+                        "name": "page",
                         "in": "query"
                     },
                     {
@@ -1841,20 +1823,11 @@ const docTemplate = `{
                 "summary": "Lista serviços",
                 "parameters": [
                     {
-                        "minimum": 0,
-                        "type": "integer",
-                        "default": 0,
-                        "description": "Quantidade de registros ignorados",
-                        "name": "offset",
-                        "in": "query"
-                    },
-                    {
-                        "maximum": 100,
                         "minimum": 1,
                         "type": "integer",
-                        "default": 20,
-                        "description": "Quantidade de registros retornados",
-                        "name": "limit",
+                        "default": 1,
+                        "description": "Número da página",
+                        "name": "page",
                         "in": "query"
                     },
                     {
@@ -2617,20 +2590,11 @@ const docTemplate = `{
                 "summary": "Lista veículos",
                 "parameters": [
                     {
-                        "minimum": 0,
-                        "type": "integer",
-                        "default": 0,
-                        "description": "Quantidade de registros ignorados",
-                        "name": "offset",
-                        "in": "query"
-                    },
-                    {
-                        "maximum": 100,
                         "minimum": 1,
                         "type": "integer",
-                        "default": 20,
-                        "description": "Quantidade de registros retornados",
-                        "name": "limit",
+                        "default": 1,
+                        "description": "Número da página",
+                        "name": "page",
                         "in": "query"
                     },
                     {
@@ -3324,21 +3288,25 @@ const docTemplate = `{
                         "$ref": "#/definitions/cliente.ClienteResponse"
                     }
                 },
-                "limit": {
-                    "type": "integer",
-                    "example": 20
-                },
-                "offset": {
-                    "type": "integer",
-                    "example": 0
-                },
                 "order": {
                     "type": "string",
                     "example": "nome"
                 },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "page_size": {
+                    "type": "integer",
+                    "example": 20
+                },
                 "total": {
                     "type": "integer",
                     "example": 42
+                },
+                "total_pages": {
+                    "type": "integer",
+                    "example": 3
                 }
             }
         },
@@ -3520,21 +3488,25 @@ const docTemplate = `{
                         "$ref": "#/definitions/peca.PecaResponse"
                     }
                 },
-                "limit": {
-                    "type": "integer",
-                    "example": 20
-                },
-                "offset": {
-                    "type": "integer",
-                    "example": 0
-                },
                 "order": {
                     "type": "string",
                     "example": "nome"
                 },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "page_size": {
+                    "type": "integer",
+                    "example": 20
+                },
                 "total": {
                     "type": "integer",
                     "example": 42
+                },
+                "total_pages": {
+                    "type": "integer",
+                    "example": 3
                 }
             }
         },
@@ -3687,21 +3659,25 @@ const docTemplate = `{
                         "$ref": "#/definitions/servico.ServicoResponse"
                     }
                 },
-                "limit": {
-                    "type": "integer",
-                    "example": 20
-                },
-                "offset": {
-                    "type": "integer",
-                    "example": 0
-                },
                 "order": {
                     "type": "string",
                     "example": "nome"
                 },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "page_size": {
+                    "type": "integer",
+                    "example": 20
+                },
                 "total": {
                     "type": "integer",
                     "example": 42
+                },
+                "total_pages": {
+                    "type": "integer",
+                    "example": 3
                 }
             }
         },
@@ -3922,21 +3898,25 @@ const docTemplate = `{
                         "$ref": "#/definitions/veiculo.VeiculoResponse"
                     }
                 },
-                "limit": {
-                    "type": "integer",
-                    "example": 20
-                },
-                "offset": {
-                    "type": "integer",
-                    "example": 0
-                },
                 "order": {
                     "type": "string",
                     "example": "id"
                 },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "page_size": {
+                    "type": "integer",
+                    "example": 20
+                },
                 "total": {
                     "type": "integer",
                     "example": 42
+                },
+                "total_pages": {
+                    "type": "integer",
+                    "example": 3
                 }
             }
         },

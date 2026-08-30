@@ -784,11 +784,12 @@ func TestHandler_Listar_ComSucesso_Retorna200(t *testing.T) {
 				Items: []*domainveiculo.Veiculo{
 					veiculoExistente(t),
 				},
-				Total:     1,
-				Offset:    0,
-				Limit:     20,
-				Order:     "id",
-				Direction: query.DirectionASC,
+				Total:      1,
+				Page:       1,
+				PageSize:   20,
+				TotalPages: 1,
+				Order:      "id",
+				Direction:  query.DirectionASC,
 			},
 			nil,
 		)
@@ -825,8 +826,9 @@ func TestHandler_Listar_ComSucesso_Retorna200(t *testing.T) {
 
 	require.Len(t, resp.Items, 1)
 	require.Equal(t, int64(1), resp.Total)
-	require.Equal(t, 0, resp.Offset)
-	require.Equal(t, 20, resp.Limit)
+	require.Equal(t, 1, resp.Page)
+	require.Equal(t, 20, resp.PageSize)
+	require.Equal(t, 1, resp.TotalPages)
 	require.Equal(t, "id", resp.Order)
 	require.Equal(t, "ASC", resp.Direction)
 
@@ -846,12 +848,13 @@ func TestHandler_Listar_ListaVazia_Retorna200(t *testing.T) {
 		Listar(mock.Anything, mock.AnythingOfType("query.Params")).
 		Return(
 			query.Page[*domainveiculo.Veiculo]{
-				Items:     []*domainveiculo.Veiculo{},
-				Total:     0,
-				Offset:    0,
-				Limit:     20,
-				Order:     "id",
-				Direction: query.DirectionASC,
+				Items:      []*domainveiculo.Veiculo{},
+				Total:      0,
+				Page:       1,
+				PageSize:   20,
+				TotalPages: 0,
+				Order:      "id",
+				Direction:  query.DirectionASC,
 			},
 			nil,
 		)
@@ -889,7 +892,9 @@ func TestHandler_Listar_ListaVazia_Retorna200(t *testing.T) {
 	require.NotNil(t, resp.Items)
 	require.Empty(t, resp.Items)
 	require.Equal(t, int64(0), resp.Total)
-	require.Equal(t, 20, resp.Limit)
+	require.Equal(t, 1, resp.Page)
+	require.Equal(t, 20, resp.PageSize)
+	require.Zero(t, resp.TotalPages)
 }
 
 func TestHandler_Listar_ComPaginacaoEOrdenacao_Retorna200(t *testing.T) {
@@ -902,20 +907,20 @@ func TestHandler_Listar_ComPaginacaoEOrdenacao_Retorna200(t *testing.T) {
 		Listar(
 			mock.Anything,
 			mock.MatchedBy(func(params query.Params) bool {
-				return params.Offset == 10 &&
-					params.Limit == 5 &&
+				return params.Page == 2 &&
 					params.Order == "ano" &&
 					params.Direction == query.DirectionDESC
 			}),
 		).
 		Return(
 			query.Page[*domainveiculo.Veiculo]{
-				Items:     []*domainveiculo.Veiculo{},
-				Total:     25,
-				Offset:    10,
-				Limit:     5,
-				Order:     "ano",
-				Direction: query.DirectionDESC,
+				Items:      []*domainveiculo.Veiculo{},
+				Total:      25,
+				Page:       2,
+				PageSize:   20,
+				TotalPages: 2,
+				Order:      "ano",
+				Direction:  query.DirectionDESC,
 			},
 			nil,
 		)
@@ -936,7 +941,7 @@ func TestHandler_Listar_ComPaginacaoEOrdenacao_Retorna200(t *testing.T) {
 
 	req := httptest.NewRequest(
 		http.MethodGet,
-		"/v1/veiculos?offset=10&limit=5&order=ano&direction=DESC",
+		"/v1/veiculos?page=2&order=ano&direction=DESC",
 		nil,
 	)
 
@@ -951,8 +956,9 @@ func TestHandler_Listar_ComPaginacaoEOrdenacao_Retorna200(t *testing.T) {
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 
 	require.Equal(t, int64(25), resp.Total)
-	require.Equal(t, 10, resp.Offset)
-	require.Equal(t, 5, resp.Limit)
+	require.Equal(t, 2, resp.Page)
+	require.Equal(t, 20, resp.PageSize)
+	require.Equal(t, 2, resp.TotalPages)
 	require.Equal(t, "ano", resp.Order)
 	require.Equal(t, "DESC", resp.Direction)
 }
@@ -976,11 +982,12 @@ func TestHandler_Listar_ComFiltros_Retorna200(t *testing.T) {
 				Items: []*domainveiculo.Veiculo{
 					veiculoExistente(t),
 				},
-				Total:     1,
-				Offset:    0,
-				Limit:     20,
-				Order:     "id",
-				Direction: query.DirectionASC,
+				Total:      1,
+				Page:       1,
+				PageSize:   20,
+				TotalPages: 1,
+				Order:      "id",
+				Direction:  query.DirectionASC,
 			},
 			nil,
 		)
@@ -1078,7 +1085,7 @@ func TestHandler_Listar_QueryInvalida_Retorna400(t *testing.T) {
 
 	req := httptest.NewRequest(
 		http.MethodGet,
-		"/v1/veiculos?limit=abc",
+		"/v1/veiculos?page=abc",
 		nil,
 	)
 

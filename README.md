@@ -242,31 +242,32 @@ http://localhost:8080/swagger/index.html
 
 ## Paginação, ordenação e filtros
 
-A primeira rota que utiliza a consulta paginada é a listagem de clientes:
+As rotas de listagem de `clientes`, `veiculos`, `servicos` e `pecas` utilizam a mesma infraestrutura de consultas para paginação, ordenação e filtros.
+
+Exemplo com clientes:
 
 ```http
 GET /v1/clientes
 Authorization: Bearer <access_token>
 ```
 
-A rota é protegida e aceita somente usuários internos autenticados. Os parâmetros são enviados pela query string:
+A paginação é baseada em número de página. O tamanho da página é definido internamente pela aplicação e atualmente é fixo em **20 registros**; portanto, `limit` e `offset` não fazem parte da API pública.
 
 | Parâmetro | Descrição | Padrão | Regra |
 |---|---|---|---|
-| `offset` | Quantidade de registros ignorados antes do primeiro resultado | `0` | Deve ser maior ou igual a zero |
-| `limit` | Quantidade máxima de registros retornados | `20` | Deve estar entre 1 e 100 |
-| `order` | Campo usado na ordenação | `id` | Precisa ser um campo autorizado |
+| `page` | Número da página solicitada | `1` | Deve ser maior ou igual a 1 |
+| `order` | Campo usado na ordenação | `id` | Precisa ser um campo autorizado pela listagem |
 | `direction` | Direção da ordenação | `ASC` | Aceita `ASC` ou `DESC` |
 
-O `offset` representa uma quantidade de registros, não o número da página. Para calcular o offset a partir de uma página:
+Internamente, o offset usado pelo banco é calculado a partir da página e do tamanho fixo:
 
 ```text
-offset = (pagina - 1) * limit
+offset = (page - 1) * page_size
 ```
 
-Por exemplo, usando `limit=20`:
+Com `page_size = 20`:
 
-| Página | Offset |
+| Página | Offset interno |
 |---|---|
 | 1 | `0` |
 | 2 | `20` |
@@ -274,19 +275,19 @@ Por exemplo, usando `limit=20`:
 
 ### Exemplos de paginação e ordenação
 
-Primeira página, com 10 clientes ordenados pelo nome:
+Primeira página ordenada pelo nome:
 
 ```bash
-curl "http://localhost:8080/v1/clientes?offset=0&limit=10&order=nome&direction=ASC" -H "Authorization: Bearer $TOKEN"
+curl "http://localhost:8080/v1/clientes?page=1&order=nome&direction=ASC" -H "Authorization: Bearer $TOKEN"
 ```
 
 Segunda página da mesma consulta:
 
 ```bash
-curl "http://localhost:8080/v1/clientes?offset=10&limit=10&order=nome&direction=ASC" -H "Authorization: Bearer $TOKEN"
+curl "http://localhost:8080/v1/clientes?page=2&order=nome&direction=ASC" -H "Authorization: Bearer $TOKEN"
 ```
 
-A resposta contém os itens da página e o total encontrado antes da aplicação de `offset` e `limit`:
+A resposta contém os itens da página e os metadados necessários para navegação:
 
 ```json
 {
@@ -304,18 +305,19 @@ A resposta contém os itens da página e o total encontrado antes da aplicação
     }
   ],
   "total": 42,
-  "offset": 0,
-  "limit": 10,
+  "page": 1,
+  "page_size": 20,
+  "total_pages": 3,
   "order": "nome",
   "direction": "ASC"
 }
 ```
 
-Nesse exemplo existem 42 clientes que atendem aos filtros, mas somente os primeiros 10 foram retornados.
+Nesse exemplo existem 42 clientes que atendem aos filtros. Com 20 registros por página, a consulta possui 3 páginas no total.
 
 ### Filtros diretos por campo
 
-Não é necessário informar um operador. Qualquer parâmetro diferente de `offset`, `limit`, `order` e `direction` é interpretado como um filtro:
+Não é necessário informar um operador. Qualquer parâmetro diferente de `page`, `order` e `direction` é interpretado como filtro:
 
 ```text
 campo=valor
@@ -326,7 +328,7 @@ O tipo configurado para o campo define automaticamente como o filtro será aplic
 | Tipo | Um valor | Vários valores separados por vírgula |
 |---|---|---|
 | Texto | `LIKE %valor%` | `IN` |
-| Número inteiro | Igualdade | `IN` |
+| Número | Igualdade | `IN` |
 | Booleano | Igualdade | Não permitido |
 | Data | Todo o dia ou instante exato | Intervalo entre duas datas |
 
@@ -361,22 +363,59 @@ curl "http://localhost:8080/v1/clientes?data_cadastro=2026-08-20,2026-08-22" -H 
 
 Também é aceito um instante completo em RFC 3339, como `2026-08-20T10:30:00-03:00`.
 
-Campos disponíveis na listagem:
+### Campos disponíveis por recurso
+
+Cada recurso declara explicitamente os campos que podem ser filtrados e ordenados. Campos não declarados não são convertidos em SQL.
+
+**Clientes**
 
 | Tipo | Campos |
 |---|---|
-| Número inteiro | `id`, `criado_por` |
+| Número | `id`, `criado_por` |
 | Texto | `documento`, `tipo`, `nome`, `email`, `telefone` |
-| Booleano | `ativo`, `requer_alterar_senha` |
-| Data | `data_cadastro`, `data_atualizacao` |
+| Booleano | `ativo` |
+| Data | `data_cadastro` |
 
-Todos esses campos também podem ser usados em `order`. Um exemplo completo:
+**Veículos**
+
+| Tipo | Campos |
+|---|---|
+| Número | `id`, `quilometragem_atual`, `ano`, `criado_por` |
+| Texto | `placa`, `marca`, `modelo`, `cor` |
+| Booleano | `ativo` |
+| Data | `data_cadastro` |
+
+**Serviços**
+
+| Tipo | Campos |
+|---|---|
+| Número | `id`, `preco_base`, `tempo_estimado_minutos`, `criado_por` |
+| Texto | `nome`, `descricao` |
+| Booleano | `ativo` |
+| Data | `data_cadastro` |
+
+**Peças**
+
+| Tipo | Campos |
+|---|---|
+| Número | `id`, `preco`, `quantidade_em_estoque`, `estoque_minimo`, `criado_por` |
+| Texto | `codigo`, `nome`, `marca`, `descricao` |
+| Booleano | `ativo` |
+| Data | `data_cadastro` |
+
+Exemplo combinando paginação, ordenação e filtros:
 
 ```bash
-curl "http://localhost:8080/v1/clientes?offset=0&limit=5&order=data_cadastro&direction=DESC&nome=caio&ativo=true" -H "Authorization: Bearer $TOKEN"
+curl "http://localhost:8080/v1/clientes?page=2&order=data_cadastro&direction=DESC&nome=caio&ativo=true" -H "Authorization: Bearer $TOKEN"
 ```
 
-Campos ou valores inválidos retornam `400 Bad Request`. Apenas campos previamente autorizados na configuração chegam ao GORM, e todos os valores são enviados como parâmetros da consulta.
+Campos, operadores ou valores inválidos retornam `400 Bad Request`. Apenas campos previamente autorizados na configuração chegam ao GORM, e os valores dos filtros são enviados como parâmetros da consulta.
+
+### Configuração compartilhada das consultas MySQL
+
+A infraestrutura genérica de consultas fica em `internal/infrastructure/persistence/mysql/query`. Ela concentra o `Builder`, os operadores comuns e os padrões compartilhados, como `page_size = 20` e direção `ASC`.
+
+Cada módulo mantém apenas a configuração específica dos campos públicos da sua consulta e cria o builder através de `mysqlquery.NewDefaultBuilder(...)`. Dessa forma, regras comuns de paginação e operadores não são duplicadas entre `cliente`, `veiculo`, `servico` e `peca`.
 
 ## Erros de domínio
 

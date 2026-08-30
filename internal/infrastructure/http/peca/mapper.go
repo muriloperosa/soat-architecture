@@ -2,7 +2,8 @@ package peca
 
 import (
 	apppeca "github.com/muriloperosa/soat-architecture/internal/application/peca"
-	"github.com/muriloperosa/soat-architecture/internal/domain/query"
+	appquery "github.com/muriloperosa/soat-architecture/internal/application/query"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httpquery"
 )
 
 // toCadastrarInput converte o DTO HTTP de cadastro pro DTO de entrada do
@@ -36,7 +37,10 @@ func toAtualizarInput(id uint64, req AtualizarPecaRequest) apppeca.AtualizarPeca
 // toReporEstoqueInput converte o DTO HTTP de reposição pro DTO de entrada do
 // ReporEstoqueUseCase. id vem do path param, não do corpo da requisição.
 func toReporEstoqueInput(id uint64, req ReporEstoqueRequest) apppeca.ReporEstoqueInput {
-	return apppeca.ReporEstoqueInput{PecaID: id, Quantidade: req.Quantidade}
+	return apppeca.ReporEstoqueInput{
+		PecaID:     id,
+		Quantidade: req.Quantidade,
+	}
 }
 
 // toPecaResponse converte o DTO de saída dos use cases de gestão/consulta
@@ -56,19 +60,45 @@ func toPecaResponse(out apppeca.PecaOutput) PecaResponse {
 	}
 }
 
-func toListResponse(page query.Page[apppeca.PecaOutput]) ListarPecasResponse {
-	items := make([]PecaResponse, 0, len(page.Items))
+func toListarInput(params httpquery.Params) apppeca.ListarPecasInput {
+	var filters []appquery.FilterInput
 
-	for _, item := range page.Items {
+	if len(params.Filters) > 0 {
+		filters = make([]appquery.FilterInput, 0, len(params.Filters))
+
+		for _, filter := range params.Filters {
+			filters = append(filters, appquery.FilterInput{
+				Field:    filter.Field,
+				Operator: filter.Operator,
+				Value:    filter.Value,
+			})
+		}
+	}
+
+	return apppeca.ListarPecasInput{
+		ParamsInput: appquery.ParamsInput{
+			Page:      params.Page,
+			Order:     params.Order,
+			Direction: params.Direction,
+			Filters:   filters,
+		},
+	}
+}
+
+func toListResponse(output apppeca.ListarPecasOutput) ListarPecasResponse {
+	items := make([]PecaResponse, 0, len(output.Items))
+
+	for _, item := range output.Items {
 		items = append(items, toPecaResponse(item))
 	}
 
 	return ListarPecasResponse{
-		Items:     items,
-		Total:     page.Total,
-		Offset:    page.Offset,
-		Limit:     page.Limit,
-		Order:     page.Order,
-		Direction: string(page.Direction),
+		Items:      items,
+		Total:      output.Total,
+		Page:       output.Page,
+		PageSize:   output.PageSize,
+		TotalPages: output.TotalPages,
+		Order:      output.Order,
+		Direction:  output.Direction,
 	}
 }

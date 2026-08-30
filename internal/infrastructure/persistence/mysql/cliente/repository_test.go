@@ -93,8 +93,7 @@ func TestRepositoryListarComPaginacaoOrdenacaoEFiltros(t *testing.T) {
 	db, mock := newRepositoryTestDB(t)
 	repository := NewRepository(db)
 	params := query.Params{
-		Offset:    1,
-		Limit:     1,
+		Page:      2,
 		Order:     "nome",
 		Direction: query.DirectionDESC,
 		Filters: []query.Filter{
@@ -114,8 +113,8 @@ func TestRepositoryListarComPaginacaoOrdenacaoEFiltros(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, page.Items, 1)
 	require.Equal(t, int64(2), page.Total)
-	require.Equal(t, 1, page.Offset)
-	require.Equal(t, 1, page.Limit)
+	require.Equal(t, 2, page.Page)
+	require.Equal(t, 20, page.PageSize)
 	require.Equal(t, "nome", page.Order)
 	require.Equal(t, query.DirectionDESC, page.Direction)
 	require.Equal(t, uint64(7), page.Items[0].CriadoPor())
@@ -134,7 +133,7 @@ func TestRepositoryListarUsaPadroes(t *testing.T) {
 	page, err := repository.Listar(context.Background(), query.Params{})
 
 	require.NoError(t, err)
-	require.Equal(t, 20, page.Limit)
+	require.Equal(t, 20, page.PageSize)
 	require.Equal(t, "id", page.Order)
 	require.Equal(t, query.DirectionASC, page.Direction)
 	require.NoError(t, mock.ExpectationsWereMet())

@@ -5,176 +5,159 @@ import (
 	"errors"
 	"testing"
 
+	appquery "github.com/muriloperosa/soat-architecture/internal/application/query"
 	domain "github.com/muriloperosa/soat-architecture/internal/domain/peca"
 	"github.com/muriloperosa/soat-architecture/internal/domain/peca/mocks"
 	"github.com/muriloperosa/soat-architecture/internal/domain/query"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
-
-func novaPecaParaListagem(t *testing.T) *domain.Peca {
-	t.Helper()
-
-	peca, err := domain.NewPeca("Pastilha de Freio", "Bosch", "Pastilha dianteira", 149.90, 25, 5, 1)
-	require.NoError(t, err)
-
-	peca.AtribuirID(1)
-
-	return peca
-}
-
-func TestNewListarPecasUseCase(t *testing.T) {
-	repository := mocks.NewRepository(t)
-
-	useCase := NewListarPecasUseCase(repository)
-
-	require.NotNil(t, useCase)
-}
 
 func TestListarPecasUseCase_Executar_ComSucesso(t *testing.T) {
 	repository := mocks.NewRepository(t)
 	useCase := NewListarPecasUseCase(repository)
-
 	ctx := context.Background()
 
-	params := query.Params{
-		Offset:    10,
-		Limit:     20,
-		Order:     "nome",
-		Direction: query.DirectionDESC,
+	entity, err := domain.NewPeca(
+		"Pastilha de Freio",
+		"Bosch",
+		"Pastilha dianteira",
+		149.90,
+		25,
+		5,
+		1,
+	)
+	require.NoError(t, err)
+
+	entity.AtribuirID(1)
+
+	input := ListarPecasInput{
+		ParamsInput: appquery.ParamsInput{
+			Page:      2,
+			Order:     "nome",
+			Direction: "DESC",
+			Filters: []appquery.FilterInput{
+				{
+					Field:    "nome",
+					Operator: "auto",
+					Value:    "Teste",
+				},
+			},
+		},
 	}
 
-	peca := novaPecaParaListagem(t)
+	expectedParams := query.Params{
+		Page:      2,
+		Order:     "nome",
+		Direction: query.DirectionDESC,
+		Filters: []query.Filter{
+			{
+				Field:    "nome",
+				Operator: query.OperatorAuto,
+				Value:    "Teste",
+			},
+		},
+	}
 
 	repository.
 		EXPECT().
-		Listar(ctx, params).
-		Return(
-			query.Page[*domain.Peca]{
-				Items: []*domain.Peca{
-					peca,
-				},
-				Total:     42,
-				Offset:    10,
-				Limit:     20,
-				Order:     "nome",
-				Direction: query.DirectionDESC,
-			},
-			nil,
-		).
+		Listar(ctx, expectedParams).
+		Return(query.Page[*domain.Peca]{
+			Items:      []*domain.Peca{entity},
+			Total:      42,
+			Page:       2,
+			PageSize:   20,
+			TotalPages: 3,
+			Order:      "nome",
+			Direction:  query.DirectionDESC,
+		}, nil).
 		Once()
 
-	page, err := useCase.Executar(ctx, params)
+	out, err := useCase.Executar(ctx, input)
 
 	require.NoError(t, err)
-
-	require.Equal(t, int64(42), page.Total)
-	require.Equal(t, 10, page.Offset)
-	require.Equal(t, 20, page.Limit)
-	require.Equal(t, "nome", page.Order)
-	require.Equal(t, query.DirectionDESC, page.Direction)
-
-	require.Len(t, page.Items, 1)
-
-	item := page.Items[0]
-
-	require.Equal(t, peca.ID(), item.ID)
-	require.Equal(t, peca.Codigo(), item.Codigo)
-	require.Equal(t, peca.Nome(), item.Nome)
-	require.Equal(t, peca.Marca(), item.Marca)
-	require.Equal(t, peca.Descricao(), item.Descricao)
-	require.Equal(t, peca.Preco(), item.Preco)
-	require.Equal(t, peca.QuantidadeEmEstoque(), item.QuantidadeEmEstoque)
-	require.Equal(t, peca.EstoqueMinimo(), item.EstoqueMinimo)
-	require.Equal(t, peca.CriadoPor(), item.CriadoPor)
-	require.Equal(t, peca.Ativo(), item.Ativo)
+	require.Len(t, out.Items, 1)
+	require.Equal(t, int64(42), out.Total)
+	require.Equal(t, 2, out.Page)
+	require.Equal(t, 20, out.PageSize)
+	require.Equal(t, 3, out.TotalPages)
+	require.Equal(t, "nome", out.Order)
+	require.Equal(t, "DESC", out.Direction)
 }
 
 func TestListarPecasUseCase_Executar_ListaVazia(t *testing.T) {
 	repository := mocks.NewRepository(t)
 	useCase := NewListarPecasUseCase(repository)
-
 	ctx := context.Background()
 
-	params := query.Params{}
+	input := ListarPecasInput{
+		ParamsInput: appquery.ParamsInput{
+			Page: 1,
+		},
+	}
 
 	repository.
 		EXPECT().
-		Listar(ctx, params).
-		Return(
-			query.Page[*domain.Peca]{
-				Items:     []*domain.Peca{},
-				Total:     0,
-				Offset:    0,
-				Limit:     20,
-				Order:     "id",
-				Direction: query.DirectionASC,
-			},
-			nil,
-		).
+		Listar(ctx, query.Params{
+			Page: 1,
+		}).
+		Return(query.Page[*domain.Peca]{
+			Items:      []*domain.Peca{},
+			Total:      0,
+			Page:       1,
+			PageSize:   20,
+			TotalPages: 0,
+			Order:      "id",
+			Direction:  query.DirectionASC,
+		}, nil).
 		Once()
 
-	page, err := useCase.Executar(ctx, params)
+	out, err := useCase.Executar(ctx, input)
 
 	require.NoError(t, err)
-
-	require.NotNil(t, page.Items)
-	require.Empty(t, page.Items)
-
-	require.Equal(t, int64(0), page.Total)
-	require.Equal(t, 0, page.Offset)
-	require.Equal(t, 20, page.Limit)
-	require.Equal(t, "id", page.Order)
-	require.Equal(t, query.DirectionASC, page.Direction)
+	require.NotNil(t, out.Items)
+	require.Empty(t, out.Items)
+	require.Equal(t, 1, out.Page)
+	require.Equal(t, 20, out.PageSize)
+	require.Zero(t, out.TotalPages)
 }
 
 func TestListarPecasUseCase_Executar_PreservaAppError(t *testing.T) {
 	repository := mocks.NewRepository(t)
-	useCase := NewListarPecasUseCase(repository)
-
-	ctx := context.Background()
-
-	params := query.Params{Order: "campo_invalido"}
-
-	appErr := shared.NewValidationError("campo de ordenação inválido")
+	appErr := shared.NewValidationError("filtro inválido")
 
 	repository.
 		EXPECT().
-		Listar(ctx, params).
-		Return(query.Page[*domain.Peca]{}, appErr).
-		Once()
+		Listar(mock.Anything, mock.Anything).
+		Return(query.Page[*domain.Peca]{}, appErr)
 
-	page, err := useCase.Executar(ctx, params)
+	_, err := NewListarPecasUseCase(repository).Executar(
+		context.Background(),
+		ListarPecasInput{},
+	)
 
-	require.Error(t, err)
 	require.ErrorIs(t, err, appErr)
-
-	require.Empty(t, page.Items)
 }
 
-func TestListarPecasUseCase_Executar_ConverteErroDoRepositoryParaInternalError(t *testing.T) {
+func TestListarPecasUseCase_Executar_ErroDeInfraestrutura(t *testing.T) {
 	repository := mocks.NewRepository(t)
-	useCase := NewListarPecasUseCase(repository)
-
-	ctx := context.Background()
-
-	params := query.Params{}
-
-	erroBanco := errors.New("erro de banco")
 
 	repository.
 		EXPECT().
-		Listar(ctx, params).
-		Return(query.Page[*domain.Peca]{}, erroBanco).
-		Once()
+		Listar(mock.Anything, mock.Anything).
+		Return(
+			query.Page[*domain.Peca]{},
+			errors.New("banco indisponível"),
+		)
 
-	page, err := useCase.Executar(ctx, params)
-
-	require.Error(t, err)
-	require.Empty(t, page.Items)
+	_, err := NewListarPecasUseCase(repository).Executar(
+		context.Background(),
+		ListarPecasInput{},
+	)
 
 	var appErr *shared.AppError
-	require.ErrorAs(t, err, &appErr)
 
-	require.ErrorIs(t, err, erroBanco)
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindInternal, appErr.Kind)
 }

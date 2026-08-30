@@ -4,53 +4,47 @@ import (
 	"context"
 	"errors"
 
-	"github.com/muriloperosa/soat-architecture/internal/domain/query"
-	domainservico "github.com/muriloperosa/soat-architecture/internal/domain/servico"
+	appquery "github.com/muriloperosa/soat-architecture/internal/application/query"
+
+	domain "github.com/muriloperosa/soat-architecture/internal/domain/servico"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 )
 
-// ListarServicosUseCase devolve os serviços aplicando paginação,
-// ordenação e filtros suportados pelo repositório.
 type ListarServicosUseCase struct {
-	repo domainservico.ServicoRepository
+	repository domain.ServicoRepository
 }
 
-func NewListarServicosUseCase(
-	repo domainservico.ServicoRepository,
-) *ListarServicosUseCase {
-	return &ListarServicosUseCase{
-		repo: repo,
-	}
+func NewListarServicosUseCase(repository domain.ServicoRepository) *ListarServicosUseCase {
+	return &ListarServicosUseCase{repository: repository}
 }
 
 func (uc *ListarServicosUseCase) Executar(
 	ctx context.Context,
-	params query.Params,
-) (query.Page[ServicoOutput], error) {
-	page, err := uc.repo.Listar(ctx, params)
+	input ListarServicosInput,
+) (ListarServicosOutput, error) {
+	params := appquery.ToDomainParams(input.ParamsInput)
+
+	page, err := uc.repository.Listar(ctx, params)
 	if err != nil {
 		var appErr *shared.AppError
-
 		if errors.As(err, &appErr) {
-			return query.Page[ServicoOutput]{}, err
+			return ListarServicosOutput{}, err
 		}
-
-		return query.Page[ServicoOutput]{},
-			shared.NewInternalError("erro ao listar serviços", err)
+		return ListarServicosOutput{}, shared.NewInternalError("erro ao listar serviços", err)
 	}
 
 	items := make([]ServicoOutput, 0, len(page.Items))
-
-	for _, servico := range page.Items {
-		items = append(items, toOutput(servico))
+	for _, entity := range page.Items {
+		items = append(items, toOutput(entity))
 	}
 
-	return query.Page[ServicoOutput]{
-		Items:     items,
-		Total:     page.Total,
-		Offset:    page.Offset,
-		Limit:     page.Limit,
-		Order:     page.Order,
-		Direction: page.Direction,
+	return ListarServicosOutput{
+		Items:      items,
+		Total:      page.Total,
+		Page:       page.Page,
+		PageSize:   page.PageSize,
+		TotalPages: page.TotalPages,
+		Order:      page.Order,
+		Direction:  string(page.Direction),
 	}, nil
 }

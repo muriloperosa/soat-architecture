@@ -2,7 +2,8 @@ package cliente
 
 import (
 	app "github.com/muriloperosa/soat-architecture/internal/application/cliente"
-	"github.com/muriloperosa/soat-architecture/internal/domain/query"
+	appquery "github.com/muriloperosa/soat-architecture/internal/application/query"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httpquery"
 )
 
 func toCriarInput(criadoPor uint64, req CriarClienteRequest) app.CriarClienteInput {
@@ -47,18 +48,45 @@ func toResponse(output app.ClienteOutput) ClienteResponse {
 	}
 }
 
-func toListResponse(output query.Page[app.ClienteOutput]) ListarClientesResponse {
+func toListarInput(params httpquery.Params) app.ListarClientesInput {
+	var filters []appquery.FilterInput
+
+	if len(params.Filters) > 0 {
+		filters = make([]appquery.FilterInput, 0, len(params.Filters))
+
+		for _, filter := range params.Filters {
+			filters = append(filters, appquery.FilterInput{
+				Field:    filter.Field,
+				Operator: filter.Operator,
+				Value:    filter.Value,
+			})
+		}
+	}
+
+	return app.ListarClientesInput{
+		ParamsInput: appquery.ParamsInput{
+			Page:      params.Page,
+			Order:     params.Order,
+			Direction: params.Direction,
+			Filters:   filters,
+		},
+	}
+}
+
+func toListResponse(output app.ListarClientesOutput) ListarClientesResponse {
 	items := make([]ClienteResponse, 0, len(output.Items))
-	for _, cliente := range output.Items {
-		items = append(items, toResponse(cliente))
+
+	for _, item := range output.Items {
+		items = append(items, toResponse(item))
 	}
 
 	return ListarClientesResponse{
-		Items:     items,
-		Total:     output.Total,
-		Offset:    output.Offset,
-		Limit:     output.Limit,
-		Order:     output.Order,
-		Direction: string(output.Direction),
+		Items:      items,
+		Total:      output.Total,
+		Page:       output.Page,
+		PageSize:   output.PageSize,
+		TotalPages: output.TotalPages,
+		Order:      output.Order,
+		Direction:  output.Direction,
 	}
 }

@@ -1,6 +1,9 @@
 package servico
 
-import domainservico "github.com/muriloperosa/soat-architecture/internal/domain/servico"
+import (
+	appquery "github.com/muriloperosa/soat-architecture/internal/application/query"
+	domainservico "github.com/muriloperosa/soat-architecture/internal/domain/servico"
+)
 
 // CriarServicoInput é o DTO de entrada do CriarServicoUseCase.
 type CriarServicoInput struct {
@@ -49,4 +52,20 @@ func toOutputList(servicos []*domainservico.Servico) []ServicoOutput {
 		out = append(out, toOutput(s))
 	}
 	return out
+}
+
+// ListarServicosInput é o contrato de entrada do caso de uso de listagem.
+type ListarServicosInput struct {
+	appquery.ParamsInput
+}
+
+// ListarServicosOutput é o contrato de saída do caso de uso de listagem.
+type ListarServicosOutput struct {
+	Items      []ServicoOutput
+	Total      int64
+	Page       int
+	PageSize   int
+	TotalPages int
+	Order      string
+	Direction  string
 }

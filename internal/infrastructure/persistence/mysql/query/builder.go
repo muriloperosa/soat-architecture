@@ -36,8 +36,7 @@ type Config struct {
 	Fields           map[string]Field
 	DefaultOrder     string
 	DefaultDirection domainquery.Direction
-	DefaultLimit     int
-	MaxLimit         int
+	PageSize         int
 }
 
 type Builder struct {
@@ -60,19 +59,11 @@ func NewBuilder(config Config) *Builder {
 // Normalize aplica os padrões e valida os parâmetros que não dependem do tipo
 // de cada filtro.
 func (b *Builder) Normalize(params domainquery.Params) (domainquery.Params, error) {
-	if params.Offset < 0 {
-		return domainquery.Params{}, shared.NewValidationError("Offset não pode ser negativo.")
+	if params.Page < 0 {
+		return domainquery.Params{}, shared.NewValidationError("Page não pode ser negativo.")
 	}
-	if params.Limit < 0 {
-		return domainquery.Params{}, shared.NewValidationError("Limit não pode ser negativo.")
-	}
-	if params.Limit == 0 {
-		params.Limit = b.config.DefaultLimit
-	}
-	if params.Limit > b.config.MaxLimit {
-		return domainquery.Params{}, shared.NewValidationError(
-			fmt.Sprintf("Limit não pode ser maior que %d.", b.config.MaxLimit),
-		)
+	if params.Page == 0 {
+		params.Page = 1
 	}
 
 	if params.Order == "" {
@@ -287,7 +278,19 @@ func parseTimeValue(raw string) (time.Time, bool, error) {
 // ApplyPagination aplica ordenação e janela após a contagem total.
 func (b *Builder) ApplyPagination(db *gorm.DB, params domainquery.Params) *gorm.DB {
 	field := b.config.Fields[params.Order]
-	return db.Order(field.Column + " " + string(params.Direction)).Offset(params.Offset).Limit(params.Limit)
+	offset := (params.Page - 1) * b.config.PageSize
+	return db.Order(field.Column + " " + string(params.Direction)).Offset(offset).Limit(b.config.PageSize)
+}
+
+// PageSize retorna o tamanho fixo da página configurado para a consulta.
+func (b *Builder) PageSize() int { return b.config.PageSize }
+
+// TotalPages calcula a quantidade de páginas para o total informado.
+func (b *Builder) TotalPages(total int64) int {
+	if total == 0 {
+		return 0
+	}
+	return int((total + int64(b.config.PageSize) - 1) / int64(b.config.PageSize))
 }
 
 func applyFilter(db *gorm.DB, field Field, filter domainquery.Filter) (*gorm.DB, error) {

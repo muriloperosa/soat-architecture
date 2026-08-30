@@ -81,8 +81,7 @@ func (h *Handler) Criar(c *gin.Context) {
 // @Tags Servicos
 // @Produce json
 // @Security BearerAuth
-// @Param offset query int false "Quantidade de registros ignorados" default(0) minimum(0)
-// @Param limit query int false "Quantidade de registros retornados" default(20) minimum(1) maximum(100)
+// @Param page query int false "Número da página" default(1) minimum(1)
 // @Param order query string false "Campo de ordenação" Enums(id,nome,descricao,preco_base,tempo_estimado_minutos,criado_por,ativo,data_cadastro,data_atualizacao) default(id)
 // @Param direction query string false "Direção da ordenação" Enums(ASC,DESC) default(ASC)
 // @Param id query string false "ID ou lista de IDs separada por vírgula" example(1,2,3)
@@ -107,10 +106,7 @@ func (h *Handler) Listar(c *gin.Context) {
 		return
 	}
 
-	out, err := h.listar.Executar(
-		c.Request.Context(),
-		params,
-	)
+	out, err := h.listar.Executar(c.Request.Context(), toListarInput(params))
 	if err != nil {
 		httperror.RespondError(c, err)
 		return

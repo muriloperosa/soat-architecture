@@ -38,7 +38,8 @@ func TestVeiculoLifecycle_TodosOsEndpoints(t *testing.T) {
 		t.Fatalf("Listar: resposta inesperada: %+v", listagem)
 	}
 
-	if listagem.Offset != 0 || listagem.Limit != 20 || listagem.Order != "id" || listagem.Direction != "ASC" {
+	if listagem.Page != 1 || listagem.PageSize != 20 || listagem.TotalPages != 1 ||
+		listagem.Order != "id" || listagem.Direction != "ASC" {
 		t.Fatalf("Listar: paginação inesperada: %+v", listagem)
 	}
 
@@ -172,7 +173,7 @@ func TestVeiculoListar_ComPaginacaoEFiltro_Retorna200(t *testing.T) {
 	rec := doRequest(
 		t,
 		http.MethodGet,
-		"/v1/veiculos?marca=Fiat&limit=1&offset=0&order=ano&direction=DESC",
+		"/v1/veiculos?marca=Fiat&page=1&order=ano&direction=DESC",
 		loginAdmin.AccessToken,
 		nil,
 		&resp,
@@ -186,19 +187,20 @@ func TestVeiculoListar_ComPaginacaoEFiltro_Retorna200(t *testing.T) {
 		t.Fatalf("Listar: total esperado 2, veio %d", resp.Total)
 	}
 
-	if len(resp.Items) != 1 {
-		t.Fatalf("Listar: esperado 1 item, vieram %d", len(resp.Items))
+	if len(resp.Items) != 2 {
+		t.Fatalf("Listar: esperados 2 itens, vieram %d", len(resp.Items))
 	}
 
-	if resp.Items[0].Marca != "Fiat" {
-		t.Fatalf("Listar: marca esperada Fiat, veio %q", resp.Items[0].Marca)
+	if resp.Items[0].Marca != "Fiat" || resp.Items[1].Marca != "Fiat" {
+		t.Fatalf("Listar: esperado apenas veículos Fiat, veio %+v", resp.Items)
 	}
 
-	if resp.Items[0].Ano != 2022 {
-		t.Fatalf("Listar: esperado veículo mais recente primeiro, veio ano %d", resp.Items[0].Ano)
+	if resp.Items[0].Ano != 2022 || resp.Items[1].Ano != 2020 {
+		t.Fatalf("Listar: ordenação por ano DESC inesperada: %+v", resp.Items)
 	}
 
-	if resp.Offset != 0 || resp.Limit != 1 || resp.Order != "ano" || resp.Direction != "DESC" {
+	if resp.Page != 1 || resp.PageSize != 20 || resp.TotalPages != 1 ||
+		resp.Order != "ano" || resp.Direction != "DESC" {
 		t.Fatalf("Listar: metadados inesperados: %+v", resp)
 	}
 }
@@ -220,5 +222,9 @@ func TestVeiculoListar_SemRegistros_RetornaPaginaVazia(t *testing.T) {
 
 	if resp.Total != 0 || len(resp.Items) != 0 {
 		t.Fatalf("Listar vazio: resposta inesperada: %+v", resp)
+	}
+
+	if resp.Page != 1 || resp.PageSize != 20 || resp.TotalPages != 0 {
+		t.Fatalf("Listar vazio: metadados inesperados: %+v", resp)
 	}
 }

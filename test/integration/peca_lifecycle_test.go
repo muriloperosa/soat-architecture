@@ -52,7 +52,8 @@ func TestPecaLifecycle_TodosOsEndpoints(t *testing.T) {
 		t.Fatalf("Listar: esperado ID %d, recebido %d", criada.ID, listagem.Items[0].ID)
 	}
 
-	if listagem.Offset != 0 || listagem.Limit != 20 || listagem.Order != "id" || listagem.Direction != "ASC" {
+	if listagem.Page != 1 || listagem.PageSize != 20 || listagem.TotalPages != 1 ||
+		listagem.Order != "id" || listagem.Direction != "ASC" {
 		t.Fatalf("Listar: paginação padrão inesperada: %+v", listagem)
 	}
 
@@ -152,7 +153,7 @@ func TestPecaListar_ComPaginacaoOrdenacaoEFiltro_Retorna200(t *testing.T) {
 	rec := doRequest(
 		t,
 		http.MethodGet,
-		"/v1/pecas?marca=Bosch&limit=1&offset=0&order=preco&direction=DESC",
+		"/v1/pecas?marca=Bosch&page=1&order=preco&direction=DESC",
 		loginAdmin.AccessToken,
 		nil,
 		&resp,
@@ -166,26 +167,28 @@ func TestPecaListar_ComPaginacaoOrdenacaoEFiltro_Retorna200(t *testing.T) {
 		t.Fatalf("Listar: esperado total=2, recebido %d", resp.Total)
 	}
 
-	if len(resp.Items) != 1 {
-		t.Fatalf("Listar: esperado 1 item, recebido %d", len(resp.Items))
+	if len(resp.Items) != 2 {
+		t.Fatalf("Listar: esperados 2 itens, recebido %d", len(resp.Items))
 	}
 
-	item := resp.Items[0]
-
-	if item.Marca != "Bosch" {
-		t.Fatalf("Listar: esperado marca Bosch, recebido %q", item.Marca)
+	if resp.Items[0].Marca != "Bosch" || resp.Items[1].Marca != "Bosch" {
+		t.Fatalf("Listar: esperado apenas peças Bosch, recebido %+v", resp.Items)
 	}
 
-	if item.Preco != 150.00 {
-		t.Fatalf("Listar: esperado maior preço primeiro (150), recebido %.2f", item.Preco)
+	if resp.Items[0].Preco != 150.00 || resp.Items[1].Preco != 90.00 {
+		t.Fatalf("Listar: ordenação por preço DESC inesperada: %+v", resp.Items)
 	}
 
-	if resp.Offset != 0 {
-		t.Fatalf("Listar: esperado offset=0, recebido %d", resp.Offset)
+	if resp.Page != 1 {
+		t.Fatalf("Listar: esperado page=1, recebido %d", resp.Page)
 	}
 
-	if resp.Limit != 1 {
-		t.Fatalf("Listar: esperado limit=1, recebido %d", resp.Limit)
+	if resp.PageSize != 20 {
+		t.Fatalf("Listar: esperado page_size=20, recebido %d", resp.PageSize)
+	}
+
+	if resp.TotalPages != 1 {
+		t.Fatalf("Listar: esperado total_pages=1, recebido %d", resp.TotalPages)
 	}
 
 	if resp.Order != "preco" {

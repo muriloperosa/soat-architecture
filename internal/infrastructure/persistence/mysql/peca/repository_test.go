@@ -351,8 +351,8 @@ func TestRepositoryListar_RetornaPagina(t *testing.T) {
 
 	require.Len(t, page.Items, 1)
 	require.Equal(t, int64(1), page.Total)
-	require.Equal(t, 0, page.Offset)
-	require.Equal(t, 20, page.Limit)
+	require.Equal(t, 1, page.Page)
+	require.Equal(t, 20, page.PageSize)
 	require.Equal(t, "id", page.Order)
 	require.Equal(t, domainquery.DirectionASC, page.Direction)
 
@@ -406,7 +406,7 @@ func TestRepositoryListar_VazioRetornaPaginaVazia(t *testing.T) {
 	require.NotNil(t, page.Items)
 	require.Empty(t, page.Items)
 	require.Equal(t, int64(0), page.Total)
-	require.Equal(t, 20, page.Limit)
+	require.Equal(t, 20, page.PageSize)
 
 	require.NoError(t, mock.ExpectationsWereMet())
 }
@@ -429,8 +429,7 @@ func TestRepositoryListar_AplicaPaginacaoEOrdenacao(t *testing.T) {
 	page, err := repository.Listar(
 		context.Background(),
 		domainquery.Params{
-			Offset:    5,
-			Limit:     2,
+			Page:      2,
 			Order:     "preco",
 			Direction: domainquery.DirectionDESC,
 		},
@@ -439,8 +438,8 @@ func TestRepositoryListar_AplicaPaginacaoEOrdenacao(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, int64(10), page.Total)
-	require.Equal(t, 5, page.Offset)
-	require.Equal(t, 2, page.Limit)
+	require.Equal(t, 2, page.Page)
+	require.Equal(t, 20, page.PageSize)
 	require.Equal(t, "preco", page.Order)
 	require.Equal(t, domainquery.DirectionDESC, page.Direction)
 
@@ -749,7 +748,7 @@ func TestRepositoryListar_LimitMaiorQueMaximoRetornaErro(t *testing.T) {
 	page, err := repository.Listar(
 		context.Background(),
 		domainquery.Params{
-			Limit: 101,
+			Page: -1,
 		},
 	)
 

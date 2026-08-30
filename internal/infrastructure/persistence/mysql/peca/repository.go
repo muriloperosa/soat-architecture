@@ -134,12 +134,13 @@ func (r *Repository) Listar(
 	}
 
 	return domainquery.Page[*domain.Peca]{
-		Items:     pecas,
-		Total:     total,
-		Offset:    normalized.Offset,
-		Limit:     normalized.Limit,
-		Order:     normalized.Order,
-		Direction: normalized.Direction,
+		Items:      pecas,
+		Total:      total,
+		Page:       normalized.Page,
+		PageSize:   r.queryBuilder.PageSize(),
+		TotalPages: r.queryBuilder.TotalPages(total),
+		Order:      normalized.Order,
+		Direction:  normalized.Direction,
 	}, nil
 }
 

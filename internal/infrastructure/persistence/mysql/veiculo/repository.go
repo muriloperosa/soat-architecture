@@ -110,12 +110,13 @@ func (r *Repository) Listar(
 	}
 
 	return domainquery.Page[*domain.Veiculo]{
-		Items:     veiculos,
-		Total:     total,
-		Offset:    normalized.Offset,
-		Limit:     normalized.Limit,
-		Order:     normalized.Order,
-		Direction: normalized.Direction,
+		Items:      veiculos,
+		Total:      total,
+		Page:       normalized.Page,
+		PageSize:   r.queryBuilder.PageSize(),
+		TotalPages: r.queryBuilder.TotalPages(total),
+		Order:      normalized.Order,
+		Direction:  normalized.Direction,
 	}, nil
 }
 

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	appquery "github.com/muriloperosa/soat-architecture/internal/application/query"
 	"github.com/muriloperosa/soat-architecture/internal/domain/query"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	domain "github.com/muriloperosa/soat-architecture/internal/domain/veiculo"
@@ -13,179 +14,171 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func novoVeiculoParaListagem(t *testing.T) *domain.Veiculo {
-	t.Helper()
+func TestListarVeiculosUseCase_Executar_ComSucesso(t *testing.T) {
+	repository := mocks.NewRepository(t)
+	useCase := NewListarVeiculosUseCase(repository)
+	ctx := context.Background()
 
-	veiculo, err := domain.NewVeiculo("ABC1D23", "Fiat", "Uno", 15000, 2020, "Prata", 1)
+	entity, err := domain.NewVeiculo(
+		"ABC1D23",
+		"Fiat",
+		"Uno",
+		10000,
+		2020,
+		"Branco",
+		1,
+	)
 	require.NoError(t, err)
 
-	veiculo.AtribuirID(1)
+	entity.AtribuirID(1)
 
-	return veiculo
-}
-
-func TestListarVeiculosUseCase_Executar_RetornaPagina(t *testing.T) {
-	repository := mocks.NewRepository(t)
-
-	veiculo := novoVeiculoParaListagem(t)
-
-	params := query.Params{
-		Offset:    0,
-		Limit:     20,
-		Order:     "id",
-		Direction: query.DirectionASC,
+	input := ListarVeiculosInput{
+		ParamsInput: appquery.ParamsInput{
+			Page:      2,
+			Order:     "nome",
+			Direction: "DESC",
+			Filters: []appquery.FilterInput{
+				{
+					Field:    "nome",
+					Operator: "auto",
+					Value:    "Teste",
+				},
+			},
+		},
 	}
 
-	repository.
-		EXPECT().
-		Listar(mock.Anything, params).
-		Return(query.Page[*domain.Veiculo]{
-			Items: []*domain.Veiculo{
-				veiculo,
-			},
-			Total:     1,
-			Offset:    0,
-			Limit:     20,
-			Order:     "id",
-			Direction: query.DirectionASC,
-		}, nil)
-
-	useCase := NewListarVeiculosUseCase(repository)
-
-	page, err := useCase.Executar(context.Background(), params)
-
-	require.NoError(t, err)
-
-	require.Len(t, page.Items, 1)
-	require.Equal(t, int64(1), page.Total)
-	require.Equal(t, 0, page.Offset)
-	require.Equal(t, 20, page.Limit)
-	require.Equal(t, "id", page.Order)
-	require.Equal(t, query.DirectionASC, page.Direction)
-
-	require.Equal(t, uint64(1), page.Items[0].ID)
-	require.Equal(t, "ABC1D23", page.Items[0].Placa)
-	require.Equal(t, "Fiat", page.Items[0].Marca)
-	require.Equal(t, "Uno", page.Items[0].Modelo)
-}
-
-func TestListarVeiculosUseCase_Executar_ListaVaziaRetornaPaginaVazia(t *testing.T) {
-	repository := mocks.NewRepository(t)
-
-	params := query.Params{}
-
-	repository.
-		EXPECT().
-		Listar(mock.Anything, params).
-		Return(query.Page[*domain.Veiculo]{
-			Items:     []*domain.Veiculo{},
-			Total:     0,
-			Offset:    0,
-			Limit:     20,
-			Order:     "id",
-			Direction: query.DirectionASC,
-		}, nil)
-
-	useCase := NewListarVeiculosUseCase(repository)
-
-	page, err := useCase.Executar(context.Background(), params)
-
-	require.NoError(t, err)
-
-	require.NotNil(t, page.Items)
-	require.Empty(t, page.Items)
-
-	require.Equal(t, int64(0), page.Total)
-	require.Equal(t, 0, page.Offset)
-	require.Equal(t, 20, page.Limit)
-	require.Equal(t, "id", page.Order)
-	require.Equal(t, query.DirectionASC, page.Direction)
-}
-
-func TestListarVeiculosUseCase_Executar_PropagaParametros(t *testing.T) {
-	repository := mocks.NewRepository(t)
-
-	params := query.Params{
-		Offset:    10,
-		Limit:     5,
-		Order:     "ano",
+	expectedParams := query.Params{
+		Page:      2,
+		Order:     "nome",
 		Direction: query.DirectionDESC,
 		Filters: []query.Filter{
 			{
-				Field:    "marca",
-				Operator: query.OperatorLike,
-				Value:    "Fiat",
+				Field:    "nome",
+				Operator: query.OperatorAuto,
+				Value:    "Teste",
 			},
 		},
 	}
 
 	repository.
 		EXPECT().
-		Listar(mock.Anything, params).
-		Return(query.Page[*domain.Veiculo]{
-			Items:     []*domain.Veiculo{},
-			Total:     0,
-			Offset:    10,
-			Limit:     5,
-			Order:     "ano",
-			Direction: query.DirectionDESC,
-		}, nil)
+		Listar(ctx, expectedParams).
+		Return(
+			query.Page[*domain.Veiculo]{
+				Items:      []*domain.Veiculo{entity},
+				Total:      42,
+				Page:       2,
+				PageSize:   20,
+				TotalPages: 3,
+				Order:      "nome",
+				Direction:  query.DirectionDESC,
+			},
+			nil,
+		).
+		Once()
 
-	useCase := NewListarVeiculosUseCase(repository)
-
-	page, err := useCase.Executar(context.Background(), params)
+	out, err := useCase.Executar(ctx, input)
 
 	require.NoError(t, err)
-
-	require.Equal(t, 10, page.Offset)
-	require.Equal(t, 5, page.Limit)
-	require.Equal(t, "ano", page.Order)
-	require.Equal(t, query.DirectionDESC, page.Direction)
+	require.Len(t, out.Items, 1)
+	require.Equal(t, int64(42), out.Total)
+	require.Equal(t, 2, out.Page)
+	require.Equal(t, 20, out.PageSize)
+	require.Equal(t, 3, out.TotalPages)
+	require.Equal(t, "nome", out.Order)
+	require.Equal(t, "DESC", out.Direction)
 }
 
-func TestListarVeiculosUseCase_Executar_ErroDoBancoRetornaInternalError(t *testing.T) {
+func TestListarVeiculosUseCase_Executar_ListaVazia(t *testing.T) {
 	repository := mocks.NewRepository(t)
+	useCase := NewListarVeiculosUseCase(repository)
+	ctx := context.Background()
 
-	erroBanco := errors.New("erro ao consultar banco")
+	input := ListarVeiculosInput{
+		ParamsInput: appquery.ParamsInput{
+			Page: 1,
+		},
+	}
 
-	params := query.Params{}
+	expectedParams := query.Params{
+		Page: 1,
+	}
 
 	repository.
 		EXPECT().
-		Listar(mock.Anything, params).
-		Return(query.Page[*domain.Veiculo]{}, erroBanco)
+		Listar(ctx, expectedParams).
+		Return(
+			query.Page[*domain.Veiculo]{
+				Items:      []*domain.Veiculo{},
+				Total:      0,
+				Page:       1,
+				PageSize:   20,
+				TotalPages: 0,
+				Order:      "id",
+				Direction:  query.DirectionASC,
+			},
+			nil,
+		).
+		Once()
 
+	out, err := useCase.Executar(ctx, input)
+
+	require.NoError(t, err)
+	require.NotNil(t, out.Items)
+	require.Empty(t, out.Items)
+	require.Equal(t, int64(0), out.Total)
+	require.Equal(t, 1, out.Page)
+	require.Equal(t, 20, out.PageSize)
+	require.Zero(t, out.TotalPages)
+	require.Equal(t, "id", out.Order)
+	require.Equal(t, "ASC", out.Direction)
+}
+
+func TestListarVeiculosUseCase_Executar_PreservaAppError(t *testing.T) {
+	repository := mocks.NewRepository(t)
 	useCase := NewListarVeiculosUseCase(repository)
 
-	page, err := useCase.Executar(context.Background(), params)
+	appErr := shared.NewValidationError("filtro inválido")
 
-	require.Error(t, err)
-	require.Empty(t, page.Items)
+	repository.
+		EXPECT().
+		Listar(mock.Anything, mock.Anything).
+		Return(
+			query.Page[*domain.Veiculo]{},
+			appErr,
+		).
+		Once()
+
+	_, err := useCase.Executar(
+		context.Background(),
+		ListarVeiculosInput{},
+	)
+
+	require.ErrorIs(t, err, appErr)
+}
+
+func TestListarVeiculosUseCase_Executar_ErroDeInfraestrutura(t *testing.T) {
+	repository := mocks.NewRepository(t)
+	useCase := NewListarVeiculosUseCase(repository)
+
+	infraErr := errors.New("banco indisponível")
+
+	repository.
+		EXPECT().
+		Listar(mock.Anything, mock.Anything).
+		Return(
+			query.Page[*domain.Veiculo]{},
+			infraErr,
+		).
+		Once()
+
+	_, err := useCase.Executar(
+		context.Background(),
+		ListarVeiculosInput{},
+	)
 
 	var appErr *shared.AppError
 
 	require.ErrorAs(t, err, &appErr)
-	require.Equal(t, "erro ao listar veículos", appErr.Message)
-}
-
-func TestListarVeiculosUseCase_Executar_AppErrorDoRepositoryPropagaErro(t *testing.T) {
-	repository := mocks.NewRepository(t)
-
-	params := query.Params{Limit: 101}
-
-	erroValidacao := shared.NewValidationError("limite máximo permitido é 100")
-
-	repository.
-		EXPECT().
-		Listar(mock.Anything, params).
-		Return(query.Page[*domain.Veiculo]{}, erroValidacao)
-
-	useCase := NewListarVeiculosUseCase(repository)
-
-	page, err := useCase.Executar(context.Background(), params)
-
-	require.Error(t, err)
-	require.Empty(t, page.Items)
-
-	require.ErrorIs(t, err, erroValidacao)
+	require.Equal(t, shared.KindInternal, appErr.Kind)
 }

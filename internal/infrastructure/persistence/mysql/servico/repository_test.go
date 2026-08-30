@@ -3,12 +3,15 @@ package servico_test
 import (
 	"context"
 	"errors"
+	"regexp"
 	"testing"
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/muriloperosa/soat-architecture/internal/domain/query"
 	domainquery "github.com/muriloperosa/soat-architecture/internal/domain/query"
 	domainservico "github.com/muriloperosa/soat-architecture/internal/domain/servico"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/servico"
 	mysqlservico "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/servico"
 	test_helpers "github.com/muriloperosa/soat-architecture/test/helpers"
 	"github.com/stretchr/testify/require"
@@ -157,8 +160,8 @@ func TestServicoRepository_Listar_RetornaPagina(t *testing.T) {
 
 	require.Len(t, page.Items, 2)
 	require.Equal(t, int64(2), page.Total)
-	require.Equal(t, 0, page.Offset)
-	require.Equal(t, 20, page.Limit)
+	require.Equal(t, 1, page.Page)
+	require.Equal(t, 20, page.PageSize)
 	require.Equal(t, "id", page.Order)
 	require.Equal(t, domainquery.DirectionASC, page.Direction)
 
@@ -198,8 +201,8 @@ func TestServicoRepository_Listar_Vazio_RetornaPaginaVazia(t *testing.T) {
 	require.NotNil(t, page.Items)
 
 	require.Equal(t, int64(0), page.Total)
-	require.Equal(t, 0, page.Offset)
-	require.Equal(t, 20, page.Limit)
+	require.Equal(t, 1, page.Page)
+	require.Equal(t, 20, page.PageSize)
 	require.Equal(t, "id", page.Order)
 	require.Equal(t, domainquery.DirectionASC, page.Direction)
 
@@ -252,58 +255,50 @@ func TestServicoRepository_Listar_ErroAoBuscarRegistros_PropagaErro(t *testing.T
 
 func TestServicoRepository_Listar_AplicaPaginacaoEOrdenacao(t *testing.T) {
 	gdb, mock := test_helpers.SetupGormMock(t)
-	repo := mysqlservico.NewServicoRepository(gdb)
+	repo := servico.NewServicoRepository(gdb)
 
-	agora := time.Now()
+	params := query.Params{
+		Page:      2,
+		Order:     "nome",
+		Direction: query.DirectionDESC,
+	}
 
 	mock.
-		ExpectQuery("SELECT count\\(\\*\\) FROM `servicos`").
+		ExpectQuery(regexp.QuoteMeta("SELECT count(*) FROM `servicos`")).
 		WillReturnRows(
 			sqlmock.NewRows([]string{"count(*)"}).
-				AddRow(10),
+				AddRow(50),
 		)
 
-	rows := sqlmock.
-		NewRows(colunasServico()).
-		AddRow(
-			5,
-			"Alinhamento",
-			"Alinhamento completo",
-			200.00,
-			90,
-			1,
-			true,
-			agora,
-			agora,
-		)
+	rows := sqlmock.NewRows([]string{
+		"id",
+		"nome",
+		"descricao",
+		"preco",
+		"duracao_estimada",
+		"criado_por",
+		"ativo",
+		"data_cadastro",
+		"data_atualizacao",
+	})
 
 	mock.
-		ExpectQuery(
-			"SELECT \\* FROM `servicos` ORDER BY nome DESC LIMIT \\? OFFSET \\?",
-		).
-		WithArgs(5, 5).
+		ExpectQuery(regexp.QuoteMeta(
+			"SELECT * FROM `servicos` ORDER BY nome DESC LIMIT ? OFFSET ?",
+		)).
+		WithArgs(20, 20).
 		WillReturnRows(rows)
 
-	page, err := repo.Listar(
-		context.Background(),
-		domainquery.Params{
-			Offset:    5,
-			Limit:     5,
-			Order:     "nome",
-			Direction: domainquery.DirectionDESC,
-		},
-	)
+	page, err := repo.Listar(context.Background(), params)
 
 	require.NoError(t, err)
 
-	require.Len(t, page.Items, 1)
-	require.Equal(t, int64(10), page.Total)
-	require.Equal(t, 5, page.Offset)
-	require.Equal(t, 5, page.Limit)
+	require.Equal(t, int64(50), page.Total)
+	require.Equal(t, 2, page.Page)
+	require.Equal(t, 20, page.PageSize)
+	require.Equal(t, 3, page.TotalPages)
 	require.Equal(t, "nome", page.Order)
-	require.Equal(t, domainquery.DirectionDESC, page.Direction)
-
-	require.Equal(t, "Alinhamento", page.Items[0].Nome())
+	require.Equal(t, query.DirectionDESC, page.Direction)
 
 	require.NoError(t, mock.ExpectationsWereMet())
 }
@@ -436,7 +431,7 @@ func TestServicoRepository_Listar_LimitMaiorQueMaximo_RetornaErro(t *testing.T) 
 	page, err := repo.Listar(
 		context.Background(),
 		domainquery.Params{
-			Limit: 101,
+			Page: -1,
 		},
 	)
 

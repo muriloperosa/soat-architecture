@@ -307,8 +307,7 @@ func TestHandler_Listar_ComSucesso_Retorna200(t *testing.T) {
 		Listar(
 			mock.Anything,
 			mock.MatchedBy(func(params domainquery.Params) bool {
-				return params.Offset == 5 &&
-					params.Limit == 10 &&
+				return params.Page == 2 &&
 					params.Order == "preco" &&
 					params.Direction == domainquery.DirectionDESC
 			}),
@@ -318,11 +317,12 @@ func TestHandler_Listar_ComSucesso_Retorna200(t *testing.T) {
 				Items: []*domainpeca.Peca{
 					p,
 				},
-				Total:     20,
-				Offset:    5,
-				Limit:     10,
-				Order:     "preco",
-				Direction: domainquery.DirectionDESC,
+				Total:      20,
+				Page:       2,
+				PageSize:   20,
+				TotalPages: 1,
+				Order:      "preco",
+				Direction:  domainquery.DirectionDESC,
 			},
 			nil,
 		)
@@ -343,7 +343,7 @@ func TestHandler_Listar_ComSucesso_Retorna200(t *testing.T) {
 
 	req := httptest.NewRequest(
 		http.MethodGet,
-		"/v1/pecas?offset=5&limit=10&order=preco&direction=DESC",
+		"/v1/pecas?page=2&order=preco&direction=DESC",
 		nil,
 	)
 
@@ -361,8 +361,9 @@ func TestHandler_Listar_ComSucesso_Retorna200(t *testing.T) {
 	)
 
 	require.Equal(t, int64(20), resp.Total)
-	require.Equal(t, 5, resp.Offset)
-	require.Equal(t, 10, resp.Limit)
+	require.Equal(t, 2, resp.Page)
+	require.Equal(t, 20, resp.PageSize)
+	require.Equal(t, 1, resp.TotalPages)
 	require.Equal(t, "preco", resp.Order)
 	require.Equal(t, "DESC", resp.Direction)
 
@@ -383,25 +384,44 @@ func TestHandler_Listar_ListaVazia_Retorna200(t *testing.T) {
 
 	repo.
 		EXPECT().
-		Listar(mock.Anything, mock.Anything).
+		Listar(
+			mock.Anything,
+			mock.MatchedBy(func(params domainquery.Params) bool {
+				return params.Page == 1
+			}),
+		).
 		Return(
 			domainquery.Page[*domainpeca.Peca]{
-				Items:     []*domainpeca.Peca{},
-				Total:     0,
-				Offset:    0,
-				Limit:     20,
-				Order:     "id",
-				Direction: domainquery.DirectionASC,
+				Items:      []*domainpeca.Peca{},
+				Total:      0,
+				Page:       1,
+				PageSize:   20,
+				TotalPages: 0,
+				Order:      "id",
+				Direction:  domainquery.DirectionASC,
 			},
 			nil,
 		)
 
-	h := httppeca.NewHandler(nil, nil, nil, nil, nil, apppeca.NewListarPecasUseCase(repo), nil, novoQueryParser())
+	h := httppeca.NewHandler(
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		apppeca.NewListarPecasUseCase(repo),
+		nil,
+		novoQueryParser(),
+	)
 
 	engine := gin.New()
 	engine.GET("/v1/pecas", h.Listar)
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/pecas", nil)
+	req := httptest.NewRequest(
+		http.MethodGet,
+		"/v1/pecas",
+		nil,
+	)
 
 	rec := httptest.NewRecorder()
 
@@ -411,14 +431,18 @@ func TestHandler_Listar_ListaVazia_Retorna200(t *testing.T) {
 
 	var resp httppeca.ListarPecasResponse
 
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	require.NoError(
+		t,
+		json.Unmarshal(rec.Body.Bytes(), &resp),
+	)
 
 	require.NotNil(t, resp.Items)
 	require.Empty(t, resp.Items)
 
 	require.Equal(t, int64(0), resp.Total)
-	require.Equal(t, 0, resp.Offset)
-	require.Equal(t, 20, resp.Limit)
+	require.Equal(t, 1, resp.Page)
+	require.Equal(t, 20, resp.PageSize)
+	require.Zero(t, resp.TotalPages)
 	require.Equal(t, "id", resp.Order)
 	require.Equal(t, "ASC", resp.Direction)
 }
@@ -450,8 +474,7 @@ func TestHandler_Listar_ComFiltro_Retorna200(t *testing.T) {
 					p,
 				},
 				Total:     1,
-				Offset:    0,
-				Limit:     20,
+				Page:      2,
 				Order:     "id",
 				Direction: domainquery.DirectionASC,
 			},
@@ -491,7 +514,7 @@ func TestHandler_Listar_QueryInvalida_Retorna400(t *testing.T) {
 	engine := gin.New()
 	engine.GET("/v1/pecas", h.Listar)
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/pecas?limit=abc", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/pecas?page=abc", nil)
 
 	rec := httptest.NewRecorder()
 
@@ -515,11 +538,11 @@ func TestHandler_Listar_ErroInterno_Retorna500(t *testing.T) {
 	engine := gin.New()
 	engine.GET("/v1/pecas", h.Listar)
 
-	req := httptest.NewRequest(http.MethodGet,"/v1/pecas",nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/pecas", nil)
 
 	rec := httptest.NewRecorder()
 
 	engine.ServeHTTP(rec, req)
 
-	require.Equal(t,http.StatusInternalServerError,rec.Code)
+	require.Equal(t, http.StatusInternalServerError, rec.Code)
 }

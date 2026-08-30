@@ -1,8 +1,9 @@
 package veiculo
 
 import (
+	appquery "github.com/muriloperosa/soat-architecture/internal/application/query"
 	appveiculo "github.com/muriloperosa/soat-architecture/internal/application/veiculo"
-	"github.com/muriloperosa/soat-architecture/internal/domain/query"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httpquery"
 )
 
 func toCadastrarInput(criadoPor uint64, req CadastrarVeiculoRequest) appveiculo.CadastrarVeiculoInput {
@@ -41,19 +42,45 @@ func toVeiculoResponse(out appveiculo.VeiculoOutput) VeiculoResponse {
 	}
 }
 
-func toListResponse(page query.Page[appveiculo.VeiculoOutput]) ListarVeiculosResponse {
-	items := make([]VeiculoResponse, 0, len(page.Items))
+func toListarInput(params httpquery.Params) appveiculo.ListarVeiculosInput {
+	var filters []appquery.FilterInput
 
-	for _, item := range page.Items {
+	if len(params.Filters) > 0 {
+		filters = make([]appquery.FilterInput, 0, len(params.Filters))
+
+		for _, filter := range params.Filters {
+			filters = append(filters, appquery.FilterInput{
+				Field:    filter.Field,
+				Operator: filter.Operator,
+				Value:    filter.Value,
+			})
+		}
+	}
+
+	return appveiculo.ListarVeiculosInput{
+		ParamsInput: appquery.ParamsInput{
+			Page:      params.Page,
+			Order:     params.Order,
+			Direction: params.Direction,
+			Filters:   filters,
+		},
+	}
+}
+
+func toListResponse(output appveiculo.ListarVeiculosOutput) ListarVeiculosResponse {
+	items := make([]VeiculoResponse, 0, len(output.Items))
+
+	for _, item := range output.Items {
 		items = append(items, toVeiculoResponse(item))
 	}
 
 	return ListarVeiculosResponse{
-		Items:     items,
-		Total:     page.Total,
-		Offset:    page.Offset,
-		Limit:     page.Limit,
-		Order:     page.Order,
-		Direction: string(page.Direction),
+		Items:      items,
+		Total:      output.Total,
+		Page:       output.Page,
+		PageSize:   output.PageSize,
+		TotalPages: output.TotalPages,
+		Order:      output.Order,
+		Direction:  output.Direction,
 	}
 }

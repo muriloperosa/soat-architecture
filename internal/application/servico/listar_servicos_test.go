@@ -1,145 +1,182 @@
-package servico_test
+package servico
 
 import (
 	"context"
 	"errors"
 	"testing"
 
-	appservico "github.com/muriloperosa/soat-architecture/internal/application/servico"
+	appquery "github.com/muriloperosa/soat-architecture/internal/application/query"
 	"github.com/muriloperosa/soat-architecture/internal/domain/query"
-	domainservico "github.com/muriloperosa/soat-architecture/internal/domain/servico"
+	domain "github.com/muriloperosa/soat-architecture/internal/domain/servico"
 	"github.com/muriloperosa/soat-architecture/internal/domain/servico/mocks"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
-func TestListarServicosUseCase_Executar_RetornaCatalogo(t *testing.T) {
-	repo := mocks.NewServicoRepository(t)
-	uc := appservico.NewListarServicosUseCase(repo)
-
+func TestListarServicosUseCase_Executar_ComSucesso(t *testing.T) {
+	repository := mocks.NewServicoRepository(t)
+	useCase := NewListarServicosUseCase(repository)
 	ctx := context.Background()
 
-	params := query.Params{
-		Offset:    0,
-		Limit:     20,
-		Order:     "nome",
-		Direction: query.DirectionASC,
-	}
-
-	s1 := novoServico(t)
-	s1.AtribuirID(1)
-
-	s2, err := domainservico.NewServico(
-		"Alinhamento",
-		"alinhamento e balanceamento",
-		200,
-		90,
+	entity, err := domain.NewServico(
+		"Troca de óleo",
+		"Troca completa",
+		150,
+		60,
 		1,
 	)
 	require.NoError(t, err)
 
-	s2.AtribuirID(2)
+	entity.AtribuirID(1)
 
-	repo.
-		EXPECT().
-		Listar(ctx, params).
-		Return(
-			query.Page[*domainservico.Servico]{
-				Items: []*domainservico.Servico{
-					s1,
-					s2,
+	input := ListarServicosInput{
+		ParamsInput: appquery.ParamsInput{
+			Page:      2,
+			Order:     "nome",
+			Direction: "DESC",
+			Filters: []appquery.FilterInput{
+				{
+					Field:    "nome",
+					Operator: "auto",
+					Value:    "Teste",
 				},
-				Total:     2,
-				Offset:    0,
-				Limit:     20,
-				Order:     "nome",
-				Direction: query.DirectionASC,
+			},
+		},
+	}
+
+	expectedParams := query.Params{
+		Page:      2,
+		Order:     "nome",
+		Direction: query.DirectionDESC,
+		Filters: []query.Filter{
+			{
+				Field:    "nome",
+				Operator: query.OperatorAuto,
+				Value:    "Teste",
+			},
+		},
+	}
+
+	repository.
+		EXPECT().
+		Listar(ctx, expectedParams).
+		Return(
+			query.Page[*domain.Servico]{
+				Items:      []*domain.Servico{entity},
+				Total:      42,
+				Page:       2,
+				PageSize:   20,
+				TotalPages: 3,
+				Order:      "nome",
+				Direction:  query.DirectionDESC,
 			},
 			nil,
 		).
 		Once()
 
-	out, err := uc.Executar(ctx, params)
+	out, err := useCase.Executar(ctx, input)
 
 	require.NoError(t, err)
-
-	require.Equal(t, int64(2), out.Total)
-	require.Equal(t, 0, out.Offset)
-	require.Equal(t, 20, out.Limit)
+	require.Len(t, out.Items, 1)
+	require.Equal(t, int64(42), out.Total)
+	require.Equal(t, 2, out.Page)
+	require.Equal(t, 20, out.PageSize)
+	require.Equal(t, 3, out.TotalPages)
 	require.Equal(t, "nome", out.Order)
-	require.Equal(t, query.DirectionASC, out.Direction)
-
-	require.Len(t, out.Items, 2)
-
-	require.Equal(t, "Troca de óleo", out.Items[0].Nome)
-	require.Equal(t, "Alinhamento", out.Items[1].Nome)
+	require.Equal(t, "DESC", out.Direction)
 }
 
-func TestListarServicosUseCase_Executar_ListaVazia_RetornaPaginaVazia(t *testing.T) {
-	repo := mocks.NewServicoRepository(t)
-	uc := appservico.NewListarServicosUseCase(repo)
-
+func TestListarServicosUseCase_Executar_ListaVazia(t *testing.T) {
+	repository := mocks.NewServicoRepository(t)
+	useCase := NewListarServicosUseCase(repository)
 	ctx := context.Background()
 
-	params := query.Params{}
+	input := ListarServicosInput{
+		ParamsInput: appquery.ParamsInput{
+			Page: 1,
+		},
+	}
 
-	repo.
+	expectedParams := query.Params{
+		Page: 1,
+	}
+
+	repository.
 		EXPECT().
-		Listar(ctx, params).
+		Listar(ctx, expectedParams).
 		Return(
-			query.Page[*domainservico.Servico]{
-				Items:     []*domainservico.Servico{},
-				Total:     0,
-				Offset:    0,
-				Limit:     20,
-				Order:     "id",
-				Direction: query.DirectionASC,
+			query.Page[*domain.Servico]{
+				Items:      []*domain.Servico{},
+				Total:      0,
+				Page:       1,
+				PageSize:   20,
+				TotalPages: 0,
+				Order:      "id",
+				Direction:  query.DirectionASC,
 			},
 			nil,
 		).
 		Once()
 
-	out, err := uc.Executar(ctx, params)
+	out, err := useCase.Executar(ctx, input)
 
 	require.NoError(t, err)
-
 	require.NotNil(t, out.Items)
 	require.Empty(t, out.Items)
-
 	require.Equal(t, int64(0), out.Total)
-	require.Equal(t, 0, out.Offset)
-	require.Equal(t, 20, out.Limit)
+	require.Equal(t, 1, out.Page)
+	require.Equal(t, 20, out.PageSize)
+	require.Zero(t, out.TotalPages)
 	require.Equal(t, "id", out.Order)
-	require.Equal(t, query.DirectionASC, out.Direction)
+	require.Equal(t, "ASC", out.Direction)
 }
 
-func TestListarServicosUseCase_Executar_ErroDoBanco_RetornaInternalError(t *testing.T) {
-	repo := mocks.NewServicoRepository(t)
-	uc := appservico.NewListarServicosUseCase(repo)
+func TestListarServicosUseCase_Executar_PreservaAppError(t *testing.T) {
+	repository := mocks.NewServicoRepository(t)
+	useCase := NewListarServicosUseCase(repository)
 
-	ctx := context.Background()
+	appErr := shared.NewValidationError("filtro inválido")
 
-	params := query.Params{}
-
-	erroBanco := errors.New("conexao recusada")
-
-	repo.
+	repository.
 		EXPECT().
-		Listar(ctx, params).
+		Listar(mock.Anything, mock.Anything).
 		Return(
-			query.Page[*domainservico.Servico]{},
-			erroBanco,
+			query.Page[*domain.Servico]{},
+			appErr,
 		).
 		Once()
 
-	out, err := uc.Executar(ctx, params)
+	_, err := useCase.Executar(
+		context.Background(),
+		ListarServicosInput{},
+	)
 
-	require.Error(t, err)
-	require.Empty(t, out.Items)
+	require.ErrorIs(t, err, appErr)
+}
+
+func TestListarServicosUseCase_Executar_ErroDeInfraestrutura(t *testing.T) {
+	repository := mocks.NewServicoRepository(t)
+	useCase := NewListarServicosUseCase(repository)
+
+	infraErr := errors.New("banco indisponível")
+
+	repository.
+		EXPECT().
+		Listar(mock.Anything, mock.Anything).
+		Return(
+			query.Page[*domain.Servico]{},
+			infraErr,
+		).
+		Once()
+
+	_, err := useCase.Executar(
+		context.Background(),
+		ListarServicosInput{},
+	)
 
 	var appErr *shared.AppError
 
 	require.ErrorAs(t, err, &appErr)
 	require.Equal(t, shared.KindInternal, appErr.Kind)
-	require.ErrorIs(t, err, erroBanco)
 }

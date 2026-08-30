@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	appquery "github.com/muriloperosa/soat-architecture/internal/application/query"
 	appservico "github.com/muriloperosa/soat-architecture/internal/application/servico"
 	"github.com/muriloperosa/soat-architecture/internal/domain/query"
 	domainservico "github.com/muriloperosa/soat-architecture/internal/domain/servico"
@@ -279,45 +280,52 @@ func TestListarServicosUseCase_Executar_RetornaPagina(t *testing.T) {
 	require.NoError(t, err)
 	s2.AtribuirID(2)
 
-	params := query.Params{
-		Offset:    10,
-		Limit:     20,
+	input := appservico.ListarServicosInput{
+		ParamsInput: appquery.ParamsInput{
+			Page:      2,
+			Order:     "nome",
+			Direction: "DESC",
+		},
+	}
+
+	expectedParams := query.Params{
+		Page:      2,
 		Order:     "nome",
 		Direction: query.DirectionDESC,
 	}
 
 	repo.
 		EXPECT().
-		Listar(mock.Anything, params).
+		Listar(mock.Anything, expectedParams).
 		Return(
 			query.Page[*domainservico.Servico]{
 				Items: []*domainservico.Servico{
 					s1,
 					s2,
 				},
-				Total:     35,
-				Offset:    10,
-				Limit:     20,
-				Order:     "nome",
-				Direction: query.DirectionDESC,
+				Total:      35,
+				Page:       2,
+				PageSize:   20,
+				TotalPages: 2,
+				Order:      "nome",
+				Direction:  query.DirectionDESC,
 			},
 			nil,
 		)
 
 	out, err := uc.Executar(
 		context.Background(),
-		params,
+		input,
 	)
 
 	require.NoError(t, err)
-
 	require.Len(t, out.Items, 2)
-
 	require.Equal(t, int64(35), out.Total)
-	require.Equal(t, 10, out.Offset)
-	require.Equal(t, 20, out.Limit)
+	require.Equal(t, 2, out.Page)
+	require.Equal(t, 20, out.PageSize)
+	require.Equal(t, 2, out.TotalPages)
 	require.Equal(t, "nome", out.Order)
-	require.Equal(t, query.DirectionDESC, out.Direction)
+	require.Equal(t, "DESC", out.Direction)
 
 	require.Equal(t, uint64(1), out.Items[0].ID)
 	require.Equal(t, "Troca de óleo", out.Items[0].Nome)
@@ -334,54 +342,62 @@ func TestListarServicosUseCase_Executar_ListaVazia_RetornaPaginaVazia(t *testing
 	repo := mocks.NewServicoRepository(t)
 	uc := appservico.NewListarServicosUseCase(repo)
 
-	params := query.Params{
-		Offset:    0,
-		Limit:     20,
+	input := appservico.ListarServicosInput{
+		ParamsInput: appquery.ParamsInput{
+			Page:      2,
+			Order:     "id",
+			Direction: "ASC",
+		},
+	}
+
+	expectedParams := query.Params{
+		Page:      2,
 		Order:     "id",
 		Direction: query.DirectionASC,
 	}
 
 	repo.
 		EXPECT().
-		Listar(mock.Anything, params).
+		Listar(mock.Anything, expectedParams).
 		Return(
 			query.Page[*domainservico.Servico]{
-				Items:     []*domainservico.Servico{},
-				Total:     0,
-				Offset:    0,
-				Limit:     20,
-				Order:     "id",
-				Direction: query.DirectionASC,
+				Items:      []*domainservico.Servico{},
+				Total:      0,
+				Page:       2,
+				PageSize:   20,
+				TotalPages: 0,
+				Order:      "id",
+				Direction:  query.DirectionASC,
 			},
 			nil,
 		)
 
 	out, err := uc.Executar(
 		context.Background(),
-		params,
+		input,
 	)
 
 	require.NoError(t, err)
-
 	require.Empty(t, out.Items)
 	require.NotNil(t, out.Items)
-
 	require.Equal(t, int64(0), out.Total)
-	require.Equal(t, 0, out.Offset)
-	require.Equal(t, 20, out.Limit)
+	require.Equal(t, 2, out.Page)
+	require.Equal(t, 20, out.PageSize)
+	require.Zero(t, out.TotalPages)
 	require.Equal(t, "id", out.Order)
-	require.Equal(t, query.DirectionASC, out.Direction)
+	require.Equal(t, "ASC", out.Direction)
 }
 
 func TestListarServicosUseCase_Executar_ErroDoBanco_RetornaInternalError(t *testing.T) {
 	repo := mocks.NewServicoRepository(t)
 	uc := appservico.NewListarServicosUseCase(repo)
 
-	params := query.Params{}
+	input := appservico.ListarServicosInput{}
+	expectedParams := query.Params{}
 
 	repo.
 		EXPECT().
-		Listar(mock.Anything, params).
+		Listar(mock.Anything, expectedParams).
 		Return(
 			query.Page[*domainservico.Servico]{},
 			errors.New("conexao recusada"),
@@ -389,7 +405,7 @@ func TestListarServicosUseCase_Executar_ErroDoBanco_RetornaInternalError(t *test
 
 	out, err := uc.Executar(
 		context.Background(),
-		params,
+		input,
 	)
 
 	require.Error(t, err)
@@ -405,17 +421,23 @@ func TestListarServicosUseCase_Executar_AppErrorDoRepositorio_PropagaErro(t *tes
 	repo := mocks.NewServicoRepository(t)
 	uc := appservico.NewListarServicosUseCase(repo)
 
-	params := query.Params{
-		Limit: 101,
+	input := appservico.ListarServicosInput{
+		ParamsInput: appquery.ParamsInput{
+			Page: -1,
+		},
+	}
+
+	expectedParams := query.Params{
+		Page: -1,
 	}
 
 	expectedErr := shared.NewValidationError(
-		"Limit não pode ser maior que 100.",
+		"Page não pode ser negativo.",
 	)
 
 	repo.
 		EXPECT().
-		Listar(mock.Anything, params).
+		Listar(mock.Anything, expectedParams).
 		Return(
 			query.Page[*domainservico.Servico]{},
 			expectedErr,
@@ -423,7 +445,7 @@ func TestListarServicosUseCase_Executar_AppErrorDoRepositorio_PropagaErro(t *tes
 
 	out, err := uc.Executar(
 		context.Background(),
-		params,
+		input,
 	)
 
 	require.Error(t, err)

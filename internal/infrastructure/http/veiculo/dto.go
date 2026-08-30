@@ -29,10 +29,11 @@ type VeiculoResponse struct {
 }
 
 type ListarVeiculosResponse struct {
-	Items     []VeiculoResponse `json:"items"`
-	Total     int64             `json:"total" example:"42"`
-	Offset    int               `json:"offset" example:"0"`
-	Limit     int               `json:"limit" example:"20"`
-	Order     string            `json:"order" example:"id"`
-	Direction string            `json:"direction" example:"ASC"`
+	Items      []VeiculoResponse `json:"items"`
+	Total      int64             `json:"total" example:"42"`
+	Page       int               `json:"page" example:"1"`
+	PageSize   int               `json:"page_size" example:"20"`
+	TotalPages int               `json:"total_pages" example:"3"`
+	Order      string            `json:"order" example:"id"`
+	Direction  string            `json:"direction" example:"ASC"`
 }

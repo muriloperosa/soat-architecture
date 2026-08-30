@@ -1,5 +1,5 @@
-// Package httpquery converte query parameters HTTP nos contratos genéricos de
-// paginação e filtros do domínio.
+// Package httpquery interpreta os parâmetros de consulta HTTP sem expor
+// contratos de domínio ou de persistência aos handlers.
 package httpquery
 
 import (
@@ -9,40 +9,52 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/muriloperosa/soat-architecture/internal/domain/query"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 )
 
-// Parser interpreta offset, limit, order, direction e os demais parâmetros
-// como filtros diretos por campo.
-type Parser struct{}
+const (
+	OperatorAuto    = "auto"
+	OperatorAutoNot = "auto_not"
+)
 
-func NewParser() *Parser {
-	return &Parser{}
+// Filter representa um filtro extraído da query string HTTP.
+type Filter struct {
+	Field    string
+	Operator string
+	Value    string
 }
 
-// Parse aceita filtros no formato campo=valor. O sufixo _not representa
-// negação. O operador efetivo é escolhido na persistência conforme o tipo.
-func (p *Parser) Parse(c *gin.Context) (query.Params, error) {
-	params := query.Params{
+// Params representa somente os parâmetros expostos pelo contrato HTTP.
+type Params struct {
+	Page      int
+	Order     string
+	Direction string
+	Filters   []Filter
+}
+
+type Parser struct{}
+
+func NewParser() *Parser { return &Parser{} }
+
+// Parse aceita page, order e direction. Os demais parâmetros são filtros no
+// formato campo=valor; o sufixo _not representa negação.
+func (p *Parser) Parse(c *gin.Context) (Params, error) {
+	params := Params{
+		Page:      1,
 		Order:     strings.TrimSpace(c.Query("order")),
-		Direction: query.Direction(strings.ToUpper(strings.TrimSpace(c.Query("direction")))),
-		Filters:   make([]query.Filter, 0),
+		Direction: strings.ToUpper(strings.TrimSpace(c.Query("direction"))),
+		Filters:   make([]Filter, 0),
 	}
 
-	var err error
-	if rawOffset, ok := c.GetQuery("offset"); ok {
-		params.Offset, err = parseInteger("offset", rawOffset)
+	if rawPage, ok := c.GetQuery("page"); ok {
+		page, err := parseInteger("page", rawPage)
 		if err != nil {
-			return query.Params{}, err
+			return Params{}, err
 		}
-	}
-
-	if rawLimit, ok := c.GetQuery("limit"); ok {
-		params.Limit, err = parseInteger("limit", rawLimit)
-		if err != nil {
-			return query.Params{}, err
+		if page < 1 {
+			return Params{}, shared.NewValidationError("Parâmetro page deve ser maior ou igual a 1.")
 		}
+		params.Page = page
 	}
 
 	queryValues := c.Request.URL.Query()
@@ -56,25 +68,23 @@ func (p *Parser) Parse(c *gin.Context) (query.Params, error) {
 
 	for _, key := range keys {
 		field := strings.ToLower(strings.TrimSpace(key))
-		operator := query.OperatorAuto
+		operator := OperatorAuto
 		if strings.HasSuffix(field, "_not") {
 			field = strings.TrimSuffix(field, "_not")
-			operator = query.OperatorAutoNot
+			operator = OperatorAutoNot
 		}
 		if field == "" {
-			return query.Params{}, shared.NewValidationError("Campo do filtro é obrigatório.")
+			return Params{}, shared.NewValidationError("Campo do filtro é obrigatório.")
 		}
 
 		for _, value := range queryValues[key] {
 			value = strings.TrimSpace(value)
 			if value == "" {
-				return query.Params{}, shared.NewValidationError(
+				return Params{}, shared.NewValidationError(
 					fmt.Sprintf("Valor do filtro %q é obrigatório.", field),
 				)
 			}
-			params.Filters = append(params.Filters, query.Filter{
-				Field: field, Operator: operator, Value: value,
-			})
+			params.Filters = append(params.Filters, Filter{Field: field, Operator: operator, Value: value})
 		}
 	}
 
@@ -91,7 +101,7 @@ func parseInteger(name, value string) (int, error) {
 
 func isReservedParameter(name string) bool {
 	switch strings.ToLower(name) {
-	case "offset", "limit", "order", "direction":
+	case "page", "order", "direction":
 		return true
 	default:
 		return false

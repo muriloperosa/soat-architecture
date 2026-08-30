@@ -3,6 +3,7 @@ package cliente
 import (
 	"context"
 	"errors"
+	appquery "github.com/muriloperosa/soat-architecture/internal/application/query"
 	"testing"
 
 	domain "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
@@ -13,50 +14,86 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestListarClientesUseCase(t *testing.T) {
+func TestListarClientesUseCase_Executar_ComSucesso(t *testing.T) {
 	repository := mocks.NewClienteRepository(t)
-	cliente, err := domain.NewCliente(
-		"52998224725", domain.TipoPessoaFisica, "Maria Silva",
-		"maria@email.com", "11999998888", "senha123", 7,
-	)
+	useCase := NewListarClientesUseCase(repository)
+	ctx := context.Background()
+
+	cliente, err := domain.NewCliente("52998224725", domain.TipoPessoaFisica, "Maria Silva", "maria@email.com", "11999998888", "senha123", 7)
 	require.NoError(t, err)
 	cliente.DefinirID(1)
 
-	params := query.Params{Offset: 0, Limit: 10, Order: "nome", Direction: query.DirectionASC}
-	repository.EXPECT().Listar(mock.Anything, params).Return(query.Page[*domain.Cliente]{
-		Items: []*domain.Cliente{&cliente}, Total: 1, Offset: 0, Limit: 10,
-		Order: "nome", Direction: query.DirectionASC,
-	}, nil)
+	input := ListarClientesInput{
+		ParamsInput: appquery.ParamsInput{
+			Page:      2,
+			Order:     "nome",
+			Direction: "DESC",
+			Filters: []appquery.FilterInput{
+				{
+					Field:    "nome",
+					Operator: "auto",
+					Value:    "Teste",
+				},
+			},
+		},
+	}
+	expectedParams := query.Params{
+		Page: 2, Order: "nome", Direction: query.DirectionDESC,
+		Filters: []query.Filter{{Field: "nome", Operator: query.OperatorAuto, Value: "Teste"}},
+	}
 
-	output, err := NewListarClientesUseCase(repository).Executar(context.Background(), params)
+	repository.EXPECT().Listar(ctx, expectedParams).Return(query.Page[*domain.Cliente]{
+		Items: []*domain.Cliente{&cliente}, Total: 42, Page: 2, PageSize: 20, TotalPages: 3,
+		Order: "nome", Direction: query.DirectionDESC,
+	}, nil).Once()
 
+	out, err := useCase.Executar(ctx, input)
 	require.NoError(t, err)
-	require.Len(t, output.Items, 1)
-	require.Equal(t, uint64(1), output.Items[0].ID)
-	require.Equal(t, int64(1), output.Total)
-	require.Equal(t, "nome", output.Order)
+	require.Len(t, out.Items, 1)
+	require.Equal(t, int64(42), out.Total)
+	require.Equal(t, 2, out.Page)
+	require.Equal(t, 20, out.PageSize)
+	require.Equal(t, 3, out.TotalPages)
+	require.Equal(t, "nome", out.Order)
+	require.Equal(t, "DESC", out.Direction)
 }
 
-func TestListarClientesUseCasePreservaErroDeValidacao(t *testing.T) {
+func TestListarClientesUseCase_Executar_ListaVazia(t *testing.T) {
 	repository := mocks.NewClienteRepository(t)
-	validationErr := shared.NewValidationError("filtro inválido")
-	repository.EXPECT().Listar(mock.Anything, mock.Anything).Return(
-		query.Page[*domain.Cliente]{}, validationErr,
-	)
+	useCase := NewListarClientesUseCase(repository)
+	ctx := context.Background()
+	input := ListarClientesInput{appquery.ParamsInput{
+		Page: 1,
+	}}
 
-	_, err := NewListarClientesUseCase(repository).Executar(context.Background(), query.Params{})
+	repository.EXPECT().Listar(ctx, query.Params{Page: 1}).Return(query.Page[*domain.Cliente]{
+		Items: []*domain.Cliente{}, Total: 0, Page: 1, PageSize: 20, TotalPages: 0,
+		Order: "id", Direction: query.DirectionASC,
+	}, nil).Once()
 
-	require.ErrorIs(t, err, validationErr)
+	out, err := useCase.Executar(ctx, input)
+	require.NoError(t, err)
+	require.NotNil(t, out.Items)
+	require.Empty(t, out.Items)
+	require.Equal(t, 1, out.Page)
+	require.Equal(t, 20, out.PageSize)
+	require.Zero(t, out.TotalPages)
 }
 
-func TestListarClientesUseCaseConverteErroDeInfraestrutura(t *testing.T) {
+func TestListarClientesUseCase_Executar_PreservaAppError(t *testing.T) {
 	repository := mocks.NewClienteRepository(t)
-	repository.EXPECT().Listar(mock.Anything, mock.Anything).Return(
-		query.Page[*domain.Cliente]{}, errors.New("banco indisponível"),
-	)
+	appErr := shared.NewValidationError("filtro inválido")
+	repository.EXPECT().Listar(mock.Anything, mock.Anything).Return(query.Page[*domain.Cliente]{}, appErr)
 
-	_, err := NewListarClientesUseCase(repository).Executar(context.Background(), query.Params{})
+	_, err := NewListarClientesUseCase(repository).Executar(context.Background(), ListarClientesInput{})
+	require.ErrorIs(t, err, appErr)
+}
 
+func TestListarClientesUseCase_Executar_ErroDeInfraestrutura(t *testing.T) {
+	repository := mocks.NewClienteRepository(t)
+	repository.EXPECT().Listar(mock.Anything, mock.Anything).Return(query.Page[*domain.Cliente]{}, errors.New("banco indisponível"))
+
+	_, err := NewListarClientesUseCase(repository).Executar(context.Background(), ListarClientesInput{})
 	var appErr *shared.AppError
 	require.ErrorAs(t, err, &appErr)
 	require.Equal(t, shared.KindInternal, appErr.Kind)

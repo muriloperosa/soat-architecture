@@ -137,17 +137,20 @@ definitions:
         items:
           $ref: '#/definitions/cliente.ClienteResponse'
         type: array
-      limit:
-        example: 20
-        type: integer
-      offset:
-        example: 0
-        type: integer
       order:
         example: nome
         type: string
+      page:
+        example: 1
+        type: integer
+      page_size:
+        example: 20
+        type: integer
       total:
         example: 42
+        type: integer
+      total_pages:
+        example: 3
         type: integer
     type: object
   health.HealthCheckResponse:
@@ -278,17 +281,20 @@ definitions:
         items:
           $ref: '#/definitions/peca.PecaResponse'
         type: array
-      limit:
-        example: 20
-        type: integer
-      offset:
-        example: 0
-        type: integer
       order:
         example: nome
         type: string
+      page:
+        example: 1
+        type: integer
+      page_size:
+        example: 20
+        type: integer
       total:
         example: 42
+        type: integer
+      total_pages:
+        example: 3
         type: integer
     type: object
   peca.PecaResponse:
@@ -399,17 +405,20 @@ definitions:
         items:
           $ref: '#/definitions/servico.ServicoResponse'
         type: array
-      limit:
-        example: 20
-        type: integer
-      offset:
-        example: 0
-        type: integer
       order:
         example: nome
         type: string
+      page:
+        example: 1
+        type: integer
+      page_size:
+        example: 20
+        type: integer
       total:
         example: 42
+        type: integer
+      total_pages:
+        example: 3
         type: integer
     type: object
   servico.ServicoResponse:
@@ -572,17 +581,20 @@ definitions:
         items:
           $ref: '#/definitions/veiculo.VeiculoResponse'
         type: array
-      limit:
-        example: 20
-        type: integer
-      offset:
-        example: 0
-        type: integer
       order:
         example: id
         type: string
+      page:
+        example: 1
+        type: integer
+      page_size:
+        example: 20
+        type: integer
       total:
         example: 42
+        type: integer
+      total_pages:
+        example: 3
         type: integer
     type: object
   veiculo.VeiculoResponse:
@@ -798,18 +810,11 @@ paths:
         e duas datas ISO 8601 formam um intervalo. Use o sufixo _not para negar filtros
         textuais.
       parameters:
-      - default: 0
-        description: Quantidade de registros ignorados
+      - default: 1
+        description: Número da página
         in: query
-        minimum: 0
-        name: offset
-        type: integer
-      - default: 20
-        description: Quantidade de registros retornados
-        in: query
-        maximum: 100
         minimum: 1
-        name: limit
+        name: page
         type: integer
       - default: id
         description: Campo de ordenação
@@ -1418,18 +1423,11 @@ paths:
     get:
       description: Lista peças do estoque com paginação, ordenação e filtros.
       parameters:
-      - default: 0
-        description: Quantidade de registros a ignorar
+      - default: 1
+        description: Número da página
         in: query
-        minimum: 0
-        name: offset
-        type: integer
-      - default: 20
-        description: Quantidade máxima de registros
-        in: query
-        maximum: 100
         minimum: 1
-        name: limit
+        name: page
         type: integer
       - default: id
         description: Campo para ordenação
@@ -1823,18 +1821,11 @@ paths:
         Texto usa LIKE, listas separadas por vírgula usam IN e booleanos usam igualdade.
         Duas datas ISO 8601 formam um intervalo. Use o sufixo _not para negar filtros.
       parameters:
-      - default: 0
-        description: Quantidade de registros ignorados
+      - default: 1
+        description: Número da página
         in: query
-        minimum: 0
-        name: offset
-        type: integer
-      - default: 20
-        description: Quantidade de registros retornados
-        in: query
-        maximum: 100
         minimum: 1
-        name: limit
+        name: page
         type: integer
       - default: id
         description: Campo de ordenação
@@ -2338,18 +2329,11 @@ paths:
         usam igualdade. Duas datas ISO 8601 formam um intervalo. Use o sufixo _not
         para negar filtros.
       parameters:
-      - default: 0
-        description: Quantidade de registros ignorados
+      - default: 1
+        description: Número da página
         in: query
-        minimum: 0
-        name: offset
-        type: integer
-      - default: 20
-        description: Quantidade de registros retornados
-        in: query
-        maximum: 100
         minimum: 1
-        name: limit
+        name: page
         type: integer
       - default: id
         description: Campo de ordenação

@@ -229,8 +229,7 @@ func (h *Handler) ReporEstoque(c *gin.Context) {
 // @Tags Pecas
 // @Produce json
 // @Security BearerAuth
-// @Param offset query int false "Quantidade de registros a ignorar" default(0) minimum(0)
-// @Param limit query int false "Quantidade máxima de registros" default(20) minimum(1) maximum(100)
+// @Param page query int false "Número da página" default(1) minimum(1)
 // @Param order query string false "Campo para ordenação" Enums(id,codigo,nome,marca,descricao,preco,quantidade_em_estoque,estoque_minimo,criado_por,ativo,data_cadastro,data_atualizacao) default(id)
 // @Param direction query string false "Direção da ordenação" Enums(ASC,DESC) default(ASC)
 // @Param id query int false "Filtra pelo ID"
@@ -257,7 +256,7 @@ func (h *Handler) Listar(c *gin.Context) {
 		return
 	}
 
-	out, err := h.listar.Executar(c.Request.Context(), params)
+	out, err := h.listar.Executar(c.Request.Context(), toListarInput(params))
 	if err != nil {
 		httperror.RespondError(c, err)
 		return

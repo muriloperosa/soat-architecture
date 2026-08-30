@@ -56,8 +56,7 @@ func testBuilder() *Builder {
 		},
 		DefaultOrder:     "id",
 		DefaultDirection: domainquery.DirectionASC,
-		DefaultLimit:     20,
-		MaxLimit:         100,
+		PageSize:         20,
 	})
 }
 
@@ -119,7 +118,8 @@ func TestBuilderNormalizeAplicaPadroes(t *testing.T) {
 	params, err := testBuilder().Normalize(domainquery.Params{})
 
 	require.NoError(t, err)
-	require.Equal(t, 20, params.Limit)
+	require.Equal(t, 1, params.Page)
+	require.Equal(t, 20, testBuilder().PageSize())
 	require.Equal(t, "id", params.Order)
 	require.Equal(t, domainquery.DirectionASC, params.Direction)
 }
@@ -135,7 +135,7 @@ func TestBuilderNormalizeRejeitaOrdenacaoNaoPermitida(t *testing.T) {
 func TestBuilderApplyFiltersEApplyPagination(t *testing.T) {
 	builder := testBuilder()
 	params, err := builder.Normalize(domainquery.Params{
-		Offset: 5, Limit: 10, Order: "name", Direction: domainquery.DirectionDESC,
+		Page: 2, Order: "name", Direction: domainquery.DirectionDESC,
 		Filters: []domainquery.Filter{
 			{Field: "name", Operator: domainquery.OperatorLike, Value: "Maria"},
 			{Field: "id", Operator: domainquery.OperatorIn, Value: "1|2|3"},

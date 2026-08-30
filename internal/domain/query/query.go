@@ -30,17 +30,17 @@ const (
 	OperatorIsNotNull   Operator = "is_not_null"
 )
 
-// Filter contém um filtro já extraído da camada de transporte.
+// Filter contém um filtro já extraído da camada de aplicação.
 type Filter struct {
 	Field    string
 	Operator Operator
 	Value    string
 }
 
-// Params contém os parâmetros comuns de uma consulta paginada.
+// Params contém os parâmetros usados pelas portas de consulta do domínio.
+// Page é baseada em 1. O tamanho da página é uma decisão da persistência.
 type Params struct {
-	Offset    int
-	Limit     int
+	Page      int
 	Order     string
 	Direction Direction
 	Filters   []Filter
@@ -48,10 +48,11 @@ type Params struct {
 
 // Page representa uma página e os metadados da consulta que a produziu.
 type Page[T any] struct {
-	Items     []T
-	Total     int64
-	Offset    int
-	Limit     int
-	Order     string
-	Direction Direction
+	Items      []T
+	Total      int64
+	Page       int
+	PageSize   int
+	TotalPages int
+	Order      string
+	Direction  Direction
 }

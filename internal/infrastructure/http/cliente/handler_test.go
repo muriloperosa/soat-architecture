@@ -69,39 +69,82 @@ func TestNewHandler(t *testing.T) {
 
 func TestHandlerListarComPaginacaoEFiltros(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+
 	repo := mocks.NewClienteRepository(t)
+
 	params := query.Params{
-		Offset: 5, Limit: 10, Order: "nome", Direction: query.DirectionDESC,
+		Page:      2,
+		Order:     "nome",
+		Direction: query.DirectionDESC,
 		Filters: []query.Filter{
-			{Field: "ativo", Operator: query.OperatorAuto, Value: "true"},
-			{Field: "nome", Operator: query.OperatorAuto, Value: "Maria"},
+			{
+				Field:    "ativo",
+				Operator: query.OperatorAuto,
+				Value:    "true",
+			},
+			{
+				Field:    "nome",
+				Operator: query.OperatorAuto,
+				Value:    "Maria",
+			},
 		},
 	}
-	repo.EXPECT().Listar(mock.Anything, params).Return(query.Page[*domaincliente.Cliente]{
-		Items: []*domaincliente.Cliente{clienteValido(t, 1)},
-		Total: 21, Offset: 5, Limit: 10, Order: "nome", Direction: query.DirectionDESC,
-	}, nil)
+
+	repo.
+		EXPECT().
+		Listar(mock.Anything, params).
+		Return(query.Page[*domaincliente.Cliente]{
+			Items: []*domaincliente.Cliente{
+				clienteValido(t, 1),
+			},
+			Total:      21,
+			Page:       2,
+			PageSize:   20,
+			TotalPages: 2,
+			Order:      "nome",
+			Direction:  query.DirectionDESC,
+		}, nil)
+
 	handler := NewHandler(
-		nil, nil, nil, nil, nil, nil, nil,
-		appcliente.NewListarClientesUseCase(repo), httpquery.NewParser(),
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		appcliente.NewListarClientesUseCase(repo),
+		httpquery.NewParser(),
 	)
+
 	router := gin.New()
 	router.GET("/v1/clientes", handler.Listar)
 
 	recorder := httptest.NewRecorder()
-	router.ServeHTTP(recorder, httptest.NewRequest(
-		http.MethodGet,
-		"/v1/clientes?offset=5&limit=10&order=nome&direction=desc&nome=Maria&ativo=true",
-		nil,
-	))
+
+	router.ServeHTTP(
+		recorder,
+		httptest.NewRequest(
+			http.MethodGet,
+			"/v1/clientes?page=2&order=nome&direction=desc&nome=Maria&ativo=true",
+			nil,
+		),
+	)
 
 	require.Equal(t, http.StatusOK, recorder.Code)
+
 	var response ListarClientesResponse
-	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &response))
+
+	require.NoError(
+		t,
+		json.Unmarshal(recorder.Body.Bytes(), &response),
+	)
+
 	require.Len(t, response.Items, 1)
 	require.Equal(t, int64(21), response.Total)
-	require.Equal(t, 5, response.Offset)
-	require.Equal(t, 10, response.Limit)
+	require.Equal(t, 2, response.Page)
+	require.Equal(t, 20, response.PageSize)
+	require.Equal(t, 2, response.TotalPages)
 	require.Equal(t, "nome", response.Order)
 	require.Equal(t, "DESC", response.Direction)
 }
@@ -113,7 +156,7 @@ func TestHandlerListarRejeitaQueryInvalida(t *testing.T) {
 	router.GET("/v1/clientes", handler.Listar)
 
 	recorder := httptest.NewRecorder()
-	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/v1/clientes?limit=invalido", nil))
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/v1/clientes?page=invalida", nil))
 
 	require.Equal(t, http.StatusBadRequest, recorder.Code)
 }
