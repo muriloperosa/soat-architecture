@@ -12,8 +12,6 @@ type Repository struct {
 	db *gorm.DB
 }
 
-var _ domain.OrdemServicoRepository = (*Repository)(nil)
-
 func NewOrdemServicoRepository(db *gorm.DB) domain.OrdemServicoRepository {
 	return &Repository{db: db}
 }
