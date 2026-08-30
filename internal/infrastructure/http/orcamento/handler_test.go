@@ -17,6 +17,8 @@ import (
 	orcamentomocks "github.com/muriloperosa/soat-architecture/internal/domain/orcamento/mocks"
 	domainordemservico "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
 	ordemservicomocks "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico/mocks"
+	domainpeca "github.com/muriloperosa/soat-architecture/internal/domain/peca"
+	pecamocks "github.com/muriloperosa/soat-architecture/internal/domain/peca/mocks"
 	domainservico "github.com/muriloperosa/soat-architecture/internal/domain/servico"
 	servicomocks "github.com/muriloperosa/soat-architecture/internal/domain/servico/mocks"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
@@ -183,6 +185,125 @@ func TestHandlerAdicionarServicoInexistenteRetorna404(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, rec.Code)
 }
 
+func TestHandlerAdicionarServicoQuantidadeInvalidaRetorna400(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	orcamentoRepo := orcamentomocks.NewOrcamentoRepository(t)
+	servicoRepo := servicomocks.NewServicoRepository(t)
+
+	vazio, err := domainorcamento.NewOrcamento(42, "", 30)
+	require.NoError(t, err)
+	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(vazio, nil)
+
+	servico, err := domainservico.NewServico("Troca de óleo", "Troca de óleo do motor", 100.0, 60, 30)
+	require.NoError(t, err)
+	servico.AtribuirID(5)
+	servicoRepo.EXPECT().BuscarPorID(mock.Anything, uint64(5)).Return(servico, nil)
+
+	handler := httporcamento.NewHandler(nil, app.NewAdicionarServicoOrcamentoUseCase(orcamentoRepo, servicoRepo), nil, nil, nil, nil)
+	router := gin.New()
+	router.POST("/v1/ordens-servico/:id/orcamento/itens-servico", handler.AdicionarServico)
+
+	body := []byte(`{"servico_id":5,"quantidade":-1}`)
+	req := httptest.NewRequest(http.MethodPost, "/v1/ordens-servico/42/orcamento/itens-servico", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func pecaExistenteHTTP(t *testing.T) *domainpeca.Peca {
+	t.Helper()
+	peca, err := domainpeca.NewPeca("Filtro de óleo", "Marca X", "Filtro de óleo do motor", 50.0, 10, 2, 30)
+	require.NoError(t, err)
+	peca.AtribuirID(9)
+	return peca
+}
+
+func TestHandlerAdicionarPecaRetorna200(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	orcamentoRepo := orcamentomocks.NewOrcamentoRepository(t)
+	pecaRepo := pecamocks.NewRepository(t)
+
+	vazio, err := domainorcamento.NewOrcamento(42, "", 30)
+	require.NoError(t, err)
+	vazio.AtribuirID(1)
+	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(vazio, nil).Once()
+
+	pecaRepo.EXPECT().BuscarPorID(mock.Anything, uint64(9)).Return(pecaExistenteHTTP(t), nil)
+
+	orcamentoRepo.EXPECT().Atualizar(mock.Anything, mock.AnythingOfType("*orcamento.Orcamento")).Return(nil)
+
+	comItem, err := domainorcamento.NewOrcamento(42, "", 30)
+	require.NoError(t, err)
+	comItem.AtribuirID(1)
+	require.NoError(t, comItem.AdicionarItemPeca(9, "Filtro de óleo do motor", 3, 50.0))
+	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(comItem, nil).Once()
+
+	handler := httporcamento.NewHandler(nil, nil, app.NewAdicionarPecaOrcamentoUseCase(orcamentoRepo, pecaRepo), nil, nil, nil)
+	router := gin.New()
+	router.POST("/v1/ordens-servico/:id/orcamento/itens-peca", handler.AdicionarPeca)
+
+	body, err := json.Marshal(httporcamento.AdicionarPecaOrcamentoRequest{PecaID: 9, Quantidade: 3})
+	require.NoError(t, err)
+	req := httptest.NewRequest(http.MethodPost, "/v1/ordens-servico/42/orcamento/itens-peca", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	var response httporcamento.OrcamentoResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+	require.Equal(t, 150.0, response.ValorTotal)
+	require.Len(t, response.ItensPeca, 1)
+}
+
+func TestHandlerAdicionarPecaInexistenteRetorna404(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	orcamentoRepo := orcamentomocks.NewOrcamentoRepository(t)
+	pecaRepo := pecamocks.NewRepository(t)
+
+	vazio, err := domainorcamento.NewOrcamento(42, "", 30)
+	require.NoError(t, err)
+	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(vazio, nil)
+	pecaRepo.EXPECT().BuscarPorID(mock.Anything, uint64(999)).Return(nil, domainpeca.ErrPecaNaoEncontrada)
+
+	handler := httporcamento.NewHandler(nil, nil, app.NewAdicionarPecaOrcamentoUseCase(orcamentoRepo, pecaRepo), nil, nil, nil)
+	router := gin.New()
+	router.POST("/v1/ordens-servico/:id/orcamento/itens-peca", handler.AdicionarPeca)
+
+	body := []byte(`{"peca_id":999,"quantidade":1}`)
+	req := httptest.NewRequest(http.MethodPost, "/v1/ordens-servico/42/orcamento/itens-peca", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusNotFound, rec.Code)
+}
+
+func TestHandlerAdicionarPecaQuantidadeInvalidaRetorna400(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	orcamentoRepo := orcamentomocks.NewOrcamentoRepository(t)
+	pecaRepo := pecamocks.NewRepository(t)
+
+	vazio, err := domainorcamento.NewOrcamento(42, "", 30)
+	require.NoError(t, err)
+	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(vazio, nil)
+	pecaRepo.EXPECT().BuscarPorID(mock.Anything, uint64(9)).Return(pecaExistenteHTTP(t), nil)
+
+	handler := httporcamento.NewHandler(nil, nil, app.NewAdicionarPecaOrcamentoUseCase(orcamentoRepo, pecaRepo), nil, nil, nil)
+	router := gin.New()
+	router.POST("/v1/ordens-servico/:id/orcamento/itens-peca", handler.AdicionarPeca)
+
+	body := []byte(`{"peca_id":9,"quantidade":-2}`)
+	req := httptest.NewRequest(http.MethodPost, "/v1/ordens-servico/42/orcamento/itens-peca", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
 func TestHandlerRemoverServicoRetorna200(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	orcamentoRepo := orcamentomocks.NewOrcamentoRepository(t)
@@ -234,6 +355,63 @@ func TestHandlerRemoverServicoItemInexistenteRetorna404(t *testing.T) {
 	router.DELETE("/v1/ordens-servico/:id/orcamento/itens-servico/:itemId", handler.RemoverServico)
 
 	req := httptest.NewRequest(http.MethodDelete, "/v1/ordens-servico/42/orcamento/itens-servico/999", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusNotFound, rec.Code)
+}
+
+func TestHandlerRemoverPecaRetorna200(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	orcamentoRepo := orcamentomocks.NewOrcamentoRepository(t)
+
+	comItem, err := domainorcamento.NewOrcamento(42, "", 30)
+	require.NoError(t, err)
+	comItem.AtribuirID(1)
+	require.NoError(t, comItem.AdicionarItemPeca(9, "Filtro de óleo", 3, 50.0))
+	item := comItem.ItensPeca()[0]
+	reidratado := domainorcamento.ReidratarOrcamento(
+		1, 42,
+		nil,
+		[]domainorcamento.ItemPeca{domainorcamento.ReidratarItemPeca(11, 1, item.PecaID(), item.Descricao(), item.Quantidade(), item.Valor())},
+		comItem.ValorItemServicos(), comItem.ValorItemPecas(), comItem.ValorTotal(),
+		"", 30, comItem.CriadoEm(), comItem.AtualizadoEm(),
+	)
+	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(reidratado, nil).Once()
+	orcamentoRepo.EXPECT().Atualizar(mock.Anything, mock.AnythingOfType("*orcamento.Orcamento")).Return(nil)
+
+	vazio, err := domainorcamento.NewOrcamento(42, "", 30)
+	require.NoError(t, err)
+	vazio.AtribuirID(1)
+	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(vazio, nil).Once()
+
+	handler := httporcamento.NewHandler(nil, nil, nil, nil, app.NewRemoverPecaOrcamentoUseCase(orcamentoRepo), nil)
+	router := gin.New()
+	router.DELETE("/v1/ordens-servico/:id/orcamento/itens-peca/:itemId", handler.RemoverPeca)
+
+	req := httptest.NewRequest(http.MethodDelete, "/v1/ordens-servico/42/orcamento/itens-peca/11", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	var response httporcamento.OrcamentoResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+	require.Empty(t, response.ItensPeca)
+}
+
+func TestHandlerRemoverPecaItemInexistenteRetorna404(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	orcamentoRepo := orcamentomocks.NewOrcamentoRepository(t)
+
+	vazio, err := domainorcamento.NewOrcamento(42, "", 30)
+	require.NoError(t, err)
+	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(vazio, nil)
+
+	handler := httporcamento.NewHandler(nil, nil, nil, nil, app.NewRemoverPecaOrcamentoUseCase(orcamentoRepo), nil)
+	router := gin.New()
+	router.DELETE("/v1/ordens-servico/:id/orcamento/itens-peca/:itemId", handler.RemoverPeca)
+
+	req := httptest.NewRequest(http.MethodDelete, "/v1/ordens-servico/42/orcamento/itens-peca/999", nil)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
