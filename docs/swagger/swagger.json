@@ -1050,6 +1050,382 @@
                 }
             }
         },
+        "/v1/ordens-servico/{id}/orcamento": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cria o orçamento de uma OS. Uma OS possui no máximo um orçamento. Restrito a mecânico ou administrador.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orçamentos"
+                ],
+                "summary": "Gera o orçamento de uma Ordem de Serviço",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da Ordem de Serviço",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados do orçamento",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/orcamento.GerarOrcamentoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/orcamento.OrcamentoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/ordens-servico/{id}/orcamento/itens-peca": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Inclui uma peça do estoque no orçamento da OS, copiando a descrição e o valor vigentes. Restrito a mecânico ou administrador.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orçamentos"
+                ],
+                "summary": "Adiciona uma peça ao orçamento",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da Ordem de Serviço",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Peça e quantidade",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/orcamento.AdicionarPecaOrcamentoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/orcamento.OrcamentoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/ordens-servico/{id}/orcamento/itens-peca/{itemId}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Remove um item de peça do orçamento da OS. Restrito a mecânico ou administrador.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orçamentos"
+                ],
+                "summary": "Remove uma peça do orçamento",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da Ordem de Serviço",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ID do item de peça",
+                        "name": "itemId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/orcamento.OrcamentoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/ordens-servico/{id}/orcamento/itens-servico": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Inclui um serviço do catálogo no orçamento da OS, copiando o valor e o tempo estimado vigentes. Restrito a mecânico ou administrador.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orçamentos"
+                ],
+                "summary": "Adiciona um serviço ao orçamento",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da Ordem de Serviço",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Serviço e quantidade",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/orcamento.AdicionarServicoOrcamentoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/orcamento.OrcamentoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/ordens-servico/{id}/orcamento/itens-servico/{itemId}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Remove um item de serviço do orçamento da OS. Restrito a mecânico ou administrador.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orçamentos"
+                ],
+                "summary": "Remove um serviço do orçamento",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da Ordem de Serviço",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ID do item de serviço",
+                        "name": "itemId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/orcamento.OrcamentoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/pecas": {
             "post": {
                 "security": [
@@ -2694,6 +3070,148 @@
                 "type": {
                     "type": "string",
                     "example": "validation"
+                }
+            }
+        },
+        "orcamento.AdicionarPecaOrcamentoRequest": {
+            "type": "object",
+            "required": [
+                "peca_id",
+                "quantidade"
+            ],
+            "properties": {
+                "peca_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "quantidade": {
+                    "type": "integer",
+                    "example": 2
+                }
+            }
+        },
+        "orcamento.AdicionarServicoOrcamentoRequest": {
+            "type": "object",
+            "required": [
+                "quantidade",
+                "servico_id"
+            ],
+            "properties": {
+                "quantidade": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "servico_id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "orcamento.GerarOrcamentoRequest": {
+            "type": "object",
+            "properties": {
+                "observacoes": {
+                    "type": "string",
+                    "example": "Aguardando aprovação do cliente"
+                }
+            }
+        },
+        "orcamento.ItemPecaResponse": {
+            "type": "object",
+            "properties": {
+                "descricao": {
+                    "type": "string",
+                    "example": "Filtro de óleo"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "peca_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "quantidade": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "subtotal": {
+                    "type": "number",
+                    "example": 100
+                },
+                "valor": {
+                    "type": "number",
+                    "example": 50
+                }
+            }
+        },
+        "orcamento.ItemServicoResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "quantidade": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "servico_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "subtotal": {
+                    "type": "number",
+                    "example": 150
+                },
+                "tempo_estimado_minutos": {
+                    "type": "integer",
+                    "example": 60
+                },
+                "valor": {
+                    "type": "number",
+                    "example": 150
+                }
+            }
+        },
+        "orcamento.OrcamentoResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "itens_peca": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/orcamento.ItemPecaResponse"
+                    }
+                },
+                "itens_servico": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/orcamento.ItemServicoResponse"
+                    }
+                },
+                "observacoes": {
+                    "type": "string",
+                    "example": "Aguardando aprovação do cliente"
+                },
+                "ordem_servico_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "valor_item_pecas": {
+                    "type": "number",
+                    "example": 100
+                },
+                "valor_item_servicos": {
+                    "type": "number",
+                    "example": 150
+                },
+                "valor_total": {
+                    "type": "number",
+                    "example": 250
                 }
             }
         },
