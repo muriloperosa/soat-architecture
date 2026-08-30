@@ -37,6 +37,9 @@ func (uc *GerarOrcamentoUseCase) Executar(ctx context.Context, input GerarOrcame
 	if os == nil {
 		return OrcamentoOutput{}, domainordemservico.ErrOrdemServicoNaoEncontrada
 	}
+	if os.Status() != domainordemservico.StatusEmDiagnostico {
+		return OrcamentoOutput{}, domainorcamento.ErrOrdemServicoNaoEmDiagnostico
+	}
 
 	_, err = uc.orcamentoRepository.BuscarPorOrdemServicoID(ctx, input.OrdemServicoID)
 	if err == nil {

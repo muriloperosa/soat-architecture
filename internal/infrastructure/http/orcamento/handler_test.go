@@ -29,11 +29,13 @@ func comClaims(c *gin.Context) {
 	c.Next()
 }
 
+// osExistenteHTTP devolve uma OS EM_DIAGNOSTICO, o status exigido pra gerar orçamento.
 func osExistenteHTTP(t *testing.T) *domainordemservico.OrdemServico {
 	t.Helper()
 	os, err := domainordemservico.NewOrdemServico("OS-20260827-a1b2c3d4e5f6", 10, 20, 52_300, "", "", 30)
 	require.NoError(t, err)
 	os.AtribuirID(42)
+	require.NoError(t, os.IniciarDiagnostico(30))
 	return os
 }
 
@@ -89,6 +91,29 @@ func TestHandlerGerarOrcamentoJaExisteRetorna409(t *testing.T) {
 	router.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusConflict, rec.Code)
+}
+
+func TestHandlerGerarOSNaoEmDiagnosticoRetorna400(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	orcamentoRepo := orcamentomocks.NewOrcamentoRepository(t)
+	osRepo := ordemservicomocks.NewOrdemServicoRepository(t)
+
+	os, err := domainordemservico.NewOrdemServico("OS-20260827-a1b2c3d4e5f6", 10, 20, 52_300, "", "", 30)
+	require.NoError(t, err)
+	os.AtribuirID(42)
+	osRepo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
+
+	handler := httporcamento.NewHandler(app.NewGerarOrcamentoUseCase(orcamentoRepo, osRepo), nil, nil, nil, nil)
+	router := gin.New()
+	router.Use(comClaims)
+	router.POST("/v1/ordens-servico/:id/orcamento", handler.Gerar)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/ordens-servico/42/orcamento", bytes.NewReader([]byte(`{}`)))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
 }
 
 func TestHandlerAdicionarServicoRetorna200(t *testing.T) {

@@ -46,8 +46,20 @@ func TestOrcamento_GerarAdicionarERemoverItens_CalculaTotais(t *testing.T) {
 
 	osPath := "/v1/ordens-servico/" + strconv.FormatUint(ordemServicoID, 10)
 
-	var gerado httporcamento.OrcamentoResponse
+	// Gerar orçamento exige a OS EM_DIAGNOSTICO.
 	rec := doRequest(t, http.MethodPost, osPath+"/orcamento", login.AccessToken,
+		httporcamento.GerarOrcamentoRequest{}, nil)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("gerar orçamento com OS RECEBIDA deveria retornar 400, veio %d", rec.Code)
+	}
+
+	rec = doRequest(t, http.MethodPatch, osPath+"/iniciar-diagnostico", login.AccessToken, nil, nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("iniciar diagnóstico: status %d, body %q", rec.Code, rec.Body.String())
+	}
+
+	var gerado httporcamento.OrcamentoResponse
+	rec = doRequest(t, http.MethodPost, osPath+"/orcamento", login.AccessToken,
 		httporcamento.GerarOrcamentoRequest{Observacoes: "Aguardando aprovação"}, &gerado)
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("gerar orçamento: status %d, body %q", rec.Code, rec.Body.String())
