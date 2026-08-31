@@ -326,7 +326,32 @@
       }
     },
     {
-      "name": "13 - Enviar orçamento para aprovação",
+      "name": "13 - Consultar peça (saldo antes da reserva)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    const body = pm.response.json();",
+              "    pm.collectionVariables.set('peca_saldo_antes_reserva', body.quantidade_em_estoque);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+        "url": {
+          "raw": "{{base_url}}/v1/pecas/{{peca_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "pecas", "{{peca_id}}"]
+        }
+      }
+    },
+    {
+      "name": "14 - Enviar orçamento para aprovação",
       "request": {
         "method": "PATCH",
         "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
@@ -338,7 +363,7 @@
       }
     },
     {
-      "name": "14 - Aprovar orçamento (cliente)",
+      "name": "15 - Aprovar orçamento (cliente)",
       "request": {
         "method": "PATCH",
         "header": [{ "key": "Authorization", "value": "Bearer {{cliente_access_token}}" }],
@@ -350,7 +375,33 @@
       }
     },
     {
-      "name": "15 - Iniciar execução",
+      "name": "16 - Consultar peça (reserva não altera estoque físico)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    const body = pm.response.json();",
+              "    pm.collectionVariables.set('peca_saldo_pos_reserva', body.quantidade_em_estoque);",
+              "    console.log('Reserva não consome estoque físico: saldo antes =', pm.collectionVariables.get('peca_saldo_antes_reserva'), '| saldo após aprovação/reserva =', body.quantidade_em_estoque);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+        "url": {
+          "raw": "{{base_url}}/v1/pecas/{{peca_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "pecas", "{{peca_id}}"]
+        }
+      }
+    },
+    {
+      "name": "17 - Iniciar execução",
       "request": {
         "method": "PATCH",
         "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
@@ -362,7 +413,7 @@
       }
     },
     {
-      "name": "16 - Finalizar ordem de serviço",
+      "name": "18 - Finalizar ordem de serviço",
       "request": {
         "method": "PATCH",
         "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
@@ -374,7 +425,33 @@
       }
     },
     {
-      "name": "17 - Entregar ordem de serviço",
+      "name": "19 - Consultar peça (baixa do saldo após finalizar)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    const body = pm.response.json();",
+              "    pm.collectionVariables.set('peca_saldo_pos_baixa', body.quantidade_em_estoque);",
+              "    console.log('Baixa de estoque na finalização: saldo pós-reserva =', pm.collectionVariables.get('peca_saldo_pos_reserva'), '| saldo pós-baixa =', body.quantidade_em_estoque);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+        "url": {
+          "raw": "{{base_url}}/v1/pecas/{{peca_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "pecas", "{{peca_id}}"]
+        }
+      }
+    },
+    {
+      "name": "20 - Entregar ordem de serviço",
       "request": {
         "method": "PATCH",
         "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
@@ -382,6 +459,25 @@
           "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/entregar",
           "host": ["{{base_url}}"],
           "path": ["v1", "ordens-servico", "{{ordem_servico_id}}", "entregar"]
+        }
+      }
+    },
+    {
+      "name": "21 - Relatório de transição de status das OS",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+        "url": {
+          "raw": "{{base_url}}/v1/relatorios/ordens-servico/transicao-status?start_date=2020-01-01&final_date=2030-12-31&from_status=RECEBIDA&to_status=ENTREGUE&unit=h",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "relatorios", "ordens-servico", "transicao-status"],
+          "query": [
+            { "key": "start_date", "value": "2020-01-01" },
+            { "key": "final_date", "value": "2030-12-31" },
+            { "key": "from_status", "value": "RECEBIDA" },
+            { "key": "to_status", "value": "ENTREGUE" },
+            { "key": "unit", "value": "h" }
+          ]
         }
       }
     }

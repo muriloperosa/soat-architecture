@@ -30,6 +30,7 @@ func testBuilder() *Builder {
 				Operators: []domainquery.Operator{
 					domainquery.OperatorEqual,
 					domainquery.OperatorIn,
+					domainquery.OperatorNotIn,
 				},
 			},
 			"name": {
@@ -38,6 +39,7 @@ func testBuilder() *Builder {
 					domainquery.OperatorEqual,
 					domainquery.OperatorLike,
 					domainquery.OperatorNotLike,
+					domainquery.OperatorIsNull,
 				},
 			},
 			"active": {
@@ -167,6 +169,143 @@ func TestBuilderApplyFiltersRejeitaTipoInvalido(t *testing.T) {
 func TestBuilderApplyFiltersRejeitaOperadorNaoPermitido(t *testing.T) {
 	_, err := testBuilder().ApplyFilters(dryRunDB(t).Model(&testModel{}), []domainquery.Filter{{
 		Field: "active", Operator: domainquery.OperatorLike, Value: "true",
+	}})
+
+	var appErr *shared.AppError
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindValidation, appErr.Kind)
+}
+
+func TestBuilderTotalPages(t *testing.T) {
+	builder := testBuilder()
+
+	require.Zero(t, builder.TotalPages(0))
+	require.Equal(t, 1, builder.TotalPages(1))
+	require.Equal(t, 1, builder.TotalPages(20))
+	require.Equal(t, 2, builder.TotalPages(21))
+}
+
+func TestNewDefaultBuilder(t *testing.T) {
+	builder := NewDefaultBuilder(map[string]Field{
+		"id": {Column: "id", Type: ValueTypeUint64, Sortable: true, Operators: []domainquery.Operator{domainquery.OperatorEqual}},
+	}, "id")
+
+	require.Equal(t, DefaultPageSize, builder.PageSize())
+
+	params, err := builder.Normalize(domainquery.Params{})
+	require.NoError(t, err)
+	require.Equal(t, "id", params.Order)
+	require.Equal(t, domainquery.DirectionASC, params.Direction)
+}
+
+func TestBuilderNormalizeRejeitaPageNegativo(t *testing.T) {
+	_, err := testBuilder().Normalize(domainquery.Params{Page: -1})
+
+	var appErr *shared.AppError
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindValidation, appErr.Kind)
+}
+
+func TestBuilderNormalizeRejeitaDirectionInvalida(t *testing.T) {
+	_, err := testBuilder().Normalize(domainquery.Params{Order: "id", Direction: "SIDEWAYS"})
+
+	var appErr *shared.AppError
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindValidation, appErr.Kind)
+}
+
+func TestBuilderResolveAutomaticoNumerosNegadoEMultiplo(t *testing.T) {
+	db, err := testBuilder().ApplyFilters(dryRunDB(t).Model(&testModel{}), []domainquery.Filter{{
+		Field: "id", Operator: domainquery.OperatorAutoNot, Value: "1,2",
+	}})
+	require.NoError(t, err)
+
+	statement := db.Find(&[]testModel{}).Statement
+	require.Contains(t, statement.SQL.String(), "id NOT IN")
+}
+
+func TestBuilderResolveAutomaticoBooleanoRejeitaMultiplosValores(t *testing.T) {
+	_, err := testBuilder().ApplyFilters(dryRunDB(t).Model(&testModel{}), []domainquery.Filter{{
+		Field: "active", Operator: domainquery.OperatorAuto, Value: "true,false",
+	}})
+
+	var appErr *shared.AppError
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindValidation, appErr.Kind)
+}
+
+func TestBuilderResolveAutomaticoDataRejeitaNegacao(t *testing.T) {
+	_, err := testBuilder().ApplyFilters(dryRunDB(t).Model(&testModel{}), []domainquery.Filter{{
+		Field: "created_at", Operator: domainquery.OperatorAutoNot, Value: "2026-08-20",
+	}})
+
+	var appErr *shared.AppError
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindValidation, appErr.Kind)
+}
+
+func TestBuilderResolveAutomaticoDataRejeitaMaisDeDoisValores(t *testing.T) {
+	_, err := testBuilder().ApplyFilters(dryRunDB(t).Model(&testModel{}), []domainquery.Filter{{
+		Field: "created_at", Operator: domainquery.OperatorAuto, Value: "2026-08-20,2026-08-21,2026-08-22",
+	}})
+
+	var appErr *shared.AppError
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindValidation, appErr.Kind)
+}
+
+func TestBuilderResolveAutomaticoDataInicioAposFimRejeitado(t *testing.T) {
+	_, err := testBuilder().ApplyFilters(dryRunDB(t).Model(&testModel{}), []domainquery.Filter{{
+		Field: "created_at", Operator: domainquery.OperatorAuto, Value: "2026-08-22,2026-08-20",
+	}})
+
+	var appErr *shared.AppError
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindValidation, appErr.Kind)
+}
+
+func TestBuilderResolveAutomaticoDataUnicaComHorario(t *testing.T) {
+	db, err := testBuilder().ApplyFilters(dryRunDB(t).Model(&testModel{}), []domainquery.Filter{{
+		Field: "created_at", Operator: domainquery.OperatorAuto, Value: "2026-08-20T10:00:00Z",
+	}})
+	require.NoError(t, err)
+
+	statement := db.Find(&[]testModel{}).Statement
+	require.Contains(t, statement.SQL.String(), "created_at = ?")
+}
+
+func TestBuilderResolveAutomaticoDataIntervaloComHorarioNoFim(t *testing.T) {
+	db, err := testBuilder().ApplyFilters(dryRunDB(t).Model(&testModel{}), []domainquery.Filter{{
+		Field: "created_at", Operator: domainquery.OperatorAuto, Value: "2026-08-20,2026-08-22T10:00:00Z",
+	}})
+	require.NoError(t, err)
+
+	statement := db.Find(&[]testModel{}).Statement
+	require.Contains(t, statement.SQL.String(), "created_at <= ?")
+}
+
+func TestBuilderResolveAutomaticoRejeitaValorVazio(t *testing.T) {
+	_, err := testBuilder().ApplyFilters(dryRunDB(t).Model(&testModel{}), []domainquery.Filter{{
+		Field: "name", Operator: domainquery.OperatorAuto, Value: "a,,b",
+	}})
+
+	var appErr *shared.AppError
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindValidation, appErr.Kind)
+}
+
+func TestBuilderApplyFiltersIsNullENotIn(t *testing.T) {
+	db, err := testBuilder().ApplyFilters(dryRunDB(t).Model(&testModel{}), []domainquery.Filter{
+		{Field: "name", Operator: domainquery.OperatorIsNull},
+	})
+	require.NoError(t, err)
+	statement := db.Find(&[]testModel{}).Statement
+	require.Contains(t, statement.SQL.String(), "name IS NULL")
+}
+
+func TestBuilderApplyFiltersRejeitaValorNaoNumerico(t *testing.T) {
+	_, err := testBuilder().ApplyFilters(dryRunDB(t).Model(&testModel{}), []domainquery.Filter{{
+		Field: "id", Operator: domainquery.OperatorEqual, Value: "abc",
 	}})
 
 	var appErr *shared.AppError
