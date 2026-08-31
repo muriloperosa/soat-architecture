@@ -10,22 +10,14 @@ import (
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 	"github.com/muriloperosa/soat-architecture/internal/domain/auth/mocks"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
-	infraauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/auth"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
-func gerarBrutoDeTeste(t *testing.T) string {
-	t.Helper()
-	bruto, err := infraauth.NewAuthenticatorJWT("s", time.Minute).GerarRefreshToken()
-	require.NoError(t, err)
-	return bruto
-}
-
 func TestRefreshUseCase_Executar_TokenValido_RotacionaERetornaNovoPar(t *testing.T) {
 	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
 	jwtAuth := mocks.NewJWTProvider(t)
-	bruto := gerarBrutoDeTeste(t)
+	bruto := "refresh-token-bruto-de-teste-1"
 	rtAntigo := &domainauth.RefreshToken{
 		ID: 1, UsuarioID: 1, Tipo: domainauth.TipoCliente, Papel: shared.PapelCliente,
 		TokenHash: domainauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
@@ -51,7 +43,7 @@ func TestRefreshUseCase_Executar_TokenValido_RotacionaERetornaNovoPar(t *testing
 func TestRefreshUseCase_Executar_ErroAoRevogar_RetornaErroInterno(t *testing.T) {
 	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
 	jwtAuth := mocks.NewJWTProvider(t)
-	bruto := gerarBrutoDeTeste(t)
+	bruto := "refresh-token-bruto-de-teste-2"
 	rt := &domainauth.RefreshToken{
 		ID: 1, TokenHash: domainauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
 	}
@@ -69,7 +61,7 @@ func TestRefreshUseCase_Executar_ErroAoRevogar_RetornaErroInterno(t *testing.T) 
 func TestRefreshUseCase_Executar_ErroAoSalvarNovoPar_PropagaErro(t *testing.T) {
 	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
 	jwtAuth := mocks.NewJWTProvider(t)
-	bruto := gerarBrutoDeTeste(t)
+	bruto := "refresh-token-bruto-de-teste-3"
 	rt := &domainauth.RefreshToken{
 		ID: 1, UsuarioID: 1, Tipo: domainauth.TipoCliente, Papel: shared.PapelCliente,
 		TokenHash: domainauth.HashRefreshToken(bruto), ExpiraEm: time.Now().Add(time.Hour),
@@ -93,7 +85,7 @@ func TestRefreshUseCase_Executar_ErroAoSalvarNovoPar_PropagaErro(t *testing.T) {
 func TestRefreshUseCase_Executar_TokenJaRevogado_Erro(t *testing.T) {
 	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
 	jwtAuth := mocks.NewJWTProvider(t)
-	bruto := gerarBrutoDeTeste(t)
+	bruto := "refresh-token-bruto-de-teste-4"
 	agora := time.Now()
 	rt := &domainauth.RefreshToken{
 		ID: 1, TokenHash: domainauth.HashRefreshToken(bruto),

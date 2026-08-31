@@ -92,7 +92,7 @@ func TestLoginUseCase_Executar_UsuarioInterno_PropagaPapel(t *testing.T) {
 func TestLoginUseCase_Executar_SenhaErrada_ErroGenerico(t *testing.T) {
 	credenciaisRepo := mocks.NewCredenciaisRepository(t)
 	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
-	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, infraauth.NewAuthenticatorJWT("s", time.Minute), domainauth.TipoCliente, time.Hour, time.Hour)
+	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, mocks.NewJWTProvider(t), domainauth.TipoCliente, time.Hour, time.Hour)
 
 	credenciaisRepo.EXPECT().
 		BuscarPorEmail(mock.Anything, "a@a.com").
@@ -107,7 +107,7 @@ func TestLoginUseCase_Executar_SenhaErrada_ErroGenerico(t *testing.T) {
 func TestLoginUseCase_Executar_UsuarioInativo_ErroGenerico(t *testing.T) {
 	credenciaisRepo := mocks.NewCredenciaisRepository(t)
 	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
-	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, infraauth.NewAuthenticatorJWT("s", time.Minute), domainauth.TipoCliente, time.Hour, time.Hour)
+	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, mocks.NewJWTProvider(t), domainauth.TipoCliente, time.Hour, time.Hour)
 
 	credenciaisRepo.EXPECT().
 		BuscarPorEmail(mock.Anything, "a@a.com").
@@ -163,11 +163,18 @@ func TestLoginUseCase_Executar_ErroAoGerarRefreshToken_RetornaErroInterno(t *tes
 func TestLoginUseCase_Executar_ErroAoSalvarRefreshToken_RetornaErroInterno(t *testing.T) {
 	credenciaisRepo := mocks.NewCredenciaisRepository(t)
 	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
-	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, infraauth.NewAuthenticatorJWT("s", time.Minute), domainauth.TipoCliente, time.Hour, time.Hour)
+	jwtAuth := mocks.NewJWTProvider(t)
+	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, jwtAuth, domainauth.TipoCliente, time.Hour, time.Hour)
 
 	credenciaisRepo.EXPECT().
 		BuscarPorEmail(mock.Anything, "a@a.com").
 		Return(&domainauth.Credencial{ID: 1, SenhaHash: hashSenha(t, "senha123"), Papel: shared.PapelCliente, Ativo: true}, nil)
+	jwtAuth.EXPECT().
+		GerarAccessToken("1", domainauth.TipoCliente, shared.PapelCliente).
+		Return("access-token-valido", "jti-1", nil)
+	jwtAuth.EXPECT().
+		GerarRefreshToken().
+		Return("refresh-token-bruto-de-teste", nil)
 	refreshTokensRepo.EXPECT().
 		Salvar(mock.Anything, mock.AnythingOfType("*auth.RefreshToken")).
 		Return(errors.New("conexao recusada"))
@@ -181,7 +188,7 @@ func TestLoginUseCase_Executar_ErroAoSalvarRefreshToken_RetornaErroInterno(t *te
 func TestLoginUseCase_Executar_EmailNaoEncontrado_MesmoErroGenerico(t *testing.T) {
 	credenciaisRepo := mocks.NewCredenciaisRepository(t)
 	refreshTokensRepo := mocks.NewRefreshTokenRepository(t)
-	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, infraauth.NewAuthenticatorJWT("s", time.Minute), domainauth.TipoCliente, time.Hour, time.Hour)
+	uc := appauth.NewLoginUseCase(credenciaisRepo, refreshTokensRepo, mocks.NewJWTProvider(t), domainauth.TipoCliente, time.Hour, time.Hour)
 
 	credenciaisRepo.EXPECT().
 		BuscarPorEmail(mock.Anything, "naoexiste@a.com").
