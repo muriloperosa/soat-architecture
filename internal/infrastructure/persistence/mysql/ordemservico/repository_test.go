@@ -214,6 +214,39 @@ func TestRepositoryListarUsaPadroes(t *testing.T) {
 	require.NoError(t, mockDB.ExpectationsWereMet())
 }
 
+func TestRepositoryBuscarPorIDComBloqueio(t *testing.T) {
+	db, mockDB := newRepositoryTestDB(t)
+	repository := NewOrdemServicoRepository(db)
+	agora := time.Date(2026, time.August, 30, 12, 0, 0, 0, time.UTC)
+
+	mockDB.ExpectQuery("SELECT .* FROM .*ordens_servico.* FOR UPDATE").
+		WillReturnRows(ordemServicoRows())
+	mockDB.ExpectQuery("SELECT .* FROM .*historicos_status.*").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "ordem_servico_id", "status", "alterado_por", "motivo", "alterado_em"}).
+			AddRow(1, 42, "RECEBIDA", 30, "", agora))
+
+	os, err := repository.BuscarPorIDComBloqueio(context.Background(), 42)
+
+	require.NoError(t, err)
+	require.Equal(t, uint64(42), os.ID())
+	require.Equal(t, domain.StatusRecebida, os.Status())
+	require.NoError(t, mockDB.ExpectationsWereMet())
+}
+
+func TestRepositoryBuscarPorIDComBloqueioDeveRetornarNaoEncontrada(t *testing.T) {
+	db, mockDB := newRepositoryTestDB(t)
+	repository := NewOrdemServicoRepository(db)
+
+	mockDB.ExpectQuery("SELECT .* FROM .*ordens_servico.* FOR UPDATE").
+		WillReturnError(gorm.ErrRecordNotFound)
+
+	os, err := repository.BuscarPorIDComBloqueio(context.Background(), 999)
+
+	require.Nil(t, os)
+	require.ErrorIs(t, err, domain.ErrOrdemServicoNaoEncontrada)
+	require.NoError(t, mockDB.ExpectationsWereMet())
+}
+
 func ordemServicoColumns() []string {
 	return []string{"id", "numero", "cliente_id", "veiculo_id", "quilometragem_entrada", "status", "diagnostico", "observacoes", "criado_por", "data_cadastro", "data_atualizacao"}
 }
