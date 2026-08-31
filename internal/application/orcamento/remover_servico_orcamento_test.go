@@ -45,7 +45,7 @@ func TestRemoverServicoOrcamentoUseCase_ComSucesso(t *testing.T) {
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).
 		Return(orcamentoVazio(t, 42), nil).Once()
 
-	uc := app.NewRemoverServicoOrcamentoUseCase(orcamentoRepo, ordemServicoRepoEditavel{})
+	uc := app.NewRemoverServicoOrcamentoUseCase(orcamentoRepo, ordemServicoRepoEditavel(t))
 	output, err := uc.Executar(context.Background(), app.RemoverServicoOrcamentoInput{OrdemServicoID: 42, ItemServicoID: 1})
 
 	require.NoError(t, err)
@@ -58,7 +58,7 @@ func TestRemoverServicoOrcamentoUseCase_OrcamentoInexistente(t *testing.T) {
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).
 		Return(nil, domainorcamento.ErrOrcamentoNaoEncontrado)
 
-	uc := app.NewRemoverServicoOrcamentoUseCase(orcamentoRepo, ordemServicoRepoEditavel{})
+	uc := app.NewRemoverServicoOrcamentoUseCase(orcamentoRepo, ordemServicoRepoEditavel(t))
 	_, err := uc.Executar(context.Background(), app.RemoverServicoOrcamentoInput{OrdemServicoID: 42, ItemServicoID: 1})
 
 	require.ErrorIs(t, err, domainorcamento.ErrOrcamentoNaoEncontrado)
@@ -69,7 +69,7 @@ func TestRemoverServicoOrcamentoUseCase_ItemInexistente(t *testing.T) {
 
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(orcamentoVazio(t, 42), nil)
 
-	uc := app.NewRemoverServicoOrcamentoUseCase(orcamentoRepo, ordemServicoRepoEditavel{})
+	uc := app.NewRemoverServicoOrcamentoUseCase(orcamentoRepo, ordemServicoRepoEditavel(t))
 	_, err := uc.Executar(context.Background(), app.RemoverServicoOrcamentoInput{OrdemServicoID: 42, ItemServicoID: 999})
 
 	require.ErrorIs(t, err, domainorcamento.ErrItemServicoNaoEncontrado)
@@ -82,7 +82,7 @@ func TestRemoverServicoOrcamentoUseCase_ErroAoAtualizar(t *testing.T) {
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(orcamentoComItemServico(t, 42), nil)
 	orcamentoRepo.EXPECT().Atualizar(mock.Anything, mock.AnythingOfType("*orcamento.Orcamento")).Return(erroBanco)
 
-	uc := app.NewRemoverServicoOrcamentoUseCase(orcamentoRepo, ordemServicoRepoEditavel{})
+	uc := app.NewRemoverServicoOrcamentoUseCase(orcamentoRepo, ordemServicoRepoEditavel(t))
 	_, err := uc.Executar(context.Background(), app.RemoverServicoOrcamentoInput{OrdemServicoID: 42, ItemServicoID: 1})
 
 	var appErr *shared.AppError

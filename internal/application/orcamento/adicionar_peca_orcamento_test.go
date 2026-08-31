@@ -42,7 +42,7 @@ func TestAdicionarPecaOrcamentoUseCase_ComSucesso(t *testing.T) {
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).
 		Return(atualizado, nil).Once()
 
-	uc := app.NewAdicionarPecaOrcamentoUseCase(orcamentoRepo, pecaRepo, ordemServicoRepoEditavel{})
+	uc := app.NewAdicionarPecaOrcamentoUseCase(orcamentoRepo, pecaRepo, ordemServicoRepoEditavel(t))
 	output, err := uc.Executar(context.Background(), app.AdicionarPecaOrcamentoInput{
 		OrdemServicoID: 42,
 		PecaID:         9,
@@ -64,7 +64,7 @@ func TestAdicionarPecaOrcamentoUseCase_OrcamentoInexistente(t *testing.T) {
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).
 		Return(nil, domainorcamento.ErrOrcamentoNaoEncontrado)
 
-	uc := app.NewAdicionarPecaOrcamentoUseCase(orcamentoRepo, pecaRepo, ordemServicoRepoEditavel{})
+	uc := app.NewAdicionarPecaOrcamentoUseCase(orcamentoRepo, pecaRepo, ordemServicoRepoEditavel(t))
 	_, err := uc.Executar(context.Background(), app.AdicionarPecaOrcamentoInput{OrdemServicoID: 42, PecaID: 9, Quantidade: 1})
 
 	require.ErrorIs(t, err, domainorcamento.ErrOrcamentoNaoEncontrado)
@@ -77,7 +77,7 @@ func TestAdicionarPecaOrcamentoUseCase_PecaInexistente(t *testing.T) {
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(orcamentoVazio(t, 42), nil)
 	pecaRepo.EXPECT().BuscarPorID(mock.Anything, uint64(999)).Return(nil, domainpeca.ErrPecaNaoEncontrada)
 
-	uc := app.NewAdicionarPecaOrcamentoUseCase(orcamentoRepo, pecaRepo, ordemServicoRepoEditavel{})
+	uc := app.NewAdicionarPecaOrcamentoUseCase(orcamentoRepo, pecaRepo, ordemServicoRepoEditavel(t))
 	_, err := uc.Executar(context.Background(), app.AdicionarPecaOrcamentoInput{OrdemServicoID: 42, PecaID: 999, Quantidade: 1})
 
 	require.ErrorIs(t, err, domainpeca.ErrPecaNaoEncontrada)
@@ -90,7 +90,7 @@ func TestAdicionarPecaOrcamentoUseCase_QuantidadeInvalida(t *testing.T) {
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(orcamentoVazio(t, 42), nil)
 	pecaRepo.EXPECT().BuscarPorID(mock.Anything, uint64(9)).Return(pecaExistente(t), nil)
 
-	uc := app.NewAdicionarPecaOrcamentoUseCase(orcamentoRepo, pecaRepo, ordemServicoRepoEditavel{})
+	uc := app.NewAdicionarPecaOrcamentoUseCase(orcamentoRepo, pecaRepo, ordemServicoRepoEditavel(t))
 	_, err := uc.Executar(context.Background(), app.AdicionarPecaOrcamentoInput{OrdemServicoID: 42, PecaID: 9, Quantidade: 0})
 
 	require.ErrorIs(t, err, domainorcamento.ErrQuantidadeInvalida)
@@ -105,7 +105,7 @@ func TestAdicionarPecaOrcamentoUseCase_ErroAoAtualizar(t *testing.T) {
 	pecaRepo.EXPECT().BuscarPorID(mock.Anything, uint64(9)).Return(pecaExistente(t), nil)
 	orcamentoRepo.EXPECT().Atualizar(mock.Anything, mock.AnythingOfType("*orcamento.Orcamento")).Return(erroBanco)
 
-	uc := app.NewAdicionarPecaOrcamentoUseCase(orcamentoRepo, pecaRepo, ordemServicoRepoEditavel{})
+	uc := app.NewAdicionarPecaOrcamentoUseCase(orcamentoRepo, pecaRepo, ordemServicoRepoEditavel(t))
 	_, err := uc.Executar(context.Background(), app.AdicionarPecaOrcamentoInput{OrdemServicoID: 42, PecaID: 9, Quantidade: 1})
 
 	var appErr *shared.AppError

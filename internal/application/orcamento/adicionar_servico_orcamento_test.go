@@ -50,7 +50,7 @@ func TestAdicionarServicoOrcamentoUseCase_ComSucesso(t *testing.T) {
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).
 		Return(atualizado, nil).Once()
 
-	uc := app.NewAdicionarServicoOrcamentoUseCase(orcamentoRepo, servicoRepo, ordemServicoRepoEditavel{})
+	uc := app.NewAdicionarServicoOrcamentoUseCase(orcamentoRepo, servicoRepo, ordemServicoRepoEditavel(t))
 	output, err := uc.Executar(context.Background(), app.AdicionarServicoOrcamentoInput{
 		OrdemServicoID: 42,
 		ServicoID:      5,
@@ -71,7 +71,7 @@ func TestAdicionarServicoOrcamentoUseCase_OrcamentoInexistente(t *testing.T) {
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).
 		Return(nil, domainorcamento.ErrOrcamentoNaoEncontrado)
 
-	uc := app.NewAdicionarServicoOrcamentoUseCase(orcamentoRepo, servicoRepo, ordemServicoRepoEditavel{})
+	uc := app.NewAdicionarServicoOrcamentoUseCase(orcamentoRepo, servicoRepo, ordemServicoRepoEditavel(t))
 	_, err := uc.Executar(context.Background(), app.AdicionarServicoOrcamentoInput{OrdemServicoID: 42, ServicoID: 5, Quantidade: 1})
 
 	require.ErrorIs(t, err, domainorcamento.ErrOrcamentoNaoEncontrado)
@@ -84,7 +84,7 @@ func TestAdicionarServicoOrcamentoUseCase_ServicoInexistente(t *testing.T) {
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(orcamentoVazio(t, 42), nil)
 	servicoRepo.EXPECT().BuscarPorID(mock.Anything, uint64(999)).Return(nil, domainservico.ErrServicoNaoEncontrado)
 
-	uc := app.NewAdicionarServicoOrcamentoUseCase(orcamentoRepo, servicoRepo, ordemServicoRepoEditavel{})
+	uc := app.NewAdicionarServicoOrcamentoUseCase(orcamentoRepo, servicoRepo, ordemServicoRepoEditavel(t))
 	_, err := uc.Executar(context.Background(), app.AdicionarServicoOrcamentoInput{OrdemServicoID: 42, ServicoID: 999, Quantidade: 1})
 
 	require.ErrorIs(t, err, domainservico.ErrServicoNaoEncontrado)
@@ -100,7 +100,7 @@ func TestAdicionarServicoOrcamentoUseCase_ServicoInativo(t *testing.T) {
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(orcamentoVazio(t, 42), nil)
 	servicoRepo.EXPECT().BuscarPorID(mock.Anything, uint64(5)).Return(servicoInativo, nil)
 
-	uc := app.NewAdicionarServicoOrcamentoUseCase(orcamentoRepo, servicoRepo, ordemServicoRepoEditavel{})
+	uc := app.NewAdicionarServicoOrcamentoUseCase(orcamentoRepo, servicoRepo, ordemServicoRepoEditavel(t))
 	_, err := uc.Executar(context.Background(), app.AdicionarServicoOrcamentoInput{OrdemServicoID: 42, ServicoID: 5, Quantidade: 1})
 
 	require.ErrorIs(t, err, domainorcamento.ErrServicoInativo)
@@ -113,7 +113,7 @@ func TestAdicionarServicoOrcamentoUseCase_QuantidadeInvalida(t *testing.T) {
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(orcamentoVazio(t, 42), nil)
 	servicoRepo.EXPECT().BuscarPorID(mock.Anything, uint64(5)).Return(servicoAtivo(t), nil)
 
-	uc := app.NewAdicionarServicoOrcamentoUseCase(orcamentoRepo, servicoRepo, ordemServicoRepoEditavel{})
+	uc := app.NewAdicionarServicoOrcamentoUseCase(orcamentoRepo, servicoRepo, ordemServicoRepoEditavel(t))
 	_, err := uc.Executar(context.Background(), app.AdicionarServicoOrcamentoInput{OrdemServicoID: 42, ServicoID: 5, Quantidade: 0})
 
 	require.ErrorIs(t, err, domainorcamento.ErrQuantidadeInvalida)
@@ -128,7 +128,7 @@ func TestAdicionarServicoOrcamentoUseCase_ErroAoAtualizar(t *testing.T) {
 	servicoRepo.EXPECT().BuscarPorID(mock.Anything, uint64(5)).Return(servicoAtivo(t), nil)
 	orcamentoRepo.EXPECT().Atualizar(mock.Anything, mock.AnythingOfType("*orcamento.Orcamento")).Return(erroBanco)
 
-	uc := app.NewAdicionarServicoOrcamentoUseCase(orcamentoRepo, servicoRepo, ordemServicoRepoEditavel{})
+	uc := app.NewAdicionarServicoOrcamentoUseCase(orcamentoRepo, servicoRepo, ordemServicoRepoEditavel(t))
 	_, err := uc.Executar(context.Background(), app.AdicionarServicoOrcamentoInput{OrdemServicoID: 42, ServicoID: 5, Quantidade: 1})
 
 	var appErr *shared.AppError

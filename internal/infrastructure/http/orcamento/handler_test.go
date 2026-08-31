@@ -19,7 +19,6 @@ import (
 	ordemservicomocks "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico/mocks"
 	domainpeca "github.com/muriloperosa/soat-architecture/internal/domain/peca"
 	pecamocks "github.com/muriloperosa/soat-architecture/internal/domain/peca/mocks"
-	domainquery "github.com/muriloperosa/soat-architecture/internal/domain/query"
 	domainservico "github.com/muriloperosa/soat-architecture/internal/domain/servico"
 	servicomocks "github.com/muriloperosa/soat-architecture/internal/domain/servico/mocks"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
@@ -45,30 +44,25 @@ func osExistenteHTTP(t *testing.T) *domainordemservico.OrdemServico {
 	return os
 }
 
-type ordemServicoRepoEditavelHTTP struct{}
-
-func (ordemServicoRepoEditavelHTTP) Salvar(context.Context, *domainordemservico.OrdemServico) error {
-	return nil
-}
-func (ordemServicoRepoEditavelHTTP) Atualizar(context.Context, *domainordemservico.OrdemServico) error {
-	return nil
-}
-func (ordemServicoRepoEditavelHTTP) BuscarPorNumero(context.Context, string) (*domainordemservico.OrdemServico, error) {
-	return nil, domainordemservico.ErrOrdemServicoNaoEncontrada
-}
-func (ordemServicoRepoEditavelHTTP) Listar(context.Context, domainquery.Params) (domainquery.Page[*domainordemservico.OrdemServico], error) {
-	return domainquery.Page[*domainordemservico.OrdemServico]{}, nil
-}
-func (ordemServicoRepoEditavelHTTP) BuscarPorID(_ context.Context, id uint64) (*domainordemservico.OrdemServico, error) {
-	o, err := domainordemservico.NewOrdemServico("OS-20260827-a1b2c3d4e5f6", 10, 20, 52_300, "", "", 30)
-	if err != nil {
-		return nil, err
-	}
-	o.AtribuirID(id)
-	if err := o.IniciarDiagnostico(30); err != nil {
-		return nil, err
-	}
-	return o, nil
+// ordemServicoRepoEditavelHTTP mantém os testes de handler focados no fluxo
+// HTTP, fornecendo uma OS EM_DIAGNOSTICO para a política de edição.
+func ordemServicoRepoEditavelHTTP(t *testing.T) *ordemservicomocks.OrdemServicoRepository {
+	t.Helper()
+	repo := ordemservicomocks.NewOrdemServicoRepository(t)
+	repo.EXPECT().BuscarPorID(mock.Anything, mock.Anything).RunAndReturn(
+		func(_ context.Context, id uint64) (*domainordemservico.OrdemServico, error) {
+			o, err := domainordemservico.NewOrdemServico("OS-20260827-a1b2c3d4e5f6", 10, 20, 52_300, "", "", 30)
+			if err != nil {
+				return nil, err
+			}
+			o.AtribuirID(id)
+			if err := o.IniciarDiagnostico(30); err != nil {
+				return nil, err
+			}
+			return o, nil
+		},
+	)
+	return repo
 }
 
 func TestHandlerGerarRetorna201(t *testing.T) {
@@ -171,7 +165,7 @@ func TestHandlerAdicionarServicoRetorna200(t *testing.T) {
 	require.NoError(t, comItem.AdicionarItemServico(5, 2, 100.0, 60))
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(comItem, nil).Once()
 
-	handler := httporcamento.NewHandler(nil, app.NewAdicionarServicoOrcamentoUseCase(orcamentoRepo, servicoRepo, ordemServicoRepoEditavelHTTP{}), nil, nil, nil, nil, nil)
+	handler := httporcamento.NewHandler(nil, app.NewAdicionarServicoOrcamentoUseCase(orcamentoRepo, servicoRepo, ordemServicoRepoEditavelHTTP(t)), nil, nil, nil, nil, nil)
 	router := gin.New()
 	router.POST("/v1/ordens-servico/:id/orcamento/itens-servico", handler.AdicionarServico)
 
@@ -199,7 +193,7 @@ func TestHandlerAdicionarServicoInexistenteRetorna404(t *testing.T) {
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(vazio, nil)
 	servicoRepo.EXPECT().BuscarPorID(mock.Anything, uint64(999)).Return(nil, domainservico.ErrServicoNaoEncontrado)
 
-	handler := httporcamento.NewHandler(nil, app.NewAdicionarServicoOrcamentoUseCase(orcamentoRepo, servicoRepo, ordemServicoRepoEditavelHTTP{}), nil, nil, nil, nil, nil)
+	handler := httporcamento.NewHandler(nil, app.NewAdicionarServicoOrcamentoUseCase(orcamentoRepo, servicoRepo, ordemServicoRepoEditavelHTTP(t)), nil, nil, nil, nil, nil)
 	router := gin.New()
 	router.POST("/v1/ordens-servico/:id/orcamento/itens-servico", handler.AdicionarServico)
 
@@ -226,7 +220,7 @@ func TestHandlerAdicionarServicoQuantidadeInvalidaRetorna400(t *testing.T) {
 	servico.AtribuirID(5)
 	servicoRepo.EXPECT().BuscarPorID(mock.Anything, uint64(5)).Return(servico, nil)
 
-	handler := httporcamento.NewHandler(nil, app.NewAdicionarServicoOrcamentoUseCase(orcamentoRepo, servicoRepo, ordemServicoRepoEditavelHTTP{}), nil, nil, nil, nil, nil)
+	handler := httporcamento.NewHandler(nil, app.NewAdicionarServicoOrcamentoUseCase(orcamentoRepo, servicoRepo, ordemServicoRepoEditavelHTTP(t)), nil, nil, nil, nil, nil)
 	router := gin.New()
 	router.POST("/v1/ordens-servico/:id/orcamento/itens-servico", handler.AdicionarServico)
 
@@ -267,7 +261,7 @@ func TestHandlerAdicionarPecaRetorna200(t *testing.T) {
 	require.NoError(t, comItem.AdicionarItemPeca(9, "Filtro de óleo do motor", 3, 50.0))
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(comItem, nil).Once()
 
-	handler := httporcamento.NewHandler(nil, nil, app.NewAdicionarPecaOrcamentoUseCase(orcamentoRepo, pecaRepo, ordemServicoRepoEditavelHTTP{}), nil, nil, nil, nil)
+	handler := httporcamento.NewHandler(nil, nil, app.NewAdicionarPecaOrcamentoUseCase(orcamentoRepo, pecaRepo, ordemServicoRepoEditavelHTTP(t)), nil, nil, nil, nil)
 	router := gin.New()
 	router.POST("/v1/ordens-servico/:id/orcamento/itens-peca", handler.AdicionarPeca)
 
@@ -295,7 +289,7 @@ func TestHandlerAdicionarPecaInexistenteRetorna404(t *testing.T) {
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(vazio, nil)
 	pecaRepo.EXPECT().BuscarPorID(mock.Anything, uint64(999)).Return(nil, domainpeca.ErrPecaNaoEncontrada)
 
-	handler := httporcamento.NewHandler(nil, nil, app.NewAdicionarPecaOrcamentoUseCase(orcamentoRepo, pecaRepo, ordemServicoRepoEditavelHTTP{}), nil, nil, nil, nil)
+	handler := httporcamento.NewHandler(nil, nil, app.NewAdicionarPecaOrcamentoUseCase(orcamentoRepo, pecaRepo, ordemServicoRepoEditavelHTTP(t)), nil, nil, nil, nil)
 	router := gin.New()
 	router.POST("/v1/ordens-servico/:id/orcamento/itens-peca", handler.AdicionarPeca)
 
@@ -318,7 +312,7 @@ func TestHandlerAdicionarPecaQuantidadeInvalidaRetorna400(t *testing.T) {
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(vazio, nil)
 	pecaRepo.EXPECT().BuscarPorID(mock.Anything, uint64(9)).Return(pecaExistenteHTTP(t), nil)
 
-	handler := httporcamento.NewHandler(nil, nil, app.NewAdicionarPecaOrcamentoUseCase(orcamentoRepo, pecaRepo, ordemServicoRepoEditavelHTTP{}), nil, nil, nil, nil)
+	handler := httporcamento.NewHandler(nil, nil, app.NewAdicionarPecaOrcamentoUseCase(orcamentoRepo, pecaRepo, ordemServicoRepoEditavelHTTP(t)), nil, nil, nil, nil)
 	router := gin.New()
 	router.POST("/v1/ordens-servico/:id/orcamento/itens-peca", handler.AdicionarPeca)
 
@@ -355,7 +349,7 @@ func TestHandlerRemoverServicoRetorna200(t *testing.T) {
 	vazio.AtribuirID(1)
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(vazio, nil).Once()
 
-	handler := httporcamento.NewHandler(nil, nil, nil, app.NewRemoverServicoOrcamentoUseCase(orcamentoRepo, ordemServicoRepoEditavelHTTP{}), nil, nil, nil)
+	handler := httporcamento.NewHandler(nil, nil, nil, app.NewRemoverServicoOrcamentoUseCase(orcamentoRepo, ordemServicoRepoEditavelHTTP(t)), nil, nil, nil)
 	router := gin.New()
 	router.DELETE("/v1/ordens-servico/:id/orcamento/itens-servico/:itemId", handler.RemoverServico)
 
@@ -377,7 +371,7 @@ func TestHandlerRemoverServicoItemInexistenteRetorna404(t *testing.T) {
 	require.NoError(t, err)
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(vazio, nil)
 
-	handler := httporcamento.NewHandler(nil, nil, nil, app.NewRemoverServicoOrcamentoUseCase(orcamentoRepo, ordemServicoRepoEditavelHTTP{}), nil, nil, nil)
+	handler := httporcamento.NewHandler(nil, nil, nil, app.NewRemoverServicoOrcamentoUseCase(orcamentoRepo, ordemServicoRepoEditavelHTTP(t)), nil, nil, nil)
 	router := gin.New()
 	router.DELETE("/v1/ordens-servico/:id/orcamento/itens-servico/:itemId", handler.RemoverServico)
 
@@ -412,7 +406,7 @@ func TestHandlerRemoverPecaRetorna200(t *testing.T) {
 	vazio.AtribuirID(1)
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(vazio, nil).Once()
 
-	handler := httporcamento.NewHandler(nil, nil, nil, nil, app.NewRemoverPecaOrcamentoUseCase(orcamentoRepo, ordemServicoRepoEditavelHTTP{}), nil, nil)
+	handler := httporcamento.NewHandler(nil, nil, nil, nil, app.NewRemoverPecaOrcamentoUseCase(orcamentoRepo, ordemServicoRepoEditavelHTTP(t)), nil, nil)
 	router := gin.New()
 	router.DELETE("/v1/ordens-servico/:id/orcamento/itens-peca/:itemId", handler.RemoverPeca)
 
@@ -434,7 +428,7 @@ func TestHandlerRemoverPecaItemInexistenteRetorna404(t *testing.T) {
 	require.NoError(t, err)
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(vazio, nil)
 
-	handler := httporcamento.NewHandler(nil, nil, nil, nil, app.NewRemoverPecaOrcamentoUseCase(orcamentoRepo, ordemServicoRepoEditavelHTTP{}), nil, nil)
+	handler := httporcamento.NewHandler(nil, nil, nil, nil, app.NewRemoverPecaOrcamentoUseCase(orcamentoRepo, ordemServicoRepoEditavelHTTP(t)), nil, nil)
 	router := gin.New()
 	router.DELETE("/v1/ordens-servico/:id/orcamento/itens-peca/:itemId", handler.RemoverPeca)
 
