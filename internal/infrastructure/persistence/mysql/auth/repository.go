@@ -31,12 +31,12 @@ func (r *Repository) Salvar(ctx context.Context, rt *domainauth.RefreshToken) er
 }
 
 // BuscarPorHash busca o refresh token pelo hash do token bruto. Devolve
-// gorm.ErrRecordNotFound (sem encapsular) quando não existe.
+// domainauth.ErrRefreshTokenNaoEncontrado quando não existe.
 func (r *Repository) BuscarPorHash(ctx context.Context, tokenHash string) (*domainauth.RefreshToken, error) {
 	var m Model
 	err := r.db.WithContext(ctx).Where("token_hash = ?", tokenHash).First(&m).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, err
+		return nil, domainauth.ErrRefreshTokenNaoEncontrado
 	}
 	if err != nil {
 		return nil, err

@@ -79,7 +79,7 @@ func TestRefreshTokenRepository_BuscarPorHash_NaoEncontrado_RetornaErro(t *testi
 
 	rt, err := repo.BuscarPorHash(context.Background(), "hash-inexistente")
 
-	require.ErrorIs(t, err, gorm.ErrRecordNotFound)
+	require.ErrorIs(t, err, domainauth.ErrRefreshTokenNaoEncontrado)
 	require.Nil(t, rt)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
