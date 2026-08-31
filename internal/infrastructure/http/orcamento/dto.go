@@ -14,6 +14,10 @@ type AdicionarPecaOrcamentoRequest struct {
 	Quantidade int    `json:"quantidade" binding:"required" example:"2"`
 }
 
+type AlterarQuantidadePecaOrcamentoRequest struct {
+	Quantidade int `json:"quantidade" binding:"required" example:"3"`
+}
+
 type ItemServicoResponse struct {
 	ID                   uint64  `json:"id" example:"1"`
 	ServicoID            uint64  `json:"servico_id" example:"1"`

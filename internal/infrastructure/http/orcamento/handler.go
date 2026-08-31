@@ -11,12 +11,13 @@ import (
 )
 
 type Handler struct {
-	gerar               *app.GerarOrcamentoUseCase
-	adicionarServico    *app.AdicionarServicoOrcamentoUseCase
-	adicionarPeca       *app.AdicionarPecaOrcamentoUseCase
-	removerServico      *app.RemoverServicoOrcamentoUseCase
-	removerPeca         *app.RemoverPecaOrcamentoUseCase
-	enviarParaAprovacao *app.EnviarOrcamentoParaAprovacaoUseCase
+	gerar                 *app.GerarOrcamentoUseCase
+	adicionarServico      *app.AdicionarServicoOrcamentoUseCase
+	adicionarPeca         *app.AdicionarPecaOrcamentoUseCase
+	removerServico        *app.RemoverServicoOrcamentoUseCase
+	removerPeca           *app.RemoverPecaOrcamentoUseCase
+	alterarQuantidadePeca *app.AlterarQuantidadePecaOrcamentoUseCase
+	enviarParaAprovacao   *app.EnviarOrcamentoParaAprovacaoUseCase
 }
 
 func NewHandler(
@@ -25,15 +26,17 @@ func NewHandler(
 	adicionarPeca *app.AdicionarPecaOrcamentoUseCase,
 	removerServico *app.RemoverServicoOrcamentoUseCase,
 	removerPeca *app.RemoverPecaOrcamentoUseCase,
+	alterarQuantidadePeca *app.AlterarQuantidadePecaOrcamentoUseCase,
 	enviarParaAprovacao *app.EnviarOrcamentoParaAprovacaoUseCase,
 ) *Handler {
 	return &Handler{
-		gerar:               gerar,
-		adicionarServico:    adicionarServico,
-		adicionarPeca:       adicionarPeca,
-		removerServico:      removerServico,
-		removerPeca:         removerPeca,
-		enviarParaAprovacao: enviarParaAprovacao,
+		gerar:                 gerar,
+		adicionarServico:      adicionarServico,
+		adicionarPeca:         adicionarPeca,
+		removerServico:        removerServico,
+		removerPeca:           removerPeca,
+		alterarQuantidadePeca: alterarQuantidadePeca,
+		enviarParaAprovacao:   enviarParaAprovacao,
 	}
 }
 
@@ -143,6 +146,54 @@ func (h *Handler) AdicionarPeca(c *gin.Context) {
 	}
 
 	output, err := h.adicionarPeca.Executar(c.Request.Context(), toAdicionarPecaInput(ordemServicoID, request))
+	if err != nil {
+		httperror.RespondError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, toResponse(output))
+}
+
+// @Summary Altera a quantidade de uma peça do orçamento
+// @Description Altera a quantidade do item de peça. Se o orçamento já estiver aprovado, remove as reservas anteriores, volta a OS para AGUARDANDO_APROVACAO e reenvia o orçamento ao cliente. A nova reserva só é criada após nova aprovação.
+// @Tags Orçamentos
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID da Ordem de Serviço"
+// @Param itemId path int true "ID do item de peça"
+// @Param request body AlterarQuantidadePecaOrcamentoRequest true "Nova quantidade"
+// @Success 200 {object} OrcamentoResponse
+// @Failure 400 {object} httperror.ErrorResponse
+// @Failure 401 {object} httperror.ErrorResponse
+// @Failure 403 {object} httperror.ErrorResponse
+// @Failure 404 {object} httperror.ErrorResponse
+// @Failure 500 {object} httperror.ErrorResponse
+// @Router /v1/ordens-servico/{id}/orcamento/itens-peca/{itemId}/quantidade [patch]
+func (h *Handler) AlterarQuantidadePeca(c *gin.Context) {
+	ordemServicoID, ok := httprequest.ParseUintParam(c, "id")
+	if !ok {
+		return
+	}
+	itemPecaID, ok := httprequest.ParseUintParam(c, "itemId")
+	if !ok {
+		return
+	}
+	usuarioID, ok := middleware.SubjectID(c)
+	if !ok {
+		return
+	}
+
+	var request AlterarQuantidadePecaOrcamentoRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		httperror.RespondValidationError(c, "Request body inválido.")
+		return
+	}
+
+	output, err := h.alterarQuantidadePeca.Executar(
+		c.Request.Context(),
+		toAlterarQuantidadePecaInput(ordemServicoID, itemPecaID, usuarioID, request),
+	)
 	if err != nil {
 		httperror.RespondError(c, err)
 		return

@@ -18,6 +18,7 @@ func RegisterOrcamentoRoutes(rg *gin.RouterGroup, container *wiring.Container) {
 		container.AdicionarPecaOrcamentoUC,
 		container.RemoverServicoOrcamentoUC,
 		container.RemoverPecaOrcamentoUC,
+		container.AlterarQuantidadePecaOrcamentoUC,
 		container.EnviarOrcamentoParaAprovacaoUC,
 	)
 	decisaoHandler := NewDecisaoHandler(container.AprovarOrcamentoUC, container.RejeitarOrcamentoUC)
@@ -36,6 +37,7 @@ func RegisterOrcamentoRoutes(rg *gin.RouterGroup, container *wiring.Container) {
 	internos.POST("/itens-peca", handler.AdicionarPeca)
 	internos.DELETE("/itens-servico/:itemId", handler.RemoverServico)
 	internos.DELETE("/itens-peca/:itemId", handler.RemoverPeca)
+	internos.PATCH("/itens-peca/:itemId/quantidade", handler.AlterarQuantidadePeca)
 	internos.PATCH("/enviar-aprovacao", handler.EnviarParaAprovacao)
 
 	clientes := orcamentos.Group(

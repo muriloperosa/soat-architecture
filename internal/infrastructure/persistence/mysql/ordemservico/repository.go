@@ -6,6 +6,7 @@ import (
 
 	domain "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
 	domainquery "github.com/muriloperosa/soat-architecture/internal/domain/query"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql"
 	mysqlquery "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/query"
 	"gorm.io/gorm"
 )
@@ -25,7 +26,7 @@ func NewOrdemServicoRepository(db *gorm.DB) domain.OrdemServicoRepository {
 func (r *Repository) Salvar(ctx context.Context, os *domain.OrdemServico) error {
 	model := toModel(os)
 
-	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err := mysql.DBFromContext(ctx, r.db).WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Omit("Historicos").Create(model).Error; err != nil {
 			return err
 		}
@@ -80,7 +81,7 @@ func (r *Repository) Listar(
 	}
 
 	filtered, err := r.queryBuilder.ApplyFilters(
-		r.db.WithContext(ctx).Model(&OrdemServicoModel{}),
+		mysql.DBFromContext(ctx, r.db).WithContext(ctx).Model(&OrdemServicoModel{}),
 		normalized.Filters,
 	)
 	if err != nil {
@@ -119,7 +120,7 @@ func (r *Repository) Listar(
 
 func (r *Repository) Atualizar(ctx context.Context, os *domain.OrdemServico) error {
 	model := toModel(os)
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return mysql.DBFromContext(ctx, r.db).WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		result := tx.
 			Model(&OrdemServicoModel{}).
 			Where("id = ?", model.ID).
@@ -154,7 +155,7 @@ func (r *Repository) Atualizar(ctx context.Context, os *domain.OrdemServico) err
 }
 
 func (r *Repository) consultaComHistorico(ctx context.Context) *gorm.DB {
-	return r.db.WithContext(ctx).Preload("Historicos", func(db *gorm.DB) *gorm.DB {
+	return mysql.DBFromContext(ctx, r.db).WithContext(ctx).Preload("Historicos", func(db *gorm.DB) *gorm.DB {
 		return db.Order("alterado_em ASC")
 	})
 }

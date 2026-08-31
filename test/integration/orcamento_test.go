@@ -13,6 +13,7 @@ import (
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	httporcamento "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/orcamento"
 	httpordemservico "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/ordemservico"
+	"github.com/stretchr/testify/require"
 )
 
 func TestOrcamento_GerarAdicionarERemoverItens_CalculaTotais(t *testing.T) {
@@ -618,7 +619,8 @@ func TestOrcamento_FluxoCompleto_RejeitarEditarReenviarEAprovar(t *testing.T) {
 	}
 
 	// ---------------------------------------------------------------------
-	// Orçamento APROVADO é imutável
+	// Orçamento APROVADO não aceita inclusão estrutural de novos itens.
+	// Alteração da quantidade de peça existente usa o fluxo específico de reaprovação.
 	// ---------------------------------------------------------------------
 
 	rec = doRequest(
@@ -701,4 +703,101 @@ func TestOrcamento_FluxoCompleto_RejeitarEditarReenviarEAprovar(t *testing.T) {
 			)
 		}
 	}
+}
+
+func TestOrcamento_AlterarQuantidadeAprovada_RemoveReservaEExigeNovaAprovacao(t *testing.T) {
+	resetDB(t)
+	admin := seedUsuario(t, "Admin Oficina", "admin@oficina.com", "senha123", shared.PapelAdmin)
+	loginInterno := doLogin(t, "admin@oficina.com", "senha123")
+	ordemServicoID := seedOrdemServico(t, admin.ID)
+	osPath := "/v1/ordens-servico/" + strconv.FormatUint(ordemServicoID, 10)
+
+	var cliente struct {
+		ID    uint64
+		Email string
+	}
+	require.NoError(t, testDB.Table("clientes").
+		Select("clientes.id, clientes.email").
+		Joins("JOIN ordens_servico ON ordens_servico.cliente_id = clientes.id").
+		Where("ordens_servico.id = ?", ordemServicoID).
+		Scan(&cliente).Error)
+	loginCliente := doLoginCliente(t, cliente.Email, "senha123")
+
+	peca, err := testContainer.CadastrarPecaUC.Executar(context.Background(), apppeca.CadastrarPecaInput{
+		Nome:                "Pastilha de freio",
+		Marca:               "Bosch",
+		Descricao:           "Pastilha dianteira",
+		Preco:               50,
+		QuantidadeEmEstoque: 10,
+		EstoqueMinimo:       2,
+		CriadoPor:           admin.ID,
+	})
+	require.NoError(t, err)
+
+	rec := doRequest(t, http.MethodPatch, osPath+"/iniciar-diagnostico", loginInterno.AccessToken, nil, nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	rec = doRequest(t, http.MethodPut, osPath+"/diagnostico", loginInterno.AccessToken,
+		httpordemservico.InformarDiagnosticoRequest{Diagnostico: "Pastilhas desgastadas"}, nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	var gerado httporcamento.OrcamentoResponse
+	rec = doRequest(t, http.MethodPost, osPath+"/orcamento", loginInterno.AccessToken,
+		httporcamento.GerarOrcamentoRequest{Observacoes: "Troca de pastilhas"}, &gerado)
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+
+	var comPeca httporcamento.OrcamentoResponse
+	rec = doRequest(t, http.MethodPost, osPath+"/orcamento/itens-peca", loginInterno.AccessToken,
+		httporcamento.AdicionarPecaOrcamentoRequest{PecaID: peca.ID, Quantidade: 2}, &comPeca)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	require.Len(t, comPeca.ItensPeca, 1)
+	itemPecaID := comPeca.ItensPeca[0].ID
+	require.NotZero(t, itemPecaID)
+
+	rec = doRequest(t, http.MethodPatch, osPath+"/orcamento/enviar-aprovacao", loginInterno.AccessToken, nil, nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	rec = doRequest(t, http.MethodPatch, osPath+"/orcamento/aprovar", loginCliente.AccessToken, nil, nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	reserva, err := testContainer.ReservaPecaRepo.BuscarPorOrdemEPeca(context.Background(), ordemServicoID, peca.ID)
+	require.NoError(t, err)
+	require.Equal(t, 2, reserva.Quantidade())
+
+	// Alterar quantidade de orçamento já aprovado invalida a aprovação anterior,
+	// remove a reserva e reenvia o orçamento para nova decisão do cliente.
+	var alterado httporcamento.OrcamentoResponse
+	rec = doRequest(t, http.MethodPatch,
+		osPath+"/orcamento/itens-peca/"+strconv.FormatUint(itemPecaID, 10)+"/quantidade",
+		loginInterno.AccessToken,
+		httporcamento.AlterarQuantidadePecaOrcamentoRequest{Quantidade: 4},
+		&alterado,
+	)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	require.Len(t, alterado.ItensPeca, 1)
+	require.Equal(t, 4, alterado.ItensPeca[0].Quantidade)
+	require.Equal(t, 200.0, alterado.ValorItemPecas)
+
+	var status string
+	require.NoError(t, testDB.Table("ordens_servico").Select("status").Where("id = ?", ordemServicoID).Scan(&status).Error)
+	require.Equal(t, "AGUARDANDO_APROVACAO", status)
+
+	reservada, err := testContainer.ReservaPecaRepo.SomarQuantidadeReservada(context.Background(), peca.ID)
+	require.NoError(t, err)
+	require.Zero(t, reservada, "a reserva antiga deve ser removida enquanto o novo orçamento aguarda aprovação")
+
+	var quantidadePersistida int
+	require.NoError(t, testDB.Table("orcamentos_pecas").
+		Select("quantidade").
+		Where("id = ?", itemPecaID).
+		Scan(&quantidadePersistida).Error)
+	require.Equal(t, 4, quantidadePersistida)
+
+	// A nova quantidade só passa a ser reservada depois da nova aprovação.
+	rec = doRequest(t, http.MethodPatch, osPath+"/orcamento/aprovar", loginCliente.AccessToken, nil, nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	reserva, err = testContainer.ReservaPecaRepo.BuscarPorOrdemEPeca(context.Background(), ordemServicoID, peca.ID)
+	require.NoError(t, err)
+	require.Equal(t, 4, reserva.Quantidade())
+	require.NoError(t, testDB.Table("ordens_servico").Select("status").Where("id = ?", ordemServicoID).Scan(&status).Error)
+	require.Equal(t, "APROVADA", status)
 }

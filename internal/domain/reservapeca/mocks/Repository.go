@@ -22,53 +22,6 @@ func (_m *Repository) EXPECT() *Repository_Expecter {
 	return &Repository_Expecter{mock: &_m.Mock}
 }
 
-// Atualizar provides a mock function with given fields: ctx, reserva
-func (_m *Repository) Atualizar(ctx context.Context, reserva *reservapeca.ReservaPeca) error {
-	ret := _m.Called(ctx, reserva)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Atualizar")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, *reservapeca.ReservaPeca) error); ok {
-		r0 = rf(ctx, reserva)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// Repository_Atualizar_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Atualizar'
-type Repository_Atualizar_Call struct {
-	*mock.Call
-}
-
-// Atualizar is a helper method to define mock.On call
-//   - ctx context.Context
-//   - reserva *reservapeca.ReservaPeca
-func (_e *Repository_Expecter) Atualizar(ctx interface{}, reserva interface{}) *Repository_Atualizar_Call {
-	return &Repository_Atualizar_Call{Call: _e.mock.On("Atualizar", ctx, reserva)}
-}
-
-func (_c *Repository_Atualizar_Call) Run(run func(ctx context.Context, reserva *reservapeca.ReservaPeca)) *Repository_Atualizar_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(*reservapeca.ReservaPeca))
-	})
-	return _c
-}
-
-func (_c *Repository_Atualizar_Call) Return(_a0 error) *Repository_Atualizar_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *Repository_Atualizar_Call) RunAndReturn(run func(context.Context, *reservapeca.ReservaPeca) error) *Repository_Atualizar_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // BuscarPorOrdemEPeca provides a mock function with given fields: ctx, ordemServicoID, pecaID
 func (_m *Repository) BuscarPorOrdemEPeca(ctx context.Context, ordemServicoID uint64, pecaID uint64) (*reservapeca.ReservaPeca, error) {
 	ret := _m.Called(ctx, ordemServicoID, pecaID)
@@ -125,66 +78,6 @@ func (_c *Repository_BuscarPorOrdemEPeca_Call) Return(_a0 *reservapeca.ReservaPe
 }
 
 func (_c *Repository_BuscarPorOrdemEPeca_Call) RunAndReturn(run func(context.Context, uint64, uint64) (*reservapeca.ReservaPeca, error)) *Repository_BuscarPorOrdemEPeca_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// BuscarPorOrdemEPecaComBloqueio provides a mock function with given fields: ctx, ordemServicoID, pecaID
-func (_m *Repository) BuscarPorOrdemEPecaComBloqueio(ctx context.Context, ordemServicoID uint64, pecaID uint64) (*reservapeca.ReservaPeca, error) {
-	ret := _m.Called(ctx, ordemServicoID, pecaID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for BuscarPorOrdemEPecaComBloqueio")
-	}
-
-	var r0 *reservapeca.ReservaPeca
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uint64, uint64) (*reservapeca.ReservaPeca, error)); ok {
-		return rf(ctx, ordemServicoID, pecaID)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, uint64, uint64) *reservapeca.ReservaPeca); ok {
-		r0 = rf(ctx, ordemServicoID, pecaID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*reservapeca.ReservaPeca)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, uint64, uint64) error); ok {
-		r1 = rf(ctx, ordemServicoID, pecaID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// Repository_BuscarPorOrdemEPecaComBloqueio_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BuscarPorOrdemEPecaComBloqueio'
-type Repository_BuscarPorOrdemEPecaComBloqueio_Call struct {
-	*mock.Call
-}
-
-// BuscarPorOrdemEPecaComBloqueio is a helper method to define mock.On call
-//   - ctx context.Context
-//   - ordemServicoID uint64
-//   - pecaID uint64
-func (_e *Repository_Expecter) BuscarPorOrdemEPecaComBloqueio(ctx interface{}, ordemServicoID interface{}, pecaID interface{}) *Repository_BuscarPorOrdemEPecaComBloqueio_Call {
-	return &Repository_BuscarPorOrdemEPecaComBloqueio_Call{Call: _e.mock.On("BuscarPorOrdemEPecaComBloqueio", ctx, ordemServicoID, pecaID)}
-}
-
-func (_c *Repository_BuscarPorOrdemEPecaComBloqueio_Call) Run(run func(ctx context.Context, ordemServicoID uint64, pecaID uint64)) *Repository_BuscarPorOrdemEPecaComBloqueio_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(uint64), args[2].(uint64))
-	})
-	return _c
-}
-
-func (_c *Repository_BuscarPorOrdemEPecaComBloqueio_Call) Return(_a0 *reservapeca.ReservaPeca, _a1 error) *Repository_BuscarPorOrdemEPecaComBloqueio_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *Repository_BuscarPorOrdemEPecaComBloqueio_Call) RunAndReturn(run func(context.Context, uint64, uint64) (*reservapeca.ReservaPeca, error)) *Repository_BuscarPorOrdemEPecaComBloqueio_Call {
 	_c.Call.Return(run)
 	return _c
 }

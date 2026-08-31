@@ -13,7 +13,6 @@ import (
 // RegisterPecaRoutes registra as rotas de gestão de peças de estoque.
 func RegisterPecaRoutes(rg *gin.RouterGroup, c *wiring.Container) {
 	h := NewHandler(c.CadastrarPecaUC, c.AtualizarPecaUC, c.AtivarPecaUC, c.InativarPecaUC, c.ConsultarPecaPorIDUC, c.ListarPecasUC, c.ReporEstoquePecaUC, httpquery.NewParser())
-	reservaHandler := NewReservaHandler(c.ReservarPecaUC, c.AlterarQuantidadeReservaPecaUC)
 
 	autenticado := rg.Group("/pecas", middleware.AuthenticationMiddleware(c.JWTAuth, c.RefreshTokensRepo, c.UsuarioStatusRepo, c.ClienteStatusRepo))
 
@@ -28,11 +27,4 @@ func RegisterPecaRoutes(rg *gin.RouterGroup, c *wiring.Container) {
 	consulta.GET("/:id", h.ConsultarPorID)
 	consulta.GET("", h.Listar)
 
-	reservas := rg.Group(
-		"/ordens-servico/:id/reservas-pecas",
-		middleware.AuthenticationMiddleware(c.JWTAuth, c.RefreshTokensRepo, c.UsuarioStatusRepo, c.ClienteStatusRepo),
-		middleware.AuthorizationMiddleware(domainauth.TipoInterno, shared.PapelMecanico, shared.PapelAdmin),
-	)
-	reservas.POST("", reservaHandler.Reservar)
-	reservas.PUT("/:pecaId", reservaHandler.AlterarQuantidade)
 }

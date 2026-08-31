@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	domain "github.com/muriloperosa/soat-architecture/internal/domain/orcamento"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql"
 	"gorm.io/gorm"
 )
 
@@ -19,7 +20,7 @@ func NewOrcamentoRepository(db *gorm.DB) domain.OrcamentoRepository {
 func (r *Repository) Salvar(ctx context.Context, o *domain.Orcamento) error {
 	model := toModel(o)
 
-	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err := mysql.DBFromContext(ctx, r.db).WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Omit("ItensServico", "ItensPeca").Create(model).Error; err != nil {
 			return err
 		}
@@ -56,7 +57,7 @@ func (r *Repository) BuscarPorOrdensServicoIDs(ctx context.Context, ordensServic
 	}
 
 	models := make([]OrcamentoModel, 0)
-	if err := r.db.WithContext(ctx).
+	if err := mysql.DBFromContext(ctx, r.db).WithContext(ctx).
 		Where("ordem_servico_id IN ?", ordensServicoIDs).
 		Find(&models).Error; err != nil {
 		return nil, err
@@ -73,12 +74,12 @@ func (r *Repository) BuscarPorOrdensServicoIDs(ctx context.Context, ordensServic
 // Atualizar persiste os dados escalares do orçamento e sincroniza os itens:
 // insere os itens novos (ID == 0) e remove do banco os itens que não estão
 // mais presentes no agregado (removidos via RemoverItemServico/RemoverItemPeca).
-// Itens existentes preservam o ID, pois nunca são atualizados, só
-// adicionados ou removidos.
+// Itens existentes preservam o ID. A quantidade de ItemPeca pode ser
+// atualizada; inclusões e remoções continuam sincronizadas pelo agregado.
 func (r *Repository) Atualizar(ctx context.Context, o *domain.Orcamento) error {
 	model := toModel(o)
 
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return mysql.DBFromContext(ctx, r.db).WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		result := tx.
 			Model(&OrcamentoModel{}).
 			Where("id = ?", model.ID).
@@ -179,8 +180,14 @@ func sincronizarItensPeca(tx *gorm.DB, o *domain.Orcamento, orcamentoID uint64) 
 	for _, item := range o.ItensPeca() {
 		if item.ID() == 0 {
 			novos = append(novos, toItemPecaModel(item, orcamentoID))
-		} else {
-			idsMantidos[item.ID()] = true
+			continue
+		}
+
+		idsMantidos[item.ID()] = true
+		if err := tx.Model(&ItemPecaModel{}).
+			Where("id = ? AND orcamento_id = ?", item.ID(), orcamentoID).
+			Update("quantidade", item.Quantidade()).Error; err != nil {
+			return err
 		}
 	}
 
@@ -206,7 +213,7 @@ func sincronizarItensPeca(tx *gorm.DB, o *domain.Orcamento, orcamentoID uint64) 
 }
 
 func (r *Repository) consultaComItens(ctx context.Context) *gorm.DB {
-	return r.db.WithContext(ctx).
+	return mysql.DBFromContext(ctx, r.db).WithContext(ctx).
 		Preload("ItensServico").
 		Preload("ItensPeca")
 }

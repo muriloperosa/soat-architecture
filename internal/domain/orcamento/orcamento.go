@@ -116,6 +116,22 @@ func (o *Orcamento) AdicionarItemPeca(pecaID uint64, descricao string, quantidad
 	return nil
 }
 
+// AlterarQuantidadeItemPeca altera a quantidade de um item de peça já
+// existente e recalcula os totais do orçamento.
+func (o *Orcamento) AlterarQuantidadeItemPeca(itemID uint64, quantidade int) error {
+	for i := range o.itensPeca {
+		if o.itensPeca[i].ID() == itemID {
+			if err := o.itensPeca[i].AlterarQuantidade(quantidade); err != nil {
+				return err
+			}
+			o.atualizadoEm = time.Now()
+			o.CalcularTotal()
+			return nil
+		}
+	}
+	return ErrItemPecaNaoEncontrado
+}
+
 // RemoverItemServico remove um item de serviço pelo ID e recalcula os totais.
 func (o *Orcamento) RemoverItemServico(itemID uint64) error {
 	for i, item := range o.itensServico {

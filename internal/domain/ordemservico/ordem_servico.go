@@ -164,8 +164,9 @@ func (o *OrdemServico) InformarDiagnostico(texto string) error {
 }
 
 // EnviarParaAprovacao move a OS para AGUARDANDO_APROVACAO e
-// registra a transição. É permitido enviar a partir de EM_DIAGNOSTICO e
-// reenviar depois de uma rejeição.
+// registra a transição. É permitido enviar a partir de EM_DIAGNOSTICO,
+// reenviar depois de uma rejeição ou reenviar um orçamento aprovado que foi
+// alterado e, portanto, precisa de nova decisão do cliente.
 func (o *OrdemServico) EnviarParaAprovacao(alteradoPor uint64) error {
 	if err := o.ValidarTransicaoPara(StatusAguardandoAprovacao); err != nil {
 		return err

@@ -228,3 +228,31 @@ func TestOrcamento_ValidarParaEnvio_ComItemValido(t *testing.T) {
 	require.NoError(t, o.ValidarParaEnvio())
 	require.Equal(t, 100.0, o.ValorTotal())
 }
+
+func TestOrcamento_AlterarQuantidadeItemPeca_RecalculaTotais(t *testing.T) {
+	agora := time.Now()
+	o := orcamento.ReidratarOrcamento(
+		1, 1,
+		nil,
+		[]orcamento.ItemPeca{orcamento.ReidratarItemPeca(11, 1, 7, "Pastilha", 2, 50)},
+		0, 100, 100, "", 10, agora, agora,
+	)
+
+	require.NoError(t, o.AlterarQuantidadeItemPeca(11, 4))
+	require.Equal(t, 4, o.ItensPeca()[0].Quantidade())
+	require.Equal(t, 200.0, o.ValorItemPecas())
+	require.Equal(t, 200.0, o.ValorTotal())
+}
+
+func TestOrcamento_AlterarQuantidadeItemPeca_QuantidadeInvalida(t *testing.T) {
+	o := orcamento.ReidratarOrcamento(
+		1, 1,
+		nil,
+		[]orcamento.ItemPeca{orcamento.ReidratarItemPeca(11, 1, 7, "Pastilha", 2, 50)},
+		0, 100, 100, "", 10, time.Now(), time.Now(),
+	)
+
+	err := o.AlterarQuantidadeItemPeca(11, 0)
+	require.ErrorIs(t, err, orcamento.ErrQuantidadeInvalida)
+	require.Equal(t, 2, o.ItensPeca()[0].Quantidade())
+}

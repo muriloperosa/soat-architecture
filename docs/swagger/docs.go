@@ -1780,6 +1780,89 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/ordens-servico/{id}/orcamento/itens-peca/{itemId}/quantidade": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Altera a quantidade do item de peça. Se o orçamento já estiver aprovado, remove as reservas anteriores, volta a OS para AGUARDANDO_APROVACAO e reenvia o orçamento ao cliente. A nova reserva só é criada após nova aprovação.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orçamentos"
+                ],
+                "summary": "Altera a quantidade de uma peça do orçamento",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da Ordem de Serviço",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ID do item de peça",
+                        "name": "itemId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Nova quantidade",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/orcamento.AlterarQuantidadePecaOrcamentoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/orcamento.OrcamentoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/ordens-servico/{id}/orcamento/itens-servico": {
             "post": {
                 "security": [
@@ -1968,165 +2051,6 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/orcamento.FluxoOrcamentoResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httperror.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/httperror.ErrorResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/httperror.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/httperror.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httperror.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/ordens-servico/{id}/reservas-pecas": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Cria ou incrementa a reserva da peça para a OS, respeitando estoque mínimo e protegendo concorrência com transação e FOR UPDATE.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Reservas de Peças"
-                ],
-                "summary": "Reserva uma peça para uma Ordem de Serviço",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "ID da Ordem de Serviço",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Peça e quantidade a reservar",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/peca.ReservarPecaRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/peca.ReservaPecaResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httperror.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/httperror.ErrorResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/httperror.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/httperror.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httperror.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/ordens-servico/{id}/reservas-pecas/{pecaId}": {
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Atualiza a quantidade total da reserva existente, recalculando disponibilidade dentro de transação com lock da peça.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Reservas de Peças"
-                ],
-                "summary": "Altera a quantidade total reservada de uma peça na OS",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "ID da Ordem de Serviço",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "ID da peça",
-                        "name": "pecaId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Nova quantidade total reservada",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/peca.AlterarQuantidadeReservaPecaRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/peca.ReservaPecaResponse"
                         }
                     },
                     "400": {
@@ -4325,6 +4249,18 @@ const docTemplate = `{
                 }
             }
         },
+        "orcamento.AlterarQuantidadePecaOrcamentoRequest": {
+            "type": "object",
+            "required": [
+                "quantidade"
+            ],
+            "properties": {
+                "quantidade": {
+                    "type": "integer",
+                    "example": 3
+                }
+            }
+        },
         "orcamento.FluxoOrcamentoResponse": {
             "type": "object",
             "properties": {
@@ -4679,18 +4615,6 @@ const docTemplate = `{
                 }
             }
         },
-        "peca.AlterarQuantidadeReservaPecaRequest": {
-            "type": "object",
-            "required": [
-                "quantidade"
-            ],
-            "properties": {
-                "quantidade": {
-                    "type": "integer",
-                    "example": 3
-                }
-            }
-        },
         "peca.AtualizarPecaRequest": {
             "type": "object",
             "required": [
@@ -4846,44 +4770,6 @@ const docTemplate = `{
                 "quantidade": {
                     "type": "integer",
                     "example": 10
-                }
-            }
-        },
-        "peca.ReservaPecaResponse": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "ordem_servico_id": {
-                    "type": "integer",
-                    "example": 10
-                },
-                "peca_id": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "quantidade": {
-                    "type": "integer",
-                    "example": 2
-                }
-            }
-        },
-        "peca.ReservarPecaRequest": {
-            "type": "object",
-            "required": [
-                "peca_id",
-                "quantidade"
-            ],
-            "properties": {
-                "peca_id": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "quantidade": {
-                    "type": "integer",
-                    "example": 2
                 }
             }
         },

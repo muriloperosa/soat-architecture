@@ -82,17 +82,14 @@ type Container struct {
 	AlterarSenhaClienteUseCase          *appcliente.AlterarSenhaClienteUseCase
 	ListarClientesUseCase               *appcliente.ListarClientesUseCase
 
-	CadastrarPecaUC                *apppeca.CadastrarPecaUseCase
-	AtualizarPecaUC                *apppeca.AtualizarPecaUseCase
-	AtivarPecaUC                   *apppeca.AtivarPecaUseCase
-	InativarPecaUC                 *apppeca.InativarPecaUseCase
-	ConsultarPecaPorIDUC           *apppeca.ConsultarPecaPorIDUseCase
-	ListarPecasUC                  *apppeca.ListarPecasUseCase
-	ReporEstoquePecaUC             *apppeca.ReporEstoqueUseCase
-	ConsultarDisponibilidadeUC     *apppeca.ConsultarDisponibilidadeUseCase
-	ReservarPecaUC                 *apppeca.ReservarPecaUseCase
-	LiberarReservaPecaUC           *apppeca.LiberarReservaPecaUseCase
-	AlterarQuantidadeReservaPecaUC *apppeca.AlterarQuantidadeReservaPecaUseCase
+	CadastrarPecaUC            *apppeca.CadastrarPecaUseCase
+	AtualizarPecaUC            *apppeca.AtualizarPecaUseCase
+	AtivarPecaUC               *apppeca.AtivarPecaUseCase
+	InativarPecaUC             *apppeca.InativarPecaUseCase
+	ConsultarPecaPorIDUC       *apppeca.ConsultarPecaPorIDUseCase
+	ListarPecasUC              *apppeca.ListarPecasUseCase
+	ReporEstoquePecaUC         *apppeca.ReporEstoqueUseCase
+	ConsultarDisponibilidadeUC *apppeca.ConsultarDisponibilidadeUseCase
 
 	CadastrarVeiculoUC         *appveiculo.CadastrarVeiculoUseCase
 	AtualizarVeiculoUC         *appveiculo.AtualizarVeiculoUseCase
@@ -118,14 +115,15 @@ type Container struct {
 	ConsultarOrdemServicoPorNumeroUC *appordemservico.ConsultarOrdemServicoPorNumeroUseCase
 	ListarOrdensServicoUC            *appordemservico.ListarOrdensServicoUseCase
 
-	GerarOrcamentoUC               *apporcamento.GerarOrcamentoUseCase
-	AdicionarServicoOrcamentoUC    *apporcamento.AdicionarServicoOrcamentoUseCase
-	AdicionarPecaOrcamentoUC       *apporcamento.AdicionarPecaOrcamentoUseCase
-	RemoverServicoOrcamentoUC      *apporcamento.RemoverServicoOrcamentoUseCase
-	RemoverPecaOrcamentoUC         *apporcamento.RemoverPecaOrcamentoUseCase
-	EnviarOrcamentoParaAprovacaoUC *apporcamento.EnviarOrcamentoParaAprovacaoUseCase
-	AprovarOrcamentoUC             *apporcamento.AprovarOrcamentoUseCase
-	RejeitarOrcamentoUC            *apporcamento.RejeitarOrcamentoUseCase
+	GerarOrcamentoUC                 *apporcamento.GerarOrcamentoUseCase
+	AdicionarServicoOrcamentoUC      *apporcamento.AdicionarServicoOrcamentoUseCase
+	AdicionarPecaOrcamentoUC         *apporcamento.AdicionarPecaOrcamentoUseCase
+	RemoverServicoOrcamentoUC        *apporcamento.RemoverServicoOrcamentoUseCase
+	RemoverPecaOrcamentoUC           *apporcamento.RemoverPecaOrcamentoUseCase
+	AlterarQuantidadePecaOrcamentoUC *apporcamento.AlterarQuantidadePecaOrcamentoUseCase
+	EnviarOrcamentoParaAprovacaoUC   *apporcamento.EnviarOrcamentoParaAprovacaoUseCase
+	AprovarOrcamentoUC               *apporcamento.AprovarOrcamentoUseCase
+	RejeitarOrcamentoUC              *apporcamento.RejeitarOrcamentoUseCase
 
 	ConsultarTransicaoStatusUC *apprelatorio.ConsultarTransicaoStatusUseCase
 }
@@ -185,9 +183,6 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.ListarPecasUC = apppeca.NewListarPecasUseCase(c.PecaRepo)
 	c.ReporEstoquePecaUC = apppeca.NewReporEstoqueUseCase(c.PecaRepo)
 	c.ConsultarDisponibilidadeUC = apppeca.NewConsultarDisponibilidadeUseCase(c.PecaRepo, c.ReservaPecaRepo)
-	c.ReservarPecaUC = apppeca.NewReservarPecaUseCase(c.PecaRepo, c.ReservaPecaRepo, c.TransactionRunner)
-	c.LiberarReservaPecaUC = apppeca.NewLiberarReservaPecaUseCase(c.ReservaPecaRepo, c.TransactionRunner)
-	c.AlterarQuantidadeReservaPecaUC = apppeca.NewAlterarQuantidadeReservaPecaUseCase(c.PecaRepo, c.ReservaPecaRepo, c.TransactionRunner)
 
 	c.CadastrarVeiculoUC = appveiculo.NewCadastrarVeiculoUseCase(c.VeiculoRepo)
 	c.AtualizarVeiculoUC = appveiculo.NewAtualizarVeiculoUseCase(c.VeiculoRepo)
@@ -222,8 +217,9 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.AdicionarPecaOrcamentoUC = apporcamento.NewAdicionarPecaOrcamentoUseCase(c.OrcamentoRepo, c.PecaRepo, c.OrdemServicoRepo)
 	c.RemoverServicoOrcamentoUC = apporcamento.NewRemoverServicoOrcamentoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo)
 	c.RemoverPecaOrcamentoUC = apporcamento.NewRemoverPecaOrcamentoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo)
+	c.AlterarQuantidadePecaOrcamentoUC = apporcamento.NewAlterarQuantidadePecaOrcamentoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo, c.ReservaPecaRepo, c.PecaRepo, c.ClienteRepository, c.TransactionRunner, c.EmailSender)
 	c.EnviarOrcamentoParaAprovacaoUC = apporcamento.NewEnviarOrcamentoParaAprovacaoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo, c.ClienteRepository, c.EmailSender)
-	c.AprovarOrcamentoUC = apporcamento.NewAprovarOrcamentoUseCase(c.OrdemServicoRepo)
+	c.AprovarOrcamentoUC = apporcamento.NewAprovarOrcamentoUseCase(c.OrdemServicoRepo, c.OrcamentoRepo, c.PecaRepo, c.ReservaPecaRepo, c.TransactionRunner)
 	c.RejeitarOrcamentoUC = apporcamento.NewRejeitarOrcamentoUseCase(c.OrdemServicoRepo)
 
 	c.ConsultarTransicaoStatusUC = apprelatorio.NewConsultarTransicaoStatusUseCase(c.RelatorioRepo)

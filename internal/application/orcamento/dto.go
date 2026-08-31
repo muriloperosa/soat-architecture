@@ -23,6 +23,13 @@ type AdicionarPecaOrcamentoInput struct {
 	Quantidade     int
 }
 
+type AlterarQuantidadePecaOrcamentoInput struct {
+	OrdemServicoID uint64
+	ItemPecaID     uint64
+	Quantidade     int
+	UsuarioID      uint64
+}
+
 type RemoverServicoOrcamentoInput struct {
 	OrdemServicoID uint64
 	ItemServicoID  uint64

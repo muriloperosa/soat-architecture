@@ -456,7 +456,7 @@ func TestStatusOrdemServicoDefineTransicoesPermitidas(t *testing.T) {
 		ordemservico.StatusEmDiagnostico:       {ordemservico.StatusAguardandoAprovacao},
 		ordemservico.StatusAguardandoAprovacao: {ordemservico.StatusAprovada, ordemservico.StatusRejeitada},
 		ordemservico.StatusRejeitada:           {ordemservico.StatusAguardandoAprovacao},
-		ordemservico.StatusAprovada:            {ordemservico.StatusEmExecucao},
+		ordemservico.StatusAprovada:            {ordemservico.StatusEmExecucao, ordemservico.StatusAguardandoAprovacao},
 		ordemservico.StatusEmExecucao:          {ordemservico.StatusFinalizada},
 		ordemservico.StatusFinalizada:          {ordemservico.StatusEntregue},
 	}
@@ -490,6 +490,20 @@ func TestOrdemServico_FluxoOrcamento_Aprovar(t *testing.T) {
 	ultimo := o.HistoricoStatus()[len(o.HistoricoStatus())-1]
 	require.Equal(t, ordemservico.StatusAprovada, ultimo.Status())
 	require.Equal(t, uint64(2), ultimo.AlteradoPor())
+}
+
+func TestOrdemServico_OrcamentoAprovadoPodeVoltarParaAguardandoAposAlteracao(t *testing.T) {
+	o := osParaFluxoOrcamento(t)
+	require.NoError(t, o.IniciarDiagnostico(2))
+	require.NoError(t, o.InformarDiagnostico("Correia dentada desgastada"))
+	require.NoError(t, o.EnviarParaAprovacao(2))
+	require.NoError(t, o.AprovarOrcamento())
+
+	require.NoError(t, o.EnviarParaAprovacao(3))
+	require.Equal(t, ordemservico.StatusAguardandoAprovacao, o.Status())
+	ultimo := o.HistoricoStatus()[len(o.HistoricoStatus())-1]
+	require.Equal(t, ordemservico.StatusAguardandoAprovacao, ultimo.Status())
+	require.Equal(t, uint64(3), ultimo.AlteradoPor())
 }
 
 func TestOrdemServico_FluxoOrcamento_RejeitarRegistraMotivoEPermiteReenvio(t *testing.T) {

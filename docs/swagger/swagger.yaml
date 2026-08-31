@@ -196,6 +196,14 @@ definitions:
     - quantidade
     - servico_id
     type: object
+  orcamento.AlterarQuantidadePecaOrcamentoRequest:
+    properties:
+      quantidade:
+        example: 3
+        type: integer
+    required:
+    - quantidade
+    type: object
   orcamento.FluxoOrcamentoResponse:
     properties:
       ordem_servico_id:
@@ -448,14 +456,6 @@ definitions:
         example: 1
         type: integer
     type: object
-  peca.AlterarQuantidadeReservaPecaRequest:
-    properties:
-      quantidade:
-        example: 3
-        type: integer
-    required:
-    - quantidade
-    type: object
   peca.AtualizarPecaRequest:
     properties:
       descricao:
@@ -569,33 +569,6 @@ definitions:
         example: 10
         type: integer
     required:
-    - quantidade
-    type: object
-  peca.ReservaPecaResponse:
-    properties:
-      id:
-        example: 1
-        type: integer
-      ordem_servico_id:
-        example: 10
-        type: integer
-      peca_id:
-        example: 1
-        type: integer
-      quantidade:
-        example: 2
-        type: integer
-    type: object
-  peca.ReservarPecaRequest:
-    properties:
-      peca_id:
-        example: 1
-        type: integer
-      quantidade:
-        example: 2
-        type: integer
-    required:
-    - peca_id
     - quantidade
     type: object
   relatorio.TransicaoStatusResponse:
@@ -2027,6 +2000,62 @@ paths:
       summary: Remove uma peça do orçamento
       tags:
       - Orçamentos
+  /v1/ordens-servico/{id}/orcamento/itens-peca/{itemId}/quantidade:
+    patch:
+      consumes:
+      - application/json
+      description: Altera a quantidade do item de peça. Se o orçamento já estiver
+        aprovado, remove as reservas anteriores, volta a OS para AGUARDANDO_APROVACAO
+        e reenvia o orçamento ao cliente. A nova reserva só é criada após nova aprovação.
+      parameters:
+      - description: ID da Ordem de Serviço
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ID do item de peça
+        in: path
+        name: itemId
+        required: true
+        type: integer
+      - description: Nova quantidade
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/orcamento.AlterarQuantidadePecaOrcamentoRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/orcamento.OrcamentoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Altera a quantidade de uma peça do orçamento
+      tags:
+      - Orçamentos
   /v1/ordens-servico/{id}/orcamento/itens-servico:
     post:
       consumes:
@@ -2175,111 +2204,6 @@ paths:
       summary: Rejeita o orçamento da própria Ordem de Serviço
       tags:
       - Orçamentos
-  /v1/ordens-servico/{id}/reservas-pecas:
-    post:
-      consumes:
-      - application/json
-      description: Cria ou incrementa a reserva da peça para a OS, respeitando estoque
-        mínimo e protegendo concorrência com transação e FOR UPDATE.
-      parameters:
-      - description: ID da Ordem de Serviço
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Peça e quantidade a reservar
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/peca.ReservarPecaRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/peca.ReservaPecaResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/httperror.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/httperror.ErrorResponse'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/httperror.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/httperror.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/httperror.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Reserva uma peça para uma Ordem de Serviço
-      tags:
-      - Reservas de Peças
-  /v1/ordens-servico/{id}/reservas-pecas/{pecaId}:
-    put:
-      consumes:
-      - application/json
-      description: Atualiza a quantidade total da reserva existente, recalculando
-        disponibilidade dentro de transação com lock da peça.
-      parameters:
-      - description: ID da Ordem de Serviço
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: ID da peça
-        in: path
-        name: pecaId
-        required: true
-        type: integer
-      - description: Nova quantidade total reservada
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/peca.AlterarQuantidadeReservaPecaRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/peca.ReservaPecaResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/httperror.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/httperror.ErrorResponse'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/httperror.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/httperror.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/httperror.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Altera a quantidade total reservada de uma peça na OS
-      tags:
-      - Reservas de Peças
   /v1/ordens-servico/numero/{numero}:
     get:
       description: Usuários internos podem consultar qualquer OS. Clientes podem consultar

@@ -8,6 +8,7 @@ import (
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type Repository struct {
@@ -31,54 +32,11 @@ func (r *Repository) Salvar(ctx context.Context, reserva *domain.ReservaPeca) er
 	return nil
 }
 
-// Atualizar implements [reservapeca.Repository].
-func (r *Repository) Atualizar(ctx context.Context, reserva *domain.ReservaPeca) error {
-	model := toModel(reserva)
-
-	result := mysql.DBFromContext(ctx, r.db).
-		WithContext(ctx).
-		Model(&ReservaPecaModel{}).
-		Where("id = ?", model.ID).
-		Updates(map[string]any{
-			"quantidade":    model.Quantidade,
-			"atualizada_em": model.AtualizadaEm,
-		})
-
-	if result.Error != nil {
-		return result.Error
-	}
-
-	if result.RowsAffected == 0 {
-		return domain.ErrReservaNaoEncontrada
-	}
-
-	return nil
-}
-
 // BuscarPorOrdemEPeca implements [reservapeca.Repository].
 func (r *Repository) BuscarPorOrdemEPeca(ctx context.Context, ordemServicoID, pecaID uint64) (*domain.ReservaPeca, error) {
 	var model ReservaPecaModel
 
 	err := mysql.DBFromContext(ctx, r.db).WithContext(ctx).
-		Where("ordem_servico_id = ? AND peca_id = ?", ordemServicoID, pecaID).
-		First(&model).Error
-
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, domain.ErrReservaNaoEncontrada
-		}
-
-		return nil, err
-	}
-
-	return toDomain(model), nil
-}
-
-// BuscarPorOrdemEPecaComBloqueio implements [reservapeca.Repository].
-func (r *Repository) BuscarPorOrdemEPecaComBloqueio(ctx context.Context, ordemServicoID, pecaID uint64) (*domain.ReservaPeca, error) {
-	var model ReservaPecaModel
-
-	err := mysql.ComBloqueio(mysql.DBFromContext(ctx, r.db)).WithContext(ctx).
 		Where("ordem_servico_id = ? AND peca_id = ?", ordemServicoID, pecaID).
 		First(&model).Error
 
@@ -112,16 +70,22 @@ func (r *Repository) BuscarPorOrdemServico(ctx context.Context, ordemServicoID u
 // SomarQuantidadeReservada implements [reservapeca.Repository]. Soma a
 // quantidade reservada de uma peça em todas as Ordens de Serviço.
 func (r *Repository) SomarQuantidadeReservada(ctx context.Context, pecaID uint64) (int, error) {
-	var total int
+	var reservas []ReservaPecaModel
 
-	err := mysql.DBFromContext(ctx, r.db).WithContext(ctx).
-		Model(&ReservaPecaModel{}).
+	err := mysql.DBFromContext(ctx, r.db).
+		WithContext(ctx).
+		Clauses(clause.Locking{Strength: "UPDATE"}).
 		Where("peca_id = ?", pecaID).
-		Select("COALESCE(SUM(quantidade), 0)").
-		Scan(&total).Error
+		Find(&reservas).Error
 
 	if err != nil {
 		return 0, err
+	}
+
+	total := 0
+
+	for _, reserva := range reservas {
+		total += reserva.Quantidade
 	}
 
 	return total, nil
