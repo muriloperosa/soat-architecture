@@ -105,6 +105,11 @@ Uma Ordem de Serviço possui no máximo um orçamento.
 Se o orçamento for rejeitado, ele pode ser editado e enviado novamente
 para aprovação. A aprovação/rejeição é representada pelo status da OS.
 
+Quando a quantidade de uma peça de um orçamento já aprovado é alterada,
+a aprovação anterior é invalidada: as reservas da OS são removidas, a OS
+retorna para `AGUARDANDO_APROVACAO` e o orçamento atualizado é reenviado
+ao cliente. As novas reservas só são criadas após nova aprovação.
+
 Os itens preservam valores históricos para que alterações posteriores
 nos cadastros de serviços e peças não modifiquem o orçamento existente.
 
@@ -182,8 +187,7 @@ CREATE TABLE reservas_pecas (
 );
 ```
 
-A combinação `ordem_servico_id + peca_id` é única. Se a quantidade
-reservada mudar, a reserva existente deve ser atualizada.
+A combinação `ordem_servico_id + peca_id` é única. A aplicação não expõe operação manual para alterar uma reserva. A quantidade reservada é derivada dos `ItemPeca` do orçamento aprovado. Quando o orçamento aprovado é alterado, as reservas anteriores da OS são removidas e somente uma nova aprovação cria as reservas atualizadas.
 
 ## Exemplo de consulta da disponibilidade
 
@@ -207,15 +211,17 @@ GROUP BY
 
 ## Reserva transacional
 
-A validação de disponibilidade e a alteração da reserva devem ocorrer na
-**mesma transação**.
+A reserva não possui endpoint próprio. Ela é criada automaticamente durante
+a aprovação do orçamento e deve participar da **mesma transação** que muda
+a OS para `APROVADA`.
 
-Exemplo conceitual MySQL:
+Fluxo conceitual MySQL:
 
-``` sql
+```sql
 START TRANSACTION;
 
--- Bloqueia a peça durante a operação.
+-- Bloqueia cada peça do orçamento. A aplicação ordena os IDs para reduzir
+-- o risco de deadlocks entre aprovações concorrentes.
 SELECT
     id,
     quantidade_em_estoque,
@@ -224,65 +230,100 @@ FROM pecas
 WHERE id = ?
 FOR UPDATE;
 
--- Obtém o total atualmente reservado.
+-- Locking/current read das reservas da peça. A soma é feita pela aplicação.
 SELECT
-    COALESCE(SUM(quantidade), 0) AS quantidade_reservada
+    id,
+    ordem_servico_id,
+    peca_id,
+    quantidade
 FROM reservas_pecas
-WHERE peca_id = ?;
+WHERE peca_id = ?
+FOR UPDATE;
 ```
 
-A aplicação calcula:
+A aplicação soma as linhas retornadas e calcula:
 
-``` text
+```text
 saldo_apos_reserva =
     quantidade_em_estoque
     - quantidade_reservada_atual
-    - nova_quantidade
+    - quantidade_do_orcamento
 ```
 
-A reserva só pode continuar quando:
+A aprovação só pode continuar quando:
 
-``` text
+```text
 saldo_apos_reserva >= estoque_minimo
 ```
 
-Caso contrário:
+Caso contrário, toda a aprovação sofre rollback:
 
-``` sql
+```sql
 ROLLBACK;
 ```
 
-Caso seja válida, a reserva pode ser inserida/atualizada:
+Quando válida, é criada uma reserva para cada combinação OS + peça:
 
-``` sql
+```sql
 INSERT INTO reservas_pecas (
     ordem_servico_id,
     peca_id,
     quantidade
 )
-VALUES (?, ?, ?)
-ON DUPLICATE KEY UPDATE
-    quantidade = VALUES(quantidade),
-    atualizada_em = CURRENT_TIMESTAMP;
+VALUES (?, ?, ?);
+```
 
+Depois de todas as reservas serem criadas, a OS é persistida como
+`APROVADA` e a transação é confirmada:
+
+```sql
 COMMIT;
 ```
 
-> A regra final deve ser implementada pela aplicação dentro de uma
-> transação. O exemplo SQL documenta o comportamento esperado.
+> O `FOR UPDATE` das reservas é importante no MySQL/InnoDB para que o cálculo
+> concorrente use uma leitura corrente depois da espera pelo lock, em vez de
+> reutilizar um snapshot anterior da transação.
 
-## Exemplo de remoção de reserva
+## Alteração de orçamento já aprovado
 
-Para remover uma reserva específica:
+Não se altera `reservas_pecas.quantidade` diretamente. A alteração parte do
+`ItemPeca` do orçamento.
 
-``` sql
+Fluxo implementado:
+
+```text
+OS APROVADA
+  ↓
+alterar quantidade do ItemPeca
+  ↓
+BEGIN
+  ↓
+bloquear peças das reservas atuais
+  ↓
+DELETE reservas_pecas da OS
+  ↓
+atualizar ItemPeca e total do orçamento
+  ↓
+OS = AGUARDANDO_APROVACAO
+  ↓
+COMMIT
+  ↓
+reenviar orçamento atualizado ao cliente
+```
+
+A edição não cria reservas novas. Após o cliente aprovar novamente, o fluxo
+de aprovação recria as reservas a partir das quantidades atuais do orçamento.
+
+## Exemplo de remoção das reservas de uma OS durante reaprovação
+
+A remoção faz parte do caso de uso que invalida uma aprovação anterior; não é
+uma operação pública de estoque:
+
+```sql
 DELETE FROM reservas_pecas
 WHERE ordem_servico_id = ?
   AND peca_id = ?;
 ```
-
-A operação também deve fazer parte da transação do caso de uso
-correspondente quando houver outras alterações relacionadas.
 
 ## Exemplo de reservas de uma OS
 
@@ -537,10 +578,9 @@ make db-reset
 -   Preservar dados históricos nos itens do orçamento.
 -   Não duplicar quantidade reservada em `pecas`.
 -   Consultar reservas através de `reservas_pecas`.
--   Reserva/consumo de estoque deve ser transacional.
+-   Criação e remoção de reservas devem ocorrer dentro dos fluxos transacionais de aprovação/reaprovação do orçamento.
 -   A operação não pode deixar o estoque abaixo de `estoque_minimo`.
--   Usar `FOR UPDATE` no fluxo de reserva para proteger contra
-    concorrência.
+-   Usar `FOR UPDATE` nas peças e nas leituras de reservas do fluxo de aprovação para proteger contra concorrência.
 -   `force` deve ser utilizado somente para recuperação controlada de
     migrations `dirty`.
 -   `db-reset` é exclusivo para ambientes descartáveis/de
@@ -552,4 +592,4 @@ make db-reset
 -   Implementar suporte real a outros SGBDs somente quando necessário.
 -   Criar migrations específicas para cada SGBD suportado.
 -   Adicionar testes de integração com MySQL real.
--   Testar concorrência nas operações de reserva/consumo de estoque.
+-   Testar concorrência entre aprovações de orçamentos que disputam a mesma peça.

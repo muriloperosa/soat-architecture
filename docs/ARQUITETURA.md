@@ -59,15 +59,34 @@ Cada fonte de identidade (usuário interno, cliente) implementa as duas via um a
 
 ## Transação cross-repository (TransactionRunner)
 
-Quando um use case precisa coordenar mais de um `Repository` (de agregados diferentes) numa única operação atômica — por exemplo reservar estoque, que lê `Peca` e escreve em `ReservaPeca` — nenhum dos dois repositórios sozinho garante isso. `domain/shared.TransactionRunner` é a interface pra esse caso; `infrastructure/persistence/mysql.TransactionRunner` implementa sobre GORM.
+Quando um use case precisa coordenar mais de um `Repository` (de agregados diferentes) numa única operação atômica — por exemplo aprovar um orçamento, que lê `OrdemServico`, `Orcamento` e `Peca`, cria `ReservaPeca` e altera o status da OS — nenhum repositório isolado garante a atomicidade. `domain/shared.TransactionRunner` é a interface para esse caso; `infrastructure/persistence/mysql.TransactionRunner` implementa sobre GORM.
 
 - `TransactionRunner.Executar(ctx, fn)` abre uma transação e injeta o `*gorm.DB` da transação num `context.Context` derivado (chave não exportada), passado pra `fn`.
 - Repositórios chamam `mysql.DBFromContext(ctx, r.db)` em vez de usar `r.db` direto — se o `ctx` carrega uma transação, usa ela; senão, cai de volta pra `r.db`. Isso é zero-custo pros repositórios quando chamados fora de uma transação (a maioria dos casos).
-- `mysql.ComBloqueio(db)` adiciona `SELECT ... FOR UPDATE`. Só serve dentro de uma transação (fora dela, o MySQL libera o lock no fim do autocommit da própria SELECT) — por isso todo método que trava linha (`BuscarPorIDComBloqueio`, `BuscarPorOrdemEPecaComBloqueio`) é nomeado explicitamente, nunca um booleano escondido num parâmetro.
+- `mysql.ComBloqueio(db)` adiciona `SELECT ... FOR UPDATE`. Só serve dentro de uma transação (fora dela, o MySQL libera o lock no fim do autocommit da própria `SELECT`). Métodos que travam linhas, como `PecaRepository.BuscarPorIDComBloqueio`, deixam esse comportamento explícito no nome. Leituras de reservas usadas no cálculo concorrente também são locking/current reads para enxergar o estado mais recente após a espera pelo lock.
 
-Exemplo de ponta a ponta: `ReservarPecaUseCase` (`internal/application/peca/reservar_peca.go`) trava a linha da `Peca` antes de somar o quanto já está reservado — assim, reservas concorrentes na mesma peça serializam em vez de lerem o mesmo total desatualizado e ambas passarem na validação de disponibilidade (`Peca.PodeReservar`). Provado em `test/integration/reserva_peca_test.go` disparando reservas concorrentes de verdade contra MySQL.
+Exemplo de ponta a ponta: `AprovarOrcamentoUseCase` cria as reservas automaticamente a partir dos `ItemPeca` do orçamento. Dentro da mesma transação, as peças são bloqueadas em ordem determinística por ID, as reservas correntes são lidas com bloqueio, a disponibilidade é validada por `Peca.PodeReservar`, as novas `ReservaPeca` são persistidas e somente então a OS passa para `APROVADA`. Se qualquer peça não possuir disponibilidade, toda a operação sofre rollback. O teste de integração `TestAprovarOrcamento_ConcorrenciaNaoUltrapassaEstoqueDisponivel` prova que aprovações concorrentes não ultrapassam o estoque disponível.
 
 Pra testar use case com `TransactionRunner` sem banco real, `test/helpers.TransactionRunnerMock` só chama `fn(ctx)` direto e conta quantas vezes rodou (`Calls`) — o suficiente pra afirmar que o use case delega à transação, sem precisar simular `BEGIN`/`COMMIT`.
+
+
+### Reserva de peças como consequência da aprovação
+
+Não existe endpoint ou caso de uso público para reservar, liberar ou alterar diretamente uma `ReservaPeca`. A reserva é um efeito interno da aprovação do orçamento pelo cliente.
+
+```text
+Orçamento em AGUARDANDO_APROVACAO
+        ↓ cliente aprova
+AprovarOrcamentoUseCase
+        ↓ transação
+valida disponibilidade das peças
+        ↓
+cria reservas conforme ItemPeca
+        ↓
+OS = APROVADA
+```
+
+Quando a quantidade de uma peça de um orçamento já aprovado é alterada, a aprovação anterior é invalidada: as reservas correntes da OS são removidas dentro da transação, a OS retorna para `AGUARDANDO_APROVACAO` e o orçamento atualizado é reenviado ao cliente. Nenhuma nova reserva é criada nessa edição; ela só volta a existir quando o cliente aprovar novamente.
 
 ## Testes de integração
 
