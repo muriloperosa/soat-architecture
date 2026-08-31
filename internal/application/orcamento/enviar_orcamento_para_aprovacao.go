@@ -12,24 +12,23 @@ import (
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 )
 
-// FinalizarOrcamentoUseCase encerra a montagem do orçamento: move a OS de
-// EM_DIAGNOSTICO para AGUARDANDO_APROVACAO e, como efeito da transição,
-// envia o orçamento por e-mail ao cliente. Exige que a OS já tenha um
-// orçamento gerado.
-type FinalizarOrcamentoUseCase struct {
+// EnviarOrcamentoParaAprovacaoUseCase envia um orçamento válido para decisão
+// do cliente. A aprovação/rejeição pertence ao status da OS; o orçamento não
+// possui status próprio.
+type EnviarOrcamentoParaAprovacaoUseCase struct {
 	orcamentoRepository    domainorcamento.OrcamentoRepository
 	ordemServicoRepository domainordemservico.OrdemServicoRepository
 	clienteRepository      domaincliente.ClienteRepository
 	emailSender            shared.EmailSender
 }
 
-func NewFinalizarOrcamentoUseCase(
+func NewEnviarOrcamentoParaAprovacaoUseCase(
 	orcamentoRepository domainorcamento.OrcamentoRepository,
 	ordemServicoRepository domainordemservico.OrdemServicoRepository,
 	clienteRepository domaincliente.ClienteRepository,
 	emailSender shared.EmailSender,
-) *FinalizarOrcamentoUseCase {
-	return &FinalizarOrcamentoUseCase{
+) *EnviarOrcamentoParaAprovacaoUseCase {
+	return &EnviarOrcamentoParaAprovacaoUseCase{
 		orcamentoRepository:    orcamentoRepository,
 		ordemServicoRepository: ordemServicoRepository,
 		clienteRepository:      clienteRepository,
@@ -37,7 +36,7 @@ func NewFinalizarOrcamentoUseCase(
 	}
 }
 
-func (uc *FinalizarOrcamentoUseCase) Executar(ctx context.Context, input FinalizarOrcamentoInput) (OrcamentoOutput, error) {
+func (uc *EnviarOrcamentoParaAprovacaoUseCase) Executar(ctx context.Context, input EnviarOrcamentoParaAprovacaoInput) (OrcamentoOutput, error) {
 	orcamento, err := uc.orcamentoRepository.BuscarPorOrdemServicoID(ctx, input.OrdemServicoID)
 	if err != nil {
 		if errors.Is(err, domainorcamento.ErrOrcamentoNaoEncontrado) {
@@ -54,6 +53,14 @@ func (uc *FinalizarOrcamentoUseCase) Executar(ctx context.Context, input Finaliz
 		return OrcamentoOutput{}, shared.NewInternalError("erro ao buscar ordem de serviço", err)
 	}
 
+	// Valida a transição antes de validar o conteúdo para devolver o erro mais
+	// representativo quando a OS estiver em um estado incompatível.
+	if err := os.ValidarTransicaoPara(domainordemservico.StatusAguardandoAprovacao); err != nil {
+		return OrcamentoOutput{}, err
+	}
+	if err := orcamento.ValidarParaEnvio(); err != nil {
+		return OrcamentoOutput{}, err
+	}
 	if err := os.EnviarParaAprovacao(input.UsuarioID); err != nil {
 		return OrcamentoOutput{}, err
 	}

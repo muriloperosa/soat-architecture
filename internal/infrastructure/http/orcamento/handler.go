@@ -11,12 +11,12 @@ import (
 )
 
 type Handler struct {
-	gerar            *app.GerarOrcamentoUseCase
-	adicionarServico *app.AdicionarServicoOrcamentoUseCase
-	adicionarPeca    *app.AdicionarPecaOrcamentoUseCase
-	removerServico   *app.RemoverServicoOrcamentoUseCase
-	removerPeca      *app.RemoverPecaOrcamentoUseCase
-	finalizar        *app.FinalizarOrcamentoUseCase
+	gerar               *app.GerarOrcamentoUseCase
+	adicionarServico    *app.AdicionarServicoOrcamentoUseCase
+	adicionarPeca       *app.AdicionarPecaOrcamentoUseCase
+	removerServico      *app.RemoverServicoOrcamentoUseCase
+	removerPeca         *app.RemoverPecaOrcamentoUseCase
+	enviarParaAprovacao *app.EnviarOrcamentoParaAprovacaoUseCase
 }
 
 func NewHandler(
@@ -25,15 +25,15 @@ func NewHandler(
 	adicionarPeca *app.AdicionarPecaOrcamentoUseCase,
 	removerServico *app.RemoverServicoOrcamentoUseCase,
 	removerPeca *app.RemoverPecaOrcamentoUseCase,
-	finalizar *app.FinalizarOrcamentoUseCase,
+	enviarParaAprovacao *app.EnviarOrcamentoParaAprovacaoUseCase,
 ) *Handler {
 	return &Handler{
-		gerar:            gerar,
-		adicionarServico: adicionarServico,
-		adicionarPeca:    adicionarPeca,
-		removerServico:   removerServico,
-		removerPeca:      removerPeca,
-		finalizar:        finalizar,
+		gerar:               gerar,
+		adicionarServico:    adicionarServico,
+		adicionarPeca:       adicionarPeca,
+		removerServico:      removerServico,
+		removerPeca:         removerPeca,
+		enviarParaAprovacao: enviarParaAprovacao,
 	}
 }
 
@@ -219,8 +219,8 @@ func (h *Handler) RemoverPeca(c *gin.Context) {
 	c.JSON(http.StatusOK, toResponse(output))
 }
 
-// @Summary Finaliza o orçamento e envia para aprovação
-// @Description Move a OS de EM_DIAGNOSTICO para AGUARDANDO_APROVACAO e, como efeito da transição, envia (simulado) o e-mail do orçamento ao cliente. Restrito a mecânico ou administrador.
+// @Summary Envia o orçamento para aprovação
+// @Description Move a OS de EM_DIAGNOSTICO ou REJEITADA para AGUARDANDO_APROVACAO, exige orçamento com itens e envia o orçamento ao cliente. Restrito a mecânico ou administrador.
 // @Tags Orçamentos
 // @Produce json
 // @Security BearerAuth
@@ -231,8 +231,8 @@ func (h *Handler) RemoverPeca(c *gin.Context) {
 // @Failure 403 {object} httperror.ErrorResponse
 // @Failure 404 {object} httperror.ErrorResponse
 // @Failure 500 {object} httperror.ErrorResponse
-// @Router /v1/ordens-servico/{id}/orcamento/finalizar [patch]
-func (h *Handler) Finalizar(c *gin.Context) {
+// @Router /v1/ordens-servico/{id}/orcamento/enviar-aprovacao [patch]
+func (h *Handler) EnviarParaAprovacao(c *gin.Context) {
 	ordemServicoID, ok := httprequest.ParseUintParam(c, "id")
 	if !ok {
 		return
@@ -243,7 +243,7 @@ func (h *Handler) Finalizar(c *gin.Context) {
 		return
 	}
 
-	output, err := h.finalizar.Executar(c.Request.Context(), app.FinalizarOrcamentoInput{
+	output, err := h.enviarParaAprovacao.Executar(c.Request.Context(), app.EnviarOrcamentoParaAprovacaoInput{
 		OrdemServicoID: ordemServicoID,
 		UsuarioID:      usuarioID,
 	})

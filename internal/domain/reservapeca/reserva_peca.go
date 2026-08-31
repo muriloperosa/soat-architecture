@@ -55,6 +55,19 @@ func RestaurarReservaPeca(id, ordemServicoID, pecaID uint64, quantidade int, cri
 	}
 }
 
+// AlterarQuantidade define a quantidade total reservada para a peça nesta
+// Ordem de Serviço. A disponibilidade global é validada pelo use case dentro
+// da transação que bloqueia a peça.
+func (r *ReservaPeca) AlterarQuantidade(quantidade int) error {
+	if quantidade <= 0 {
+		return ErrQuantidadeInvalida
+	}
+
+	r.quantidade = quantidade
+	r.atualizadaEm = time.Now()
+	return nil
+}
+
 // Aumentar soma quantidade à reserva (ex. a OS reserva mais unidades da
 // mesma peça). Quem garante que o novo total não fura o estoque mínimo é
 // o orquestrador (ReservarPecaUseCase), não a reserva.
@@ -63,10 +76,7 @@ func (r *ReservaPeca) Aumentar(quantidade int) error {
 		return ErrQuantidadeInvalida
 	}
 
-	r.quantidade += quantidade
-	r.atualizadaEm = time.Now()
-
-	return nil
+	return r.AlterarQuantidade(r.quantidade + quantidade)
 }
 
 // Reduzir libera quantidade da reserva. Não é possível liberar mais do

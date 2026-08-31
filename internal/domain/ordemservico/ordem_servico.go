@@ -163,9 +163,9 @@ func (o *OrdemServico) InformarDiagnostico(texto string) error {
 	return nil
 }
 
-// EnviarParaAprovacao move uma OS em diagnóstico para aguardando aprovação
-// (exige diagnóstico preenchido, ver ValidarTransicaoPara) e registra quem
-// realizou a transição.
+// EnviarParaAprovacao move a OS para AGUARDANDO_APROVACAO e
+// registra a transição. É permitido enviar a partir de EM_DIAGNOSTICO e
+// reenviar depois de uma rejeição.
 func (o *OrdemServico) EnviarParaAprovacao(alteradoPor uint64) error {
 	if err := o.ValidarTransicaoPara(StatusAguardandoAprovacao); err != nil {
 		return err
@@ -181,6 +181,57 @@ func (o *OrdemServico) EnviarParaAprovacao(alteradoPor uint64) error {
 	o.dataAtualizacao = historico.AlteradoEm()
 	o.historicoStatus = append(o.historicoStatus, historico)
 	return nil
+}
+
+// AprovarOrcamento aprova o orçamento enquanto a OS aguarda a decisão do cliente.
+// Como alterado_por referencia usuarios, a transição preserva como responsável
+// o último usuário interno que atuou no histórico da OS.
+func (o *OrdemServico) AprovarOrcamento() error {
+	if err := o.ValidarTransicaoPara(StatusAprovada); err != nil {
+		return err
+	}
+
+	historico, err := NewHistoricoStatus(StatusAprovada, o.ultimoAlteradoPor(), "", time.Now())
+	if err != nil {
+		return err
+	}
+	historico.atribuirOrdemServicoID(o.id)
+
+	o.status = StatusAprovada
+	o.dataAtualizacao = historico.AlteradoEm()
+	o.historicoStatus = append(o.historicoStatus, historico)
+	return nil
+}
+
+// RejeitarOrcamento rejeita o orçamento e registra obrigatoriamente o motivo
+// no histórico da OS. Como alterado_por referencia usuarios, a transição
+// preserva como responsável o último usuário interno do histórico.
+func (o *OrdemServico) RejeitarOrcamento(motivo string) error {
+	if strings.TrimSpace(motivo) == "" {
+		return ErrMotivoRejeicaoObrigatorio
+	}
+	if err := o.ValidarTransicaoPara(StatusRejeitada); err != nil {
+		return err
+	}
+
+	historico, err := NewHistoricoStatus(StatusRejeitada, o.ultimoAlteradoPor(), motivo, time.Now())
+	if err != nil {
+		return err
+	}
+	historico.atribuirOrdemServicoID(o.id)
+
+	o.status = StatusRejeitada
+	o.dataAtualizacao = historico.AlteradoEm()
+	o.historicoStatus = append(o.historicoStatus, historico)
+	return nil
+}
+
+func (o *OrdemServico) ultimoAlteradoPor() uint64 {
+	if len(o.historicoStatus) == 0 {
+		return 0
+	}
+
+	return o.historicoStatus[len(o.historicoStatus)-1].AlteradoPor()
 }
 
 // IniciarExecucao move uma OS aprovada para execução e registra quem realizou a transição.

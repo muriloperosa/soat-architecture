@@ -212,3 +212,19 @@ func TestRemoverItemPeca_NaoEncontrado(t *testing.T) {
 	require.ErrorIs(t, err, orcamento.ErrItemPecaNaoEncontrado)
 	require.Len(t, o.ItensPeca(), 1)
 }
+
+func TestOrcamento_ValidarParaEnvio_OrcamentoVazioRetornaErro(t *testing.T) {
+	o, err := orcamento.NewOrcamento(1, "", 2)
+	require.NoError(t, err)
+
+	require.ErrorIs(t, o.ValidarParaEnvio(), orcamento.ErrOrcamentoVazio)
+}
+
+func TestOrcamento_ValidarParaEnvio_ComItemValido(t *testing.T) {
+	o, err := orcamento.NewOrcamento(1, "", 2)
+	require.NoError(t, err)
+	require.NoError(t, o.AdicionarItemServico(3, 1, 100, 60))
+
+	require.NoError(t, o.ValidarParaEnvio())
+	require.Equal(t, 100.0, o.ValorTotal())
+}

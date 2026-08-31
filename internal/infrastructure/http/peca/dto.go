@@ -47,3 +47,19 @@ type ListarPecasResponse struct {
 	Order      string         `json:"order" example:"nome"`
 	Direction  string         `json:"direction" example:"ASC"`
 }
+
+type ReservarPecaRequest struct {
+	PecaID     uint64 `json:"peca_id" binding:"required" example:"1"`
+	Quantidade int    `json:"quantidade" binding:"required" example:"2"`
+}
+
+type AlterarQuantidadeReservaPecaRequest struct {
+	Quantidade int `json:"quantidade" binding:"required" example:"3"`
+}
+
+type ReservaPecaResponse struct {
+	ID             uint64 `json:"id" example:"1"`
+	OrdemServicoID uint64 `json:"ordem_servico_id" example:"10"`
+	PecaID         uint64 `json:"peca_id" example:"1"`
+	Quantidade     int    `json:"quantidade" example:"2"`
+}

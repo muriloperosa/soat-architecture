@@ -119,3 +119,20 @@ func TestRestaurarReservaPeca_NaoRevalidaEPreservaEstado(t *testing.T) {
 	require.Equal(t, uint64(2), r.PecaID())
 	require.Equal(t, 3, r.Quantidade())
 }
+
+func TestReservaPeca_AlterarQuantidade_DefineQuantidadeTotal(t *testing.T) {
+	r, err := reservapeca.NewReservaPeca(1, 2, 2)
+	require.NoError(t, err)
+
+	require.NoError(t, r.AlterarQuantidade(5))
+	require.Equal(t, 5, r.Quantidade())
+}
+
+func TestReservaPeca_AlterarQuantidade_QuantidadeInvalidaNaoAltera(t *testing.T) {
+	r, err := reservapeca.NewReservaPeca(1, 2, 2)
+	require.NoError(t, err)
+
+	err = r.AlterarQuantidade(0)
+	require.ErrorIs(t, err, reservapeca.ErrQuantidadeInvalida)
+	require.Equal(t, 2, r.Quantidade())
+}

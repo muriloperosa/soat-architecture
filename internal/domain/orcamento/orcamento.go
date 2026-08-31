@@ -159,6 +159,18 @@ func (o *Orcamento) CalcularTotal() float64 {
 	return o.valorTotal
 }
 
+// ValidarParaEnvio garante que o orçamento possui conteúdo antes de ser
+// enviado para aprovação. O orçamento não possui status próprio; seu ciclo
+// de aprovação é controlado pela Ordem de Serviço.
+func (o *Orcamento) ValidarParaEnvio() error {
+	if len(o.itensServico) == 0 && len(o.itensPeca) == 0 {
+		return ErrOrcamentoVazio
+	}
+
+	o.CalcularTotal()
+	return nil
+}
+
 func (o *Orcamento) ID() uint64                 { return o.id }
 func (o *Orcamento) OrdemServicoID() uint64     { return o.ordemServicoID }
 func (o *Orcamento) ValorItemServicos() float64 { return o.valorItemServicos }

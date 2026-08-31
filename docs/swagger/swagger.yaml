@@ -196,6 +196,15 @@ definitions:
     - quantidade
     - servico_id
     type: object
+  orcamento.FluxoOrcamentoResponse:
+    properties:
+      ordem_servico_id:
+        example: 1
+        type: integer
+      status:
+        example: APROVADA
+        type: string
+    type: object
   orcamento.GerarOrcamentoRequest:
     properties:
       observacoes:
@@ -272,6 +281,14 @@ definitions:
       valor_total:
         example: 250
         type: number
+    type: object
+  orcamento.RejeitarOrcamentoRequest:
+    properties:
+      motivo:
+        example: Valor acima do esperado
+        type: string
+    required:
+    - motivo
     type: object
   ordemservico.AbrirOrdemServicoRequest:
     properties:
@@ -431,6 +448,14 @@ definitions:
         example: 1
         type: integer
     type: object
+  peca.AlterarQuantidadeReservaPecaRequest:
+    properties:
+      quantidade:
+        example: 3
+        type: integer
+    required:
+    - quantidade
+    type: object
   peca.AtualizarPecaRequest:
     properties:
       descricao:
@@ -544,6 +569,33 @@ definitions:
         example: 10
         type: integer
     required:
+    - quantidade
+    type: object
+  peca.ReservaPecaResponse:
+    properties:
+      id:
+        example: 1
+        type: integer
+      ordem_servico_id:
+        example: 10
+        type: integer
+      peca_id:
+        example: 1
+        type: integer
+      quantidade:
+        example: 2
+        type: integer
+    type: object
+  peca.ReservarPecaRequest:
+    properties:
+      peca_id:
+        example: 1
+        type: integer
+      quantidade:
+        example: 2
+        type: integer
+    required:
+    - peca_id
     - quantidade
     type: object
   relatorio.TransicaoStatusResponse:
@@ -1793,11 +1845,53 @@ paths:
       summary: Gera o orçamento de uma Ordem de Serviço
       tags:
       - Orçamentos
-  /v1/ordens-servico/{id}/orcamento/finalizar:
+  /v1/ordens-servico/{id}/orcamento/aprovar:
     patch:
-      description: Move a OS de EM_DIAGNOSTICO para AGUARDANDO_APROVACAO e, como efeito
-        da transição, envia (simulado) o e-mail do orçamento ao cliente. Restrito
-        a mecânico ou administrador.
+      description: Cliente autenticado aprova o orçamento somente quando a OS está
+        AGUARDANDO_APROVACAO e pertence a ele.
+      parameters:
+      - description: ID da Ordem de Serviço
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/orcamento.FluxoOrcamentoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Aprova o orçamento da própria Ordem de Serviço
+      tags:
+      - Orçamentos
+  /v1/ordens-servico/{id}/orcamento/enviar-aprovacao:
+    patch:
+      description: Move a OS de EM_DIAGNOSTICO ou REJEITADA para AGUARDANDO_APROVACAO,
+        exige orçamento com itens e envia o orçamento ao cliente. Restrito a mecânico
+        ou administrador.
       parameters:
       - description: ID da Ordem de Serviço
         in: path
@@ -1833,7 +1927,7 @@ paths:
             $ref: '#/definitions/httperror.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Finaliza o orçamento e envia para aprovação
+      summary: Envia o orçamento para aprovação
       tags:
       - Orçamentos
   /v1/ordens-servico/{id}/orcamento/itens-peca:
@@ -2030,6 +2124,162 @@ paths:
       summary: Remove um serviço do orçamento
       tags:
       - Orçamentos
+  /v1/ordens-servico/{id}/orcamento/rejeitar:
+    patch:
+      consumes:
+      - application/json
+      description: Cliente autenticado rejeita o orçamento somente quando a OS está
+        AGUARDANDO_APROVACAO e pertence a ele. O motivo é registrado no histórico
+        da OS.
+      parameters:
+      - description: ID da Ordem de Serviço
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Motivo da rejeição
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/orcamento.RejeitarOrcamentoRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/orcamento.FluxoOrcamentoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Rejeita o orçamento da própria Ordem de Serviço
+      tags:
+      - Orçamentos
+  /v1/ordens-servico/{id}/reservas-pecas:
+    post:
+      consumes:
+      - application/json
+      description: Cria ou incrementa a reserva da peça para a OS, respeitando estoque
+        mínimo e protegendo concorrência com transação e FOR UPDATE.
+      parameters:
+      - description: ID da Ordem de Serviço
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Peça e quantidade a reservar
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/peca.ReservarPecaRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/peca.ReservaPecaResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Reserva uma peça para uma Ordem de Serviço
+      tags:
+      - Reservas de Peças
+  /v1/ordens-servico/{id}/reservas-pecas/{pecaId}:
+    put:
+      consumes:
+      - application/json
+      description: Atualiza a quantidade total da reserva existente, recalculando
+        disponibilidade dentro de transação com lock da peça.
+      parameters:
+      - description: ID da Ordem de Serviço
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ID da peça
+        in: path
+        name: pecaId
+        required: true
+        type: integer
+      - description: Nova quantidade total reservada
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/peca.AlterarQuantidadeReservaPecaRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/peca.ReservaPecaResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Altera a quantidade total reservada de uma peça na OS
+      tags:
+      - Reservas de Peças
   /v1/ordens-servico/numero/{numero}:
     get:
       description: Usuários internos podem consultar qualquer OS. Clientes podem consultar

@@ -9,7 +9,8 @@ import (
 )
 
 // RegisterOrcamentoRoutes registra as rotas de orçamento aninhadas em uma
-// Ordem de Serviço, restritas a mecânico ou administrador.
+// Ordem de Serviço. Edição/envio são internos; aprovação/rejeição são do
+// cliente proprietário da OS, com a propriedade revalidada na application.
 func RegisterOrcamentoRoutes(rg *gin.RouterGroup, container *wiring.Container) {
 	handler := NewHandler(
 		container.GerarOrcamentoUC,
@@ -17,19 +18,30 @@ func RegisterOrcamentoRoutes(rg *gin.RouterGroup, container *wiring.Container) {
 		container.AdicionarPecaOrcamentoUC,
 		container.RemoverServicoOrcamentoUC,
 		container.RemoverPecaOrcamentoUC,
-		container.FinalizarOrcamentoUC,
+		container.EnviarOrcamentoParaAprovacaoUC,
 	)
+	decisaoHandler := NewDecisaoHandler(container.AprovarOrcamentoUC, container.RejeitarOrcamentoUC)
 
 	orcamentos := rg.Group(
 		"/ordens-servico/:id/orcamento",
 		middleware.AuthenticationMiddleware(container.JWTAuth, container.RefreshTokensRepo, container.UsuarioStatusRepo, container.ClienteStatusRepo),
-		middleware.AuthorizationMiddleware(domainauth.TipoInterno, shared.PapelMecanico, shared.PapelAdmin),
 	)
 
-	orcamentos.POST("", handler.Gerar)
-	orcamentos.POST("/itens-servico", handler.AdicionarServico)
-	orcamentos.POST("/itens-peca", handler.AdicionarPeca)
-	orcamentos.DELETE("/itens-servico/:itemId", handler.RemoverServico)
-	orcamentos.DELETE("/itens-peca/:itemId", handler.RemoverPeca)
-	orcamentos.PATCH("/finalizar", handler.Finalizar)
+	internos := orcamentos.Group(
+		"",
+		middleware.AuthorizationMiddleware(domainauth.TipoInterno, shared.PapelMecanico, shared.PapelAdmin),
+	)
+	internos.POST("", handler.Gerar)
+	internos.POST("/itens-servico", handler.AdicionarServico)
+	internos.POST("/itens-peca", handler.AdicionarPeca)
+	internos.DELETE("/itens-servico/:itemId", handler.RemoverServico)
+	internos.DELETE("/itens-peca/:itemId", handler.RemoverPeca)
+	internos.PATCH("/enviar-aprovacao", handler.EnviarParaAprovacao)
+
+	clientes := orcamentos.Group(
+		"",
+		middleware.AuthorizationMiddleware(domainauth.TipoCliente),
+	)
+	clientes.PATCH("/aprovar", decisaoHandler.Aprovar)
+	clientes.PATCH("/rejeitar", decisaoHandler.Rejeitar)
 }

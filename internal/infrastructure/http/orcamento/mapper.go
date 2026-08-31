@@ -76,3 +76,10 @@ func toResponse(output app.OrcamentoOutput) OrcamentoResponse {
 		ItensPeca:         itensPeca,
 	}
 }
+
+func toFluxoResponse(output app.FluxoOrcamentoOutput) FluxoOrcamentoResponse {
+	return FluxoOrcamentoResponse{
+		OrdemServicoID: output.OrdemServicoID,
+		Status:         output.Status,
+	}
+}

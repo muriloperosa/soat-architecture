@@ -59,7 +59,7 @@ func (uc *ReservarPecaUseCase) Executar(ctx context.Context, input ReservarPecaI
 		}
 
 		if existente != nil {
-			if err := existente.Aumentar(input.Quantidade); err != nil {
+			if err := existente.AlterarQuantidade(existente.Quantidade() + input.Quantidade); err != nil {
 				return err
 			}
 

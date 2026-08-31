@@ -76,6 +76,13 @@ type LiberarReservaPecaInput struct {
 	Quantidade     int
 }
 
+// AlterarQuantidadeReservaPecaInput define a quantidade total desejada para a reserva.
+type AlterarQuantidadeReservaPecaInput struct {
+	PecaID         uint64
+	OrdemServicoID uint64
+	Quantidade     int
+}
+
 // ReservaPecaOutput é o DTO de saída comum a ReservarPecaUseCase e
 // LiberarReservaPecaUseCase.
 type ReservaPecaOutput struct {

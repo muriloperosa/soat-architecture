@@ -18,4 +18,6 @@ var (
 	ErrOrcamentoNaoEncontrado       = shared.NewNotFoundError("orçamento não encontrado")
 	ErrOrcamentoJaExiste            = shared.NewConflictError("ordem de serviço já possui um orçamento")
 	ErrOrdemServicoNaoEmDiagnostico = shared.NewValidationError("ordem de serviço precisa estar em diagnóstico para gerar orçamento")
+	ErrOrcamentoVazio               = shared.NewValidationError("orçamento deve possuir ao menos um item antes de ser enviado para aprovação")
+	ErrOrcamentoImutavel            = shared.NewValidationError("orçamento não pode ser alterado no status atual da ordem de serviço")
 )

@@ -42,3 +42,12 @@ type OrcamentoResponse struct {
 	ItensServico      []ItemServicoResponse `json:"itens_servico"`
 	ItensPeca         []ItemPecaResponse    `json:"itens_peca"`
 }
+
+type RejeitarOrcamentoRequest struct {
+	Motivo string `json:"motivo" binding:"required" example:"Valor acima do esperado"`
+}
+
+type FluxoOrcamentoResponse struct {
+	OrdemServicoID uint64 `json:"ordem_servico_id" example:"1"`
+	Status         string `json:"status" example:"APROVADA"`
+}
