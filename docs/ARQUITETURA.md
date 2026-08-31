@@ -125,51 +125,57 @@ sequenceDiagram
 
 ## Estrutura de pastas (MVP)
 
-Um agregado (`ordemservico`) é mostrado como referência. Os demais (`cliente`, `veiculo`, `servico`, `peca`) seguem o mesmo padrão.
+Um agregado (`ordemservico`) é mostrado como referência. Os demais (`auth`, `cliente`, `veiculo`, `servico`, `peca`, `orcamento`, `reservapeca`, `query`, `relatorio`, `usuario`) seguem o mesmo padrão em `domain/`, `application/` e `infrastructure/{persistence/mysql,http}/`.
 
 ```
 soat-architecture/
 ├── cmd/
 │   ├── api/main.go
-│   └── create-user/main.go    # cria usuario interno direto no banco (bootstrap do primeiro admin)
+│   ├── create-user/main.go    # cria usuário interno direto no banco (bootstrap do primeiro admin)
+│   └── seed/main.go           # popula banco com dados de exemplo
 ├── internal/
 │   ├── domain/
 │   │   ├── ordemservico/{ordem_servico,status,repository,errors}.go + _test
-│   │   ├── usuario/{usuario,repository,errors}.go + _test  # usuário interno
-│   │   ├── cliente/ veiculo/ servico/ peca/  (mesmo padrão)
+│   │   ├── ordemservico/mocks/     # mocks gerados (mockery) da interface de repositório do agregado
 │   │   └── shared/{documento,placa,dinheiro,email,senha_hash,papel_usuario,errors}.go + _test
 │   ├── application/
-│   │   ├── ordemservico/{dto,abrir_ordem_servico}.go + _test
-│   │   ├── usuario/{dto,criar_usuario,atualizar_usuario,alterar_senha,ativar_usuario,inativar_usuario,buscar_usuario_logado}.go + _test
-│   │   └── cliente/ veiculo/ servico/ peca/  (mesmo padrão)
+│   │   └── ordemservico/{dto,abrir_ordem_servico}.go + _test
 │   └── infrastructure/
-│       ├── persistence/mysql/{connection.go, ordemservico/, usuario/, cliente/, veiculo/, servico/, peca/, auth/}
-│       │   └── usuario/{model,mapper,repository,credenciais_adapter}.go + _test  # CredenciaisAdapter implementa auth.CredenciaisRepository/UsuarioStatusRepository
+│       ├── persistence/mysql/{connection.go, ordemservico/}
+│       ├── database/                # setup/conexão de banco (pool, health check), separado de mysql/connection.go
+│       ├── email/                    # client de envio de e-mail
+│       ├── migration/                # driver golang-migrate (wrapper), consumido pelo runner em migrations/main.go
 │       ├── http/
 │       │   ├── router.go            # monta o *gin.Engine, chama Register*Routes de cada domínio
 │       │   ├── httperror/           # ErrorResponse + RespondError
 │       │   ├── httprequest/         # helpers de request HTTP reusados entre domínios (ex.: ParseUintParam)
-│       │   ├── auth/{interno_handler,cliente_handler,dto,mapper,routes}.go + _test
-│       │   ├── health/{handler,routes}.go
-│       │   ├── usuario/{handler,dto,mapper,routes}.go + _test    # gestão de usuário interno, restrito a admin + self-service
+│       │   ├── httpquery/           # helpers de paginação/filtro via query params
 │       │   ├── ordemservico/{handler,dto,mapper,routes}.go  # mesmo padrão, demais domínios
 │       │   └── middleware/{authentication_middleware,authorization_middleware,subject}.go + _test
 │       ├── auth/jwt.go              # geração/validação de JWT, hash de refresh token
 │       ├── wiring/container.go      # composition root: monta repositórios, adapters e use cases
 │       └── config/config.go
-├── migrations/
-│   ├── main.go            # runner (go run ./migrations up|down|version|force N)
-│   └── mysql/             # schema versionado, numerado (NNNNNN_nome.up/down.sql)
-├── test/integration/      # testcontainers (MySQL real), build tag "integration"
+├── migrations/             # fonte da verdade do schema (usada em prod/CI)
+│   ├── main.go             # runner (go run ./migrations up|down|version|force N)
+│   └── mysql/              # schema versionado, numerado (NNNNNN_nome.up/down.sql)
+├── test/
+│   ├── integration/        # testcontainers (MySQL real), build tag "integration"
+│   ├── helpers/            # mocks/fakes reusados entre testes (ex.: TransactionRunnerMock)
+│   └── reports/            # saída de cobertura/testes (gitignored)
 ├── docs/
 │   ├── ARQUITETURA.md     # este documento
 │   ├── SECURITY.md        # SCA/SAST/DAST: ferramentas e justificativa
 │   ├── event-storming.md
-│   └── adr/               # Architecture Decision Records
+│   ├── adr/               # Architecture Decision Records
+│   ├── challenge/         # enunciado/material do Tech Challenge
+│   ├── database/          # diagrama/documentação do schema
+│   ├── postman/           # coleção Postman da API
+│   └── swagger/           # spec OpenAPI gerada pelo swaggo
 ├── security/
 │   ├── zap-scan.sh        # orquestra make sec-dast (stack isolada, 1 scan por papel)
 │   ├── zap-rules.tsv      # falsos positivos do ZAP marcados IGNORE
 │   └── reports/           # saída de sec-sca/sec-sast/sec-dast (gitignored)
+├── bin/                    # binários compilados (gitignored)
 ├── .env.example
 ├── Dockerfile
 ├── compose.yml
