@@ -48,6 +48,18 @@
     {
       "key": "ordem_servico_id",
       "value": ""
+    },
+    {
+      "key": "orcamento_id",
+      "value": ""
+    },
+    {
+      "key": "orcamento_item_peca_id",
+      "value": ""
+    },
+    {
+      "key": "orcamento_item_servico_id",
+      "value": ""
     }
   ],
   "item": [
@@ -571,6 +583,42 @@
           }
         },
         {
+          "name": "Listar clientes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/clientes?page=1&order=id&direction=ASC",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "clientes"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "order",
+                  "value": "id"
+                },
+                {
+                  "key": "direction",
+                  "value": "ASC"
+                }
+              ]
+            }
+          }
+        },
+        {
           "name": "Buscar cliente por ID",
           "request": {
             "method": "GET",
@@ -777,6 +825,42 @@
           }
         },
         {
+          "name": "Listar veículos",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/veiculos?page=1&order=id&direction=ASC",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "veiculos"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "order",
+                  "value": "id"
+                },
+                {
+                  "key": "direction",
+                  "value": "ASC"
+                }
+              ]
+            }
+          }
+        },
+        {
           "name": "Buscar veículo por ID",
           "request": {
             "method": "GET",
@@ -946,6 +1030,42 @@
               "path": [
                 "v1",
                 "pecas"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Listar peças",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/pecas?page=1&order=id&direction=ASC",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "pecas"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "order",
+                  "value": "id"
+                },
+                {
+                  "key": "direction",
+                  "value": "ASC"
+                }
               ]
             }
           }
@@ -1305,6 +1425,89 @@
           }
         },
         {
+          "name": "Listar ordens de serviço",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico?page=1&order=id&direction=ASC",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "order",
+                  "value": "id"
+                },
+                {
+                  "key": "direction",
+                  "value": "ASC"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Buscar ordem de serviço por ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "{{ordem_servico_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Buscar ordem de serviço por número",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/numero/OS-0001",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "numero",
+                "OS-0001"
+              ]
+            }
+          }
+        },
+        {
           "name": "Iniciar diagnóstico",
           "request": {
             "method": "PATCH",
@@ -1361,6 +1564,30 @@
           }
         },
         {
+          "name": "Iniciar execução",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/iniciar-execucao",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "{{ordem_servico_id}}",
+                "iniciar-execucao"
+              ]
+            }
+          }
+        },
+        {
           "name": "Finalizar ordem de serviço",
           "request": {
             "method": "PATCH",
@@ -1380,6 +1607,344 @@
                 "ordens-servico",
                 "{{ordem_servico_id}}",
                 "finalizar"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Entregar ordem de serviço",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/entregar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "{{ordem_servico_id}}",
+                "entregar"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orcamentos",
+      "item": [
+        {
+          "name": "Gerar orçamento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('orcamento_id', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"observacoes\": \"Aguardando aprovação do cliente\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/orcamento",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "{{ordem_servico_id}}",
+                "orcamento"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Adicionar peça ao orçamento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    const item = (body.itens_peca || []).slice(-1)[0];",
+                  "    if (item) { pm.collectionVariables.set('orcamento_item_peca_id', item.id); }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"peca_id\": {{peca_id}},\n  \"quantidade\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/orcamento/itens-peca",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "{{ordem_servico_id}}",
+                "orcamento",
+                "itens-peca"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Alterar quantidade de peça do orçamento",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantidade\": 3\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/orcamento/itens-peca/{{orcamento_item_peca_id}}/quantidade",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "{{ordem_servico_id}}",
+                "orcamento",
+                "itens-peca",
+                "{{orcamento_item_peca_id}}",
+                "quantidade"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Remover peça do orçamento",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/orcamento/itens-peca/{{orcamento_item_peca_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "{{ordem_servico_id}}",
+                "orcamento",
+                "itens-peca",
+                "{{orcamento_item_peca_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Adicionar serviço ao orçamento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    const item = (body.itens_servico || []).slice(-1)[0];",
+                  "    if (item) { pm.collectionVariables.set('orcamento_item_servico_id', item.id); }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"servico_id\": {{servico_id}},\n  \"quantidade\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/orcamento/itens-servico",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "{{ordem_servico_id}}",
+                "orcamento",
+                "itens-servico"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Remover serviço do orçamento",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/orcamento/itens-servico/{{orcamento_item_servico_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "{{ordem_servico_id}}",
+                "orcamento",
+                "itens-servico",
+                "{{orcamento_item_servico_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Enviar orçamento para aprovação",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/orcamento/enviar-aprovacao",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "{{ordem_servico_id}}",
+                "orcamento",
+                "enviar-aprovacao"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Aprovar orçamento (cliente)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cliente_access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/orcamento/aprovar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "{{ordem_servico_id}}",
+                "orcamento",
+                "aprovar"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Rejeitar orçamento (cliente)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cliente_access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Valor acima do esperado\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/orcamento/rejeitar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "{{ordem_servico_id}}",
+                "orcamento",
+                "rejeitar"
               ]
             }
           }
