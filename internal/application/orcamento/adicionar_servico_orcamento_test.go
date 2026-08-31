@@ -8,6 +8,7 @@ import (
 	app "github.com/muriloperosa/soat-architecture/internal/application/orcamento"
 	domainorcamento "github.com/muriloperosa/soat-architecture/internal/domain/orcamento"
 	orcamentomocks "github.com/muriloperosa/soat-architecture/internal/domain/orcamento/mocks"
+	ordemservicomocks "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico/mocks"
 	domainservico "github.com/muriloperosa/soat-architecture/internal/domain/servico"
 	servicomocks "github.com/muriloperosa/soat-architecture/internal/domain/servico/mocks"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
@@ -135,4 +136,19 @@ func TestAdicionarServicoOrcamentoUseCase_ErroAoAtualizar(t *testing.T) {
 	require.ErrorAs(t, err, &appErr)
 	require.Equal(t, shared.KindInternal, appErr.Kind)
 	require.ErrorIs(t, err, erroBanco)
+}
+
+func TestAdicionarServicoOrcamentoUseCase_OrcamentoAprovadoNaoPermiteAdicionarNovoItem(t *testing.T) {
+	orcamentoRepo := orcamentomocks.NewOrcamentoRepository(t)
+	servicoRepo := servicomocks.NewServicoRepository(t)
+	osRepo := ordemservicomocks.NewOrdemServicoRepository(t)
+	o := osAguardandoAprovacao(t, 10)
+	require.NoError(t, o.AprovarOrcamento())
+
+	osRepo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(o, nil)
+
+	uc := app.NewAdicionarServicoOrcamentoUseCase(orcamentoRepo, servicoRepo, osRepo)
+	_, err := uc.Executar(context.Background(), app.AdicionarServicoOrcamentoInput{OrdemServicoID: 42, ServicoID: 1, Quantidade: 1})
+
+	require.ErrorIs(t, err, domainorcamento.ErrOrcamentoImutavel)
 }

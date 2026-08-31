@@ -13,7 +13,6 @@ import (
 	pecamocks "github.com/muriloperosa/soat-architecture/internal/domain/peca/mocks"
 	domainreservapeca "github.com/muriloperosa/soat-architecture/internal/domain/reservapeca"
 	reservamocks "github.com/muriloperosa/soat-architecture/internal/domain/reservapeca/mocks"
-	servicomocks "github.com/muriloperosa/soat-architecture/internal/domain/servico/mocks"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	"github.com/muriloperosa/soat-architecture/test/helpers"
 	"github.com/stretchr/testify/mock"
@@ -144,39 +143,4 @@ func TestAprovarOrcamentoUseCase_ClienteDeOutraOSRetornaForbidden(t *testing.T) 
 	require.ErrorAs(t, err, &appErr)
 	require.Equal(t, shared.KindForbidden, appErr.Kind)
 	require.Equal(t, domainordemservico.StatusAguardandoAprovacao, o.Status())
-}
-
-func TestRejeitarOrcamentoUseCase_RegistraMotivoNoHistorico(t *testing.T) {
-	repo := ordemservicomocks.NewOrdemServicoRepository(t)
-	o := osAguardandoAprovacao(t, 10)
-	repo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(o, nil)
-	repo.EXPECT().Atualizar(mock.Anything, o).Return(nil)
-
-	uc := app.NewRejeitarOrcamentoUseCase(repo)
-	out, err := uc.Executar(context.Background(), app.RejeitarOrcamentoInput{
-		OrdemServicoID: 42,
-		ClienteID:      10,
-		Motivo:         "Valor acima do esperado",
-	})
-
-	require.NoError(t, err)
-	require.Equal(t, "REJEITADA", out.Status)
-	historico := o.HistoricoStatus()
-	require.Equal(t, "Valor acima do esperado", historico[len(historico)-1].Motivo())
-	require.Equal(t, uint64(2), historico[len(historico)-1].AlteradoPor())
-}
-
-func TestAdicionarServicoOrcamentoUseCase_OrcamentoAprovadoNaoPermiteAdicionarNovoItem(t *testing.T) {
-	orcamentoRepo := orcamentomocks.NewOrcamentoRepository(t)
-	servicoRepo := servicomocks.NewServicoRepository(t)
-	osRepo := ordemservicomocks.NewOrdemServicoRepository(t)
-	o := osAguardandoAprovacao(t, 10)
-	require.NoError(t, o.AprovarOrcamento())
-
-	osRepo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(o, nil)
-
-	uc := app.NewAdicionarServicoOrcamentoUseCase(orcamentoRepo, servicoRepo, osRepo)
-	_, err := uc.Executar(context.Background(), app.AdicionarServicoOrcamentoInput{OrdemServicoID: 42, ServicoID: 1, Quantidade: 1})
-
-	require.ErrorIs(t, err, domainorcamento.ErrOrcamentoImutavel)
 }
