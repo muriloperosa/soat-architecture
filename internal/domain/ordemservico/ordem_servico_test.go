@@ -158,6 +158,23 @@ func TestAtribuirIDPropagaIdentidadeAoHistoricoInicial(t *testing.T) {
 	require.Equal(t, uint64(99), os.HistoricoStatus()[0].OrdemServicoID())
 }
 
+func TestAtribuirIDsHistoricoPendenteAtribuiApenasHistoricosSemID(t *testing.T) {
+	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 0, "", "", 3)
+	require.NoError(t, err)
+	os.AtribuirID(42)
+
+	err = os.IniciarDiagnostico(7)
+	require.NoError(t, err)
+
+	require.Equal(t, uint64(0), os.HistoricoStatus()[0].ID())
+	require.Equal(t, uint64(0), os.HistoricoStatus()[1].ID())
+
+	os.AtribuirIDsHistoricoPendente([]uint64{101, 102})
+
+	require.Equal(t, uint64(101), os.HistoricoStatus()[0].ID())
+	require.Equal(t, uint64(102), os.HistoricoStatus()[1].ID())
+}
+
 func TestNewHistoricoStatusValidaDados(t *testing.T) {
 	_, err := ordemservico.NewHistoricoStatus("INVALIDO", 1, "", time.Now())
 	require.ErrorIs(t, err, ordemservico.ErrStatusInvalido)

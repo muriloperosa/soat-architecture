@@ -47,16 +47,18 @@ func toReporEstoqueInput(id uint64, req ReporEstoqueRequest) apppeca.ReporEstoqu
 // pra resposta HTTP comum (criação/atualização/consulta de peça).
 func toPecaResponse(out apppeca.PecaOutput) PecaResponse {
 	return PecaResponse{
-		ID:                  out.ID,
-		Codigo:              out.Codigo,
-		Nome:                out.Nome,
-		Marca:               out.Marca,
-		Descricao:           out.Descricao,
-		Preco:               out.Preco,
-		QuantidadeEmEstoque: out.QuantidadeEmEstoque,
-		EstoqueMinimo:       out.EstoqueMinimo,
-		CriadoPor:           out.CriadoPor,
-		Ativo:               out.Ativo,
+		ID:                   out.ID,
+		Codigo:               out.Codigo,
+		Nome:                 out.Nome,
+		Marca:                out.Marca,
+		Descricao:            out.Descricao,
+		Preco:                out.Preco,
+		QuantidadeEmEstoque:  out.QuantidadeEmEstoque,
+		QuantidadeReservada:  out.QuantidadeReservada,
+		QuantidadeDisponivel: out.QuantidadeDisponivel,
+		EstoqueMinimo:        out.EstoqueMinimo,
+		CriadoPor:            out.CriadoPor,
+		Ativo:                out.Ativo,
 	}
 }
 

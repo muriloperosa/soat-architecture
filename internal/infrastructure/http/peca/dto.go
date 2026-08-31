@@ -25,17 +25,21 @@ type ReporEstoqueRequest struct {
 }
 
 // PecaResponse é a resposta comum de criação/atualização/consulta de peça.
+// QuantidadeReservada/QuantidadeDisponivel só vêm preenchidos na consulta
+// por ID (GET /v1/pecas/:id); nos demais endpoints ficam 0/QuantidadeEmEstoque.
 type PecaResponse struct {
-	ID                  uint64  `json:"id" example:"1"`
-	Codigo              string  `json:"codigo" example:"PC1J3K2L1M0N"`
-	Nome                string  `json:"nome" example:"Pastilha de freio"`
-	Marca               string  `json:"marca" example:"Bosch"`
-	Descricao           string  `json:"descricao" example:"Pastilha de freio dianteira"`
-	Preco               float64 `json:"preco" example:"89.9"`
-	QuantidadeEmEstoque int     `json:"quantidade_em_estoque" example:"20"`
-	EstoqueMinimo       int     `json:"estoque_minimo" example:"5"`
-	CriadoPor           uint64  `json:"criado_por" example:"1"`
-	Ativo               bool    `json:"ativo" example:"true"`
+	ID                   uint64  `json:"id" example:"1"`
+	Codigo               string  `json:"codigo" example:"PC1J3K2L1M0N"`
+	Nome                 string  `json:"nome" example:"Pastilha de freio"`
+	Marca                string  `json:"marca" example:"Bosch"`
+	Descricao            string  `json:"descricao" example:"Pastilha de freio dianteira"`
+	Preco                float64 `json:"preco" example:"89.9"`
+	QuantidadeEmEstoque  int     `json:"quantidade_em_estoque" example:"20"`
+	QuantidadeReservada  int     `json:"quantidade_reservada" example:"4"`
+	QuantidadeDisponivel int     `json:"quantidade_disponivel" example:"16"`
+	EstoqueMinimo        int     `json:"estoque_minimo" example:"5"`
+	CriadoPor            uint64  `json:"criado_por" example:"1"`
+	Ativo                bool    `json:"ativo" example:"true"`
 }
 
 type ListarPecasResponse struct {

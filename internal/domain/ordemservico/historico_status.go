@@ -63,3 +63,7 @@ func (h HistoricoStatus) Motivo() string             { return h.motivo }
 func (h *HistoricoStatus) atribuirOrdemServicoID(id uint64) {
 	h.ordemServicoID = id
 }
+
+func (h *HistoricoStatus) atribuirID(id uint64) {
+	h.id = id
+}

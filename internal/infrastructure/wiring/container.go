@@ -180,7 +180,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.AtualizarPecaUC = apppeca.NewAtualizarPecaUseCase(c.PecaRepo)
 	c.AtivarPecaUC = apppeca.NewAtivarPecaUseCase(c.PecaRepo)
 	c.InativarPecaUC = apppeca.NewInativarPecaUseCase(c.PecaRepo)
-	c.ConsultarPecaPorIDUC = apppeca.NewConsultarPecaPorIDUseCase(c.PecaRepo)
+	c.ConsultarPecaPorIDUC = apppeca.NewConsultarPecaPorIDUseCase(c.PecaRepo, c.ReservaPecaRepo)
 	c.ListarPecasUC = apppeca.NewListarPecasUseCase(c.PecaRepo)
 	c.ReporEstoquePecaUC = apppeca.NewReporEstoqueUseCase(c.PecaRepo)
 	c.ConsultarDisponibilidadeUC = apppeca.NewConsultarDisponibilidadeUseCase(c.PecaRepo, c.ReservaPecaRepo)

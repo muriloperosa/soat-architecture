@@ -39,17 +39,22 @@ type ReporEstoqueInput struct {
 }
 
 // PecaOutput é o DTO de saída comum aos use cases de gestão/consulta de peça.
+// QuantidadeReservada/QuantidadeDisponivel só são preenchidos por use cases
+// que consultam reservapeca.Repository (hoje, ConsultarPecaPorIDUseCase);
+// nos demais ficam zero/QuantidadeEmEstoque.
 type PecaOutput struct {
-	ID                  uint64
-	Codigo              string
-	Nome                string
-	Marca               string
-	Descricao           string
-	Preco               float64
-	QuantidadeEmEstoque int
-	EstoqueMinimo       int
-	CriadoPor           uint64
-	Ativo               bool
+	ID                   uint64
+	Codigo               string
+	Nome                 string
+	Marca                string
+	Descricao            string
+	Preco                float64
+	QuantidadeEmEstoque  int
+	QuantidadeReservada  int
+	QuantidadeDisponivel int
+	EstoqueMinimo        int
+	CriadoPor            uint64
+	Ativo                bool
 }
 
 // DisponibilidadePecaOutput é o DTO de saída do ConsultarDisponibilidadeUseCase.
@@ -74,6 +79,16 @@ func toOutput(p *domain.Peca) PecaOutput {
 		CriadoPor:           p.CriadoPor(),
 		Ativo:               p.Ativo(),
 	}
+}
+
+// toOutputComReserva é igual a toOutput, mas também preenche
+// QuantidadeReservada/QuantidadeDisponivel a partir da soma de reservas
+// ativas da peça (internal/domain/reservapeca).
+func toOutputComReserva(p *domain.Peca, quantidadeReservada int) PecaOutput {
+	out := toOutput(p)
+	out.QuantidadeReservada = quantidadeReservada
+	out.QuantidadeDisponivel = p.QuantidadeEmEstoque() - quantidadeReservada
+	return out
 }
 
 // FiltroPecasInput representa um filtro aceito pelo caso de uso de listagem.

@@ -64,6 +64,9 @@ func TestAbrirOrdemServico_PersisteOSHistoricoERetorna201(t *testing.T) {
 	if response.ClienteID != cliente.ID || response.VeiculoID != veiculo.ID || response.QuilometragemEntrada != 52_300 {
 		t.Fatalf("dados da OS não foram preservados: %+v", response)
 	}
+	if len(response.HistoricoStatus) != 1 || response.HistoricoStatus[0].ID == 0 {
+		t.Fatalf("histórico inicial deveria vir com ID real do banco, veio: %+v", response.HistoricoStatus)
+	}
 
 	var quantidadeHistoricos int64
 	if err := testDB.Table("historicos_status").

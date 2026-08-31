@@ -4,14 +4,16 @@ import (
 	"context"
 
 	domain "github.com/muriloperosa/soat-architecture/internal/domain/peca"
+	domainreservapeca "github.com/muriloperosa/soat-architecture/internal/domain/reservapeca"
 )
 
 type ConsultarPecaPorIDUseCase struct {
-	repository domain.Repository
+	repository        domain.Repository
+	reservaRepository domainreservapeca.Repository
 }
 
-func NewConsultarPecaPorIDUseCase(repository domain.Repository) *ConsultarPecaPorIDUseCase {
-	return &ConsultarPecaPorIDUseCase{repository: repository}
+func NewConsultarPecaPorIDUseCase(repository domain.Repository, reservaRepository domainreservapeca.Repository) *ConsultarPecaPorIDUseCase {
+	return &ConsultarPecaPorIDUseCase{repository: repository, reservaRepository: reservaRepository}
 }
 
 func (uc *ConsultarPecaPorIDUseCase) Executar(ctx context.Context, id uint64) (PecaOutput, error) {
@@ -20,5 +22,10 @@ func (uc *ConsultarPecaPorIDUseCase) Executar(ctx context.Context, id uint64) (P
 		return PecaOutput{}, err
 	}
 
-	return toOutput(peca), nil
+	reservada, err := uc.reservaRepository.SomarQuantidadeReservada(ctx, id)
+	if err != nil {
+		return PecaOutput{}, err
+	}
+
+	return toOutputComReserva(peca, reservada), nil
 }

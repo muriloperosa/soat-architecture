@@ -25,6 +25,7 @@ func NewOrdemServicoRepository(db *gorm.DB) domain.OrdemServicoRepository {
 
 func (r *Repository) Salvar(ctx context.Context, os *domain.OrdemServico) error {
 	model := toModel(os)
+	var ids []uint64
 
 	err := mysql.DBFromContext(ctx, r.db).WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Omit("Historicos").Create(model).Error; err != nil {
@@ -43,6 +44,11 @@ func (r *Repository) Salvar(ctx context.Context, os *domain.OrdemServico) error 
 			}
 		}
 
+		ids = make([]uint64, len(models))
+		for i, m := range models {
+			ids[i] = m.ID
+		}
+
 		return nil
 	})
 	if err != nil {
@@ -50,6 +56,7 @@ func (r *Repository) Salvar(ctx context.Context, os *domain.OrdemServico) error 
 	}
 
 	os.AtribuirID(model.ID)
+	os.AtribuirIDsHistoricoPendente(ids)
 	return nil
 }
 
@@ -129,7 +136,9 @@ func (r *Repository) Listar(
 
 func (r *Repository) Atualizar(ctx context.Context, os *domain.OrdemServico) error {
 	model := toModel(os)
-	return mysql.DBFromContext(ctx, r.db).WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	var ids []uint64
+
+	err := mysql.DBFromContext(ctx, r.db).WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		result := tx.
 			Model(&OrdemServicoModel{}).
 			Where("id = ?", model.ID).
@@ -159,8 +168,19 @@ func (r *Repository) Atualizar(ctx context.Context, os *domain.OrdemServico) err
 			}
 		}
 
+		ids = make([]uint64, len(novosHistoricos))
+		for i, m := range novosHistoricos {
+			ids[i] = m.ID
+		}
+
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	os.AtribuirIDsHistoricoPendente(ids)
+	return nil
 }
 
 func (r *Repository) consultaComHistorico(ctx context.Context) *gorm.DB {

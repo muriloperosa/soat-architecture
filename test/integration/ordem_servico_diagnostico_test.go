@@ -78,6 +78,14 @@ func TestDiagnosticoOrdemServico_PersisteEstadoHistoricoETexto(t *testing.T) {
 	if iniciada.Diagnostico != "" {
 		t.Fatalf("diagnóstico deve iniciar vazio, recebido %q", iniciada.Diagnostico)
 	}
+	if len(iniciada.HistoricoStatus) != 2 {
+		t.Fatalf("esperados dois históricos na resposta, encontrado %d", len(iniciada.HistoricoStatus))
+	}
+	for _, h := range iniciada.HistoricoStatus {
+		if h.ID == 0 {
+			t.Fatalf("histórico deveria vir com ID real do banco, veio: %+v", iniciada.HistoricoStatus)
+		}
+	}
 
 	var quantidadeHistoricos int64
 	if err := testDB.Table("historicos_status").

@@ -15,6 +15,7 @@ import (
 	domainpeca "github.com/muriloperosa/soat-architecture/internal/domain/peca"
 	"github.com/muriloperosa/soat-architecture/internal/domain/peca/mocks"
 	domainquery "github.com/muriloperosa/soat-architecture/internal/domain/query"
+	reservamocks "github.com/muriloperosa/soat-architecture/internal/domain/reservapeca/mocks"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httpquery"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/middleware"
@@ -203,9 +204,11 @@ func TestHandler_Inativar_ComSucesso_Retorna204(t *testing.T) {
 func TestHandler_ConsultarPorID_ComSucesso_Retorna200(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := mocks.NewRepository(t)
+	reservaRepo := reservamocks.NewRepository(t)
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(1)).Return(pecaExistente(t), nil)
+	reservaRepo.EXPECT().SomarQuantidadeReservada(mock.Anything, uint64(1)).Return(4, nil)
 
-	h := httppeca.NewHandler(nil, nil, nil, nil, apppeca.NewConsultarPecaPorIDUseCase(repo), nil, nil, nil)
+	h := httppeca.NewHandler(nil, nil, nil, nil, apppeca.NewConsultarPecaPorIDUseCase(repo, reservaRepo), nil, nil, nil)
 	engine := gin.New()
 	engine.GET("/v1/pecas/:id", h.ConsultarPorID)
 
@@ -218,14 +221,17 @@ func TestHandler_ConsultarPorID_ComSucesso_Retorna200(t *testing.T) {
 	var resp httppeca.PecaResponse
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 	require.Equal(t, uint64(1), resp.ID)
+	require.Equal(t, 4, resp.QuantidadeReservada)
+	require.Equal(t, resp.QuantidadeEmEstoque-4, resp.QuantidadeDisponivel)
 }
 
 func TestHandler_ConsultarPorID_PecaNaoEncontrada_Retorna404(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := mocks.NewRepository(t)
+	reservaRepo := reservamocks.NewRepository(t)
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(999)).Return(nil, domainpeca.ErrPecaNaoEncontrada)
 
-	h := httppeca.NewHandler(nil, nil, nil, nil, apppeca.NewConsultarPecaPorIDUseCase(repo), nil, nil, nil)
+	h := httppeca.NewHandler(nil, nil, nil, nil, apppeca.NewConsultarPecaPorIDUseCase(repo, reservaRepo), nil, nil, nil)
 	engine := gin.New()
 	engine.GET("/v1/pecas/:id", h.ConsultarPorID)
 

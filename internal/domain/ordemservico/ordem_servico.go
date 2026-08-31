@@ -111,6 +111,24 @@ func (o *OrdemServico) AtribuirID(id uint64) {
 	}
 }
 
+// AtribuirIDsHistoricoPendente registra, na mesma ordem, os IDs gerados
+// pela persistência para cada HistoricoStatus ainda sem ID (ID() == 0).
+// O repositório chama isso logo após o INSERT dos históricos novos, na
+// mesma ordem em que os enviou pro banco, pra que a resposta reflita o ID
+// real em vez de zero-value.
+func (o *OrdemServico) AtribuirIDsHistoricoPendente(ids []uint64) {
+	idx := 0
+	for i := range o.historicoStatus {
+		if idx >= len(ids) {
+			return
+		}
+		if o.historicoStatus[i].ID() == 0 {
+			o.historicoStatus[i].atribuirID(ids[idx])
+			idx++
+		}
+	}
+}
+
 // ValidarTransicaoPara centraliza as invariantes necessárias para uma mudança
 // de status. Assim, os próximos fluxos da OS reutilizam as mesmas regras.
 func (o *OrdemServico) ValidarTransicaoPara(novo StatusOrdemServico) error {

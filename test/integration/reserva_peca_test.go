@@ -16,6 +16,7 @@ import (
 	apppeca "github.com/muriloperosa/soat-architecture/internal/application/peca"
 	domainpeca "github.com/muriloperosa/soat-architecture/internal/domain/peca"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
+	httppeca "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/peca"
 	"github.com/stretchr/testify/require"
 )
 
@@ -196,6 +197,30 @@ func TestAprovarOrcamento_ConcorrenciaNaoUltrapassaEstoqueDisponivel(t *testing.
 	reservada, err := testContainer.ReservaPecaRepo.SomarQuantidadeReservada(context.Background(), pecaID)
 	require.NoError(t, err)
 	require.Equal(t, 5, reservada)
+}
+
+func TestAprovarOrcamento_GetPecaReflemeteSaldoDisponivelDescontandoReserva(t *testing.T) {
+	resetDB(t)
+	admin := seedUsuario(t, "Admin Oficina", "admin@oficina.com", "senha123", shared.PapelAdmin)
+	login := doLogin(t, "admin@oficina.com", "senha123")
+	pecaID := seedPecaComEstoque(t, admin.ID, 10, 2)
+	ordemServicoID := seedOrdemServico(t, admin.ID)
+	clienteID := clienteIDDaOS(t, ordemServicoID)
+	prepararOrcamentoComPecaAguardando(t, ordemServicoID, admin.ID, pecaID, 3)
+
+	_, err := testContainer.AprovarOrcamentoUC.Executar(context.Background(), apporcamento.AprovarOrcamentoInput{
+		OrdemServicoID: ordemServicoID,
+		ClienteID:      clienteID,
+	})
+	require.NoError(t, err)
+
+	var resposta httppeca.PecaResponse
+	rec := doRequest(t, http.MethodGet, "/v1/pecas/"+strconv.FormatUint(pecaID, 10), login.AccessToken, nil, &resposta)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	require.Equal(t, 10, resposta.QuantidadeEmEstoque, "estoque físico não deve mudar por causa da reserva")
+	require.Equal(t, 3, resposta.QuantidadeReservada)
+	require.Equal(t, 7, resposta.QuantidadeDisponivel, "saldo disponível deve descontar a reserva da OS aprovada")
 }
 
 func TestReservaPeca_NaoPossuiEndpointManual(t *testing.T) {
