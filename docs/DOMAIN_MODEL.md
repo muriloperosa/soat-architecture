@@ -466,6 +466,32 @@ Em caso de erro: `ROLLBACK`.
 
 A transação e o bloqueio são responsabilidades da infraestrutura de persistência; a regra que determina se a reserva é válida continua protegida pelo domínio/aplicação.
 
+### Consumo transacional (finalização da OS)
+
+Finalizar uma OS em execução transforma as reservas em consumo físico. O estoque da peça não pode ficar abaixo de `estoqueMinimo`. Qualquer erro desfaz a finalização inteira.
+
+Fluxo:
+
+```text
+BEGIN
+  ↓
+SELECT OS FOR UPDATE
+  ↓
+carregar reservas da OS
+  ↓
+SELECT peça FOR UPDATE
+  ↓
+Peca.consumir(quantidade)
+  ↓
+remover reservas
+  ↓
+OS → FINALIZADA + HistoricoStatus
+  ↓
+COMMIT
+```
+
+Em caso de erro: `ROLLBACK`.
+
 ### Persistência dos enums
 
 Enums de conjunto fechado são persistidos com `ENUM` no MySQL, incluindo `PapelUsuario`, `TipoPessoa` e `StatusOrdemServico`.
