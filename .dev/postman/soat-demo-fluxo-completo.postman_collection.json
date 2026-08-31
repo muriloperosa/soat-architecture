@@ -38,7 +38,7 @@
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"email\": \"admin@oficina.com\",\n  \"senha\": \"senha123\"\n}"
+          "raw": "{\n  \"email\": \"admin@oficina.com\",\n  \"senha\": \"Senha@123\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/v1/auth/login",
@@ -70,7 +70,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"documento\": \"12345678909\",\n  \"tipo_pessoa\": \"PF\",\n  \"nome\": \"Maria Silva\",\n  \"email\": \"maria@oficina.com\",\n  \"senha\": \"senha123\",\n  \"telefone\": \"11999998888\"\n}"
+          "raw": "{\n  \"documento\": \"12345678909\",\n  \"tipo_pessoa\": \"PF\",\n  \"nome\": \"Maria Silva\",\n  \"email\": \"maria@oficina.com\",\n  \"senha\": \"Senha@123\",\n  \"telefone\": \"11999998888\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/v1/clientes",
@@ -100,7 +100,7 @@
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"email\": \"maria@oficina.com\",\n  \"senha\": \"senha123\"\n}"
+          "raw": "{\n  \"email\": \"maria@oficina.com\",\n  \"senha\": \"Senha@123\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/v1/auth/cliente/login",
