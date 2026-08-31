@@ -40,7 +40,7 @@ func (r *Repository) Salvar(ctx context.Context, veiculo *domain.Veiculo) error 
 }
 
 func (r *Repository) BuscarPorID(ctx context.Context, id uint64) (*domain.Veiculo, error) {
-	var model VeiculoModel
+	var model Model
 
 	err := r.db.WithContext(ctx).First(&model, id).Error
 
@@ -56,7 +56,7 @@ func (r *Repository) BuscarPorID(ctx context.Context, id uint64) (*domain.Veicul
 }
 
 func (r *Repository) BuscarPorPlaca(ctx context.Context, placa domain.Placa) (*domain.Veiculo, error) {
-	var model VeiculoModel
+	var model Model
 
 	err := r.db.WithContext(ctx).Where("placa = ?", placa.String()).First(&model).Error
 
@@ -81,7 +81,7 @@ func (r *Repository) Listar(
 	}
 
 	filtered, err := r.queryBuilder.ApplyFilters(
-		r.db.WithContext(ctx).Model(&VeiculoModel{}),
+		r.db.WithContext(ctx).Model(&Model{}),
 		normalized.Filters,
 	)
 	if err != nil {
@@ -94,7 +94,7 @@ func (r *Repository) Listar(
 		return domainquery.Page[*domain.Veiculo]{}, err
 	}
 
-	models := make([]VeiculoModel, 0)
+	models := make([]Model, 0)
 
 	if err = r.queryBuilder.
 		ApplyPagination(filtered, normalized).
@@ -125,7 +125,7 @@ func (r *Repository) Atualizar(ctx context.Context, veiculo *domain.Veiculo) err
 
 	result := r.db.
 		WithContext(ctx).
-		Model(&VeiculoModel{}).
+		Model(&Model{}).
 		Where("id = ?", model.ID).
 		Updates(map[string]any{
 			"marca":               model.Marca,

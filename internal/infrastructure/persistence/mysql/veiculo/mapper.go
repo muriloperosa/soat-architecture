@@ -2,8 +2,8 @@ package veiculo
 
 import domain "github.com/muriloperosa/soat-architecture/internal/domain/veiculo"
 
-func toModel(veiculo *domain.Veiculo) *VeiculoModel {
-	return &VeiculoModel{
+func toModel(veiculo *domain.Veiculo) *Model {
+	return &Model{
 		ID:                 veiculo.ID(),
 		Placa:              veiculo.Placa().String(),
 		Marca:              veiculo.Marca(),
@@ -18,7 +18,7 @@ func toModel(veiculo *domain.Veiculo) *VeiculoModel {
 	}
 }
 
-func toDomain(model VeiculoModel) *domain.Veiculo {
+func toDomain(model Model) *domain.Veiculo {
 	placaVO, _ := domain.NewPlaca(model.Placa)
 	corVO, _ := domain.NewCor(model.Cor)
 

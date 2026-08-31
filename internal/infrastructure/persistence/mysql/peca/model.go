@@ -2,7 +2,7 @@ package peca
 
 import "time"
 
-type PecaModel struct {
+type Model struct {
 	ID                  uint64    `gorm:"column:id;primaryKey;autoIncrement"`
 	Codigo              string    `gorm:"column:codigo"`
 	Nome                string    `gorm:"column:nome"`
@@ -17,6 +17,6 @@ type PecaModel struct {
 	DataAtualizacao     time.Time `gorm:"column:data_atualizacao"`
 }
 
-func (PecaModel) TableName() string {
+func (Model) TableName() string {
 	return "pecas"
 }

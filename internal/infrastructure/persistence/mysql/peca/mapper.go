@@ -2,8 +2,8 @@ package peca
 
 import domain "github.com/muriloperosa/soat-architecture/internal/domain/peca"
 
-func toModel(peca *domain.Peca) *PecaModel {
-	return &PecaModel{
+func toModel(peca *domain.Peca) *Model {
+	return &Model{
 		ID:                  peca.ID(),
 		Codigo:              peca.Codigo(),
 		Nome:                peca.Nome(),
@@ -19,7 +19,7 @@ func toModel(peca *domain.Peca) *PecaModel {
 	}
 }
 
-func toDomain(model PecaModel) *domain.Peca {
+func toDomain(model Model) *domain.Peca {
 	return domain.RestaurarPeca(
 		model.ID,
 		model.Codigo,

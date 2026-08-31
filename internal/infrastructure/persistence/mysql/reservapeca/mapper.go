@@ -2,8 +2,8 @@ package reservapeca
 
 import domain "github.com/muriloperosa/soat-architecture/internal/domain/reservapeca"
 
-func toModel(reserva *domain.ReservaPeca) *ReservaPecaModel {
-	return &ReservaPecaModel{
+func toModel(reserva *domain.ReservaPeca) *Model {
+	return &Model{
 		ID:             reserva.ID(),
 		OrdemServicoID: reserva.OrdemServicoID(),
 		PecaID:         reserva.PecaID(),
@@ -13,7 +13,7 @@ func toModel(reserva *domain.ReservaPeca) *ReservaPecaModel {
 	}
 }
 
-func toDomain(model ReservaPecaModel) *domain.ReservaPeca {
+func toDomain(model Model) *domain.ReservaPeca {
 	return domain.RestaurarReservaPeca(
 		model.ID,
 		model.OrdemServicoID,

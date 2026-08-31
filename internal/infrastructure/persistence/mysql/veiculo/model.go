@@ -2,7 +2,7 @@ package veiculo
 
 import "time"
 
-type VeiculoModel struct {
+type Model struct {
 	ID                 uint64    `gorm:"column:id;primaryKey;autoIncrement"`
 	Placa              string    `gorm:"column:placa"`
 	Marca              string    `gorm:"column:marca"`
@@ -16,6 +16,6 @@ type VeiculoModel struct {
 	DataAtualizacao    time.Time `gorm:"column:data_atualizacao"`
 }
 
-func (VeiculoModel) TableName() string {
+func (Model) TableName() string {
 	return "veiculos"
 }

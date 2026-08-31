@@ -43,7 +43,7 @@ func (r *Repository) Salvar(ctx context.Context, peca *domain.Peca) error {
 
 // BuscarPorID implements [peca.Repository].
 func (r *Repository) BuscarPorID(ctx context.Context, id uint64) (*domain.Peca, error) {
-	var model PecaModel
+	var model Model
 
 	err := r.db.WithContext(ctx).First(&model, id).Error
 
@@ -60,7 +60,7 @@ func (r *Repository) BuscarPorID(ctx context.Context, id uint64) (*domain.Peca, 
 
 // BuscarPorCodigo implements [peca.Repository].
 func (r *Repository) BuscarPorCodigo(ctx context.Context, codigo string) (*domain.Peca, error) {
-	var model PecaModel
+	var model Model
 
 	err := r.db.WithContext(ctx).Where("codigo = ?", codigo).First(&model).Error
 
@@ -77,7 +77,7 @@ func (r *Repository) BuscarPorCodigo(ctx context.Context, codigo string) (*domai
 
 // BuscarPorIDComBloqueio implements [peca.Repository].
 func (r *Repository) BuscarPorIDComBloqueio(ctx context.Context, id uint64) (*domain.Peca, error) {
-	var model PecaModel
+	var model Model
 
 	db := mysql.ComBloqueio(mysql.DBFromContext(ctx, r.db))
 
@@ -105,7 +105,7 @@ func (r *Repository) Listar(
 	}
 
 	filtered, err := r.queryBuilder.ApplyFilters(
-		r.db.WithContext(ctx).Model(&PecaModel{}),
+		r.db.WithContext(ctx).Model(&Model{}),
 		normalized.Filters,
 	)
 	if err != nil {
@@ -118,7 +118,7 @@ func (r *Repository) Listar(
 		return domainquery.Page[*domain.Peca]{}, err
 	}
 
-	models := make([]PecaModel, 0)
+	models := make([]Model, 0)
 
 	if err = r.queryBuilder.
 		ApplyPagination(filtered, normalized).
@@ -150,7 +150,7 @@ func (r *Repository) Atualizar(ctx context.Context, peca *domain.Peca) error {
 
 	result := mysql.DBFromContext(ctx, r.db).
 		WithContext(ctx).
-		Model(&PecaModel{}).
+		Model(&Model{}).
 		Where("id = ?", model.ID).
 		Updates(map[string]any{
 			"nome":                  model.Nome,

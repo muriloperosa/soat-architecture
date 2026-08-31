@@ -34,7 +34,7 @@ func (r *Repository) Salvar(ctx context.Context, reserva *domain.ReservaPeca) er
 
 // BuscarPorOrdemEPeca implements [reservapeca.Repository].
 func (r *Repository) BuscarPorOrdemEPeca(ctx context.Context, ordemServicoID, pecaID uint64) (*domain.ReservaPeca, error) {
-	var model ReservaPecaModel
+	var model Model
 
 	err := mysql.DBFromContext(ctx, r.db).WithContext(ctx).
 		Where("ordem_servico_id = ? AND peca_id = ?", ordemServicoID, pecaID).
@@ -53,7 +53,7 @@ func (r *Repository) BuscarPorOrdemEPeca(ctx context.Context, ordemServicoID, pe
 
 // BuscarPorOrdemServico implements [reservapeca.Repository].
 func (r *Repository) BuscarPorOrdemServico(ctx context.Context, ordemServicoID uint64) ([]*domain.ReservaPeca, error) {
-	var models []ReservaPecaModel
+	var models []Model
 
 	if err := mysql.DBFromContext(ctx, r.db).WithContext(ctx).Where("ordem_servico_id = ?", ordemServicoID).Find(&models).Error; err != nil {
 		return nil, err
@@ -70,7 +70,7 @@ func (r *Repository) BuscarPorOrdemServico(ctx context.Context, ordemServicoID u
 // SomarQuantidadeReservada implements [reservapeca.Repository]. Soma a
 // quantidade reservada de uma peça em todas as Ordens de Serviço.
 func (r *Repository) SomarQuantidadeReservada(ctx context.Context, pecaID uint64) (int, error) {
-	var reservas []ReservaPecaModel
+	var reservas []Model
 
 	err := mysql.DBFromContext(ctx, r.db).
 		WithContext(ctx).
@@ -95,7 +95,7 @@ func (r *Repository) SomarQuantidadeReservada(ctx context.Context, pecaID uint64
 func (r *Repository) Remover(ctx context.Context, ordemServicoID, pecaID uint64) error {
 	result := mysql.DBFromContext(ctx, r.db).WithContext(ctx).
 		Where("ordem_servico_id = ? AND peca_id = ?", ordemServicoID, pecaID).
-		Delete(&ReservaPecaModel{})
+		Delete(&Model{})
 
 	if result.Error != nil {
 		return result.Error

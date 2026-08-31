@@ -2,7 +2,7 @@ package reservapeca
 
 import "time"
 
-type ReservaPecaModel struct {
+type Model struct {
 	ID             uint64    `gorm:"column:id;primaryKey;autoIncrement"`
 	OrdemServicoID uint64    `gorm:"column:ordem_servico_id;uniqueIndex:uq_reservas_pecas_ordem_peca"`
 	PecaID         uint64    `gorm:"column:peca_id;uniqueIndex:uq_reservas_pecas_ordem_peca"`
@@ -11,6 +11,6 @@ type ReservaPecaModel struct {
 	AtualizadaEm   time.Time `gorm:"column:atualizada_em"`
 }
 
-func (ReservaPecaModel) TableName() string {
+func (Model) TableName() string {
 	return "reservas_pecas"
 }
