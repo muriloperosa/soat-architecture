@@ -1,0 +1,389 @@
+{
+  "info": {
+    "name": "SOAT — Demo Fluxo Completo OS",
+    "description": "Fluxo sequencial para apresentação: login (admin + cliente), cadastro de dependências, abertura de OS, diagnóstico, orçamento, aprovação do cliente, execução, finalização e entrega. Todos os tokens e IDs são setados automaticamente nas variáveis da collection (aba Tests de cada request); basta rodar com o Collection Runner, na ordem em que aparecem.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8080" },
+    { "key": "access_token", "value": "" },
+    { "key": "refresh_token", "value": "" },
+    { "key": "cliente_access_token", "value": "" },
+    { "key": "cliente_refresh_token", "value": "" },
+    { "key": "cliente_id", "value": "" },
+    { "key": "veiculo_id", "value": "" },
+    { "key": "peca_id", "value": "" },
+    { "key": "servico_id", "value": "" },
+    { "key": "ordem_servico_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "01 - Login admin",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    const body = pm.response.json();",
+              "    pm.collectionVariables.set('access_token', body.access_token);",
+              "    pm.collectionVariables.set('refresh_token', body.refresh_token);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@oficina.com\",\n  \"senha\": \"senha123\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/v1/auth/login",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "auth", "login"]
+        }
+      }
+    },
+    {
+      "name": "02 - Criar cliente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 201 || pm.response.code === 200) {",
+              "    const body = pm.response.json();",
+              "    pm.collectionVariables.set('cliente_id', body.id);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"documento\": \"12345678909\",\n  \"tipo_pessoa\": \"PF\",\n  \"nome\": \"Maria Silva\",\n  \"email\": \"maria@oficina.com\",\n  \"senha\": \"senha123\",\n  \"telefone\": \"11999998888\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/v1/clientes",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "clientes"]
+        }
+      }
+    },
+    {
+      "name": "03 - Login cliente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    const body = pm.response.json();",
+              "    pm.collectionVariables.set('cliente_access_token', body.access_token);",
+              "    pm.collectionVariables.set('cliente_refresh_token', body.refresh_token);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"maria@oficina.com\",\n  \"senha\": \"senha123\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/v1/auth/cliente/login",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "auth", "cliente", "login"]
+        }
+      }
+    },
+    {
+      "name": "04 - Cadastrar veículo",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 201 || pm.response.code === 200) {",
+              "    const body = pm.response.json();",
+              "    pm.collectionVariables.set('veiculo_id', body.id);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"placa\": \"ABC1D23\",\n  \"marca\": \"Fiat\",\n  \"modelo\": \"Uno\",\n  \"ano\": 2020,\n  \"cor\": \"Prata\",\n  \"quilometragem_atual\": 15000\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/v1/veiculos",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "veiculos"]
+        }
+      }
+    },
+    {
+      "name": "05 - Cadastrar peça",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 201 || pm.response.code === 200) {",
+              "    const body = pm.response.json();",
+              "    pm.collectionVariables.set('peca_id', body.id);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nome\": \"Pastilha de freio\",\n  \"marca\": \"Bosch\",\n  \"descricao\": \"Pastilha de freio dianteira\",\n  \"preco\": 89.90,\n  \"quantidade_em_estoque\": 20,\n  \"estoque_minimo\": 5\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/v1/pecas",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "pecas"]
+        }
+      }
+    },
+    {
+      "name": "06 - Criar serviço",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 201 || pm.response.code === 200) {",
+              "    const body = pm.response.json();",
+              "    pm.collectionVariables.set('servico_id', body.id);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nome\": \"Troca de óleo\",\n  \"descricao\": \"Troca de óleo e filtro\",\n  \"preco_base\": 150.50,\n  \"tempo_estimado_minutos\": 60\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/v1/servicos",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "servicos"]
+        }
+      }
+    },
+    {
+      "name": "07 - Abrir ordem de serviço",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 201 || pm.response.code === 200) {",
+              "    const body = pm.response.json();",
+              "    pm.collectionVariables.set('ordem_servico_id', body.id);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cliente_id\": {{cliente_id}},\n  \"veiculo_id\": {{veiculo_id}},\n  \"quilometragem_entrada\": 52300,\n  \"observacoes\": \"Cliente relatou ruído no motor\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/v1/ordens-servico",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "ordens-servico"]
+        }
+      }
+    },
+    {
+      "name": "08 - Iniciar diagnóstico",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+        "url": {
+          "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/iniciar-diagnostico",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "ordens-servico", "{{ordem_servico_id}}", "iniciar-diagnostico"]
+        }
+      }
+    },
+    {
+      "name": "09 - Informar diagnóstico",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"diagnostico\": \"Falha na bomba de combustível\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/diagnostico",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "ordens-servico", "{{ordem_servico_id}}", "diagnostico"]
+        }
+      }
+    },
+    {
+      "name": "10 - Gerar orçamento",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"observacoes\": \"Aguardando aprovação do cliente\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/orcamento",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "ordens-servico", "{{ordem_servico_id}}", "orcamento"]
+        }
+      }
+    },
+    {
+      "name": "11 - Adicionar peça ao orçamento",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"peca_id\": {{peca_id}},\n  \"quantidade\": 2\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/orcamento/itens-peca",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "ordens-servico", "{{ordem_servico_id}}", "orcamento", "itens-peca"]
+        }
+      }
+    },
+    {
+      "name": "12 - Adicionar serviço ao orçamento",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"servico_id\": {{servico_id}},\n  \"quantidade\": 1\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/orcamento/itens-servico",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "ordens-servico", "{{ordem_servico_id}}", "orcamento", "itens-servico"]
+        }
+      }
+    },
+    {
+      "name": "13 - Enviar orçamento para aprovação",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+        "url": {
+          "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/orcamento/enviar-aprovacao",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "ordens-servico", "{{ordem_servico_id}}", "orcamento", "enviar-aprovacao"]
+        }
+      }
+    },
+    {
+      "name": "14 - Aprovar orçamento (cliente)",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Authorization", "value": "Bearer {{cliente_access_token}}" }],
+        "url": {
+          "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/orcamento/aprovar",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "ordens-servico", "{{ordem_servico_id}}", "orcamento", "aprovar"]
+        }
+      }
+    },
+    {
+      "name": "15 - Iniciar execução",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+        "url": {
+          "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/iniciar-execucao",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "ordens-servico", "{{ordem_servico_id}}", "iniciar-execucao"]
+        }
+      }
+    },
+    {
+      "name": "16 - Finalizar ordem de serviço",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+        "url": {
+          "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/finalizar",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "ordens-servico", "{{ordem_servico_id}}", "finalizar"]
+        }
+      }
+    },
+    {
+      "name": "17 - Entregar ordem de serviço",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+        "url": {
+          "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/entregar",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "ordens-servico", "{{ordem_servico_id}}", "entregar"]
+        }
+      }
+    }
+  ]
+}
