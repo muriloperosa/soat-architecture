@@ -285,6 +285,30 @@ func TestHandlerInativar(t *testing.T) {
 	require.Equal(t, http.StatusNoContent, recorder.Code)
 }
 
+func TestHandlerAtivarClienteInexistente(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := mocks.NewClienteRepository(t)
+	repo.EXPECT().BuscarPorID(mock.Anything, uint64(99)).Return(nil, domaincliente.ErrClienteNaoEncontrado)
+	handler := NewHandler(nil, nil, nil, nil, appcliente.NewAtivarClienteUseCase(repo), nil, nil, nil, nil)
+	router := gin.New()
+	router.PATCH("/v1/clientes/:id/ativar", handler.Ativar)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodPatch, "/v1/clientes/99/ativar", nil))
+	require.Equal(t, http.StatusNotFound, recorder.Code)
+}
+
+func TestHandlerInativarClienteInexistente(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := mocks.NewClienteRepository(t)
+	repo.EXPECT().BuscarPorID(mock.Anything, uint64(99)).Return(nil, domaincliente.ErrClienteNaoEncontrado)
+	handler := NewHandler(nil, nil, nil, nil, nil, appcliente.NewInativarClienteUseCase(repo), nil, nil, nil)
+	router := gin.New()
+	router.PATCH("/v1/clientes/:id/inativar", handler.Inativar)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodPatch, "/v1/clientes/99/inativar", nil))
+	require.Equal(t, http.StatusNotFound, recorder.Code)
+}
+
 func TestHandlerAlterarSenhaDoClienteLogado(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	cliente := clienteValido(t, 1)
@@ -299,6 +323,19 @@ func TestHandlerAlterarSenhaDoClienteLogado(t *testing.T) {
 	router.ServeHTTP(recorder, req)
 	require.Equal(t, http.StatusNoContent, recorder.Code)
 	require.False(t, cliente.RequerAlterarSenha())
+}
+
+func TestHandlerAlterarSenhaClienteInexistente(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := mocks.NewClienteRepository(t)
+	repo.EXPECT().BuscarPorID(mock.Anything, uint64(1)).Return(nil, domaincliente.ErrClienteNaoEncontrado)
+	handler := NewHandler(nil, nil, nil, nil, nil, nil, appcliente.NewAlterarSenhaClienteUseCase(repo), nil, nil)
+	router := gin.New()
+	router.PUT("/v1/clientes/me/senha", withSubject("1"), handler.AlterarSenha)
+	req := requestJSON(t, http.MethodPut, "/v1/clientes/me/senha", AlterarSenhaRequest{SenhaNova: "novaSenha123"})
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, req)
+	require.Equal(t, http.StatusNotFound, recorder.Code)
 }
 
 func TestHandlerRetorna404QuandoClienteNaoExiste(t *testing.T) {

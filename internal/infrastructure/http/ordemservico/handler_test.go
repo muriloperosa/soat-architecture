@@ -474,6 +474,41 @@ func TestHandlerListarOrdensServicoComPaginacaoEFiltros(t *testing.T) {
 	require.Equal(t, float64(450), response.Items[0].Orcamento.ValorTotal)
 }
 
+func TestHandlerListarOrdensServicoQueryInvalidaRetorna400(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := httpordemservico.NewHandler(nil, nil, nil, nil, nil, nil, nil, nil, nil, httpquery.NewParser())
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno})
+		c.Next()
+	})
+	router.GET("/v1/ordens-servico", handler.Listar)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/v1/ordens-servico?page=invalida", nil))
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestHandlerIniciarDiagnosticoOrdemInexistenteRetorna404(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repository := ordemservicomocks.NewOrdemServicoRepository(t)
+	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(nil, domainordemservico.ErrOrdemServicoNaoEncontrada)
+
+	handler := httpordemservico.NewHandler(nil, app.NewIniciarDiagnosticoUseCase(repository), nil, nil, nil, nil, nil, nil, nil, nil)
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno, Papel: shared.PapelMecanico})
+		c.Next()
+	})
+	router.PATCH("/v1/ordens-servico/:id/iniciar-diagnostico", handler.IniciarDiagnostico)
+
+	req := httptest.NewRequest(http.MethodPatch, "/v1/ordens-servico/42/iniciar-diagnostico", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusNotFound, rec.Code)
+}
+
 func TestHandlerBuscarOrdemServicoPorIDRetorna200(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repository := ordemservicomocks.NewOrdemServicoRepository(t)

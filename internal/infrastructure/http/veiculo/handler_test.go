@@ -538,6 +538,43 @@ func TestHandler_Inativar_ComSucesso_Retorna204(t *testing.T) {
 	require.Equal(t, http.StatusNoContent, rec.Code)
 }
 
+func TestHandler_Inativar_VeiculoNaoEncontrado_Retorna404(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := mocks.NewRepository(t)
+
+	repo.
+		EXPECT().
+		BuscarPorID(mock.Anything, uint64(999)).
+		Return(nil, domainveiculo.ErrVeiculoNaoEncontrado)
+
+	h := httpveiculo.NewHandler(
+		nil,
+		nil,
+		nil,
+		appveiculo.NewInativarVeiculoUseCase(repo),
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+
+	engine := gin.New()
+	engine.PATCH("/v1/veiculos/:id/inativar", h.Inativar)
+
+	req := httptest.NewRequest(
+		http.MethodPatch,
+		"/v1/veiculos/999/inativar",
+		nil,
+	)
+
+	rec := httptest.NewRecorder()
+
+	engine.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusNotFound, rec.Code)
+}
+
 func TestHandler_ConsultarPorID_ComSucesso_Retorna200(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

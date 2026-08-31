@@ -288,6 +288,40 @@ func TestHandler_Listar_ComSucesso_Retorna200(t *testing.T) {
 	require.Equal(t, "Troca de óleo", resp.Items[0].Nome)
 }
 
+func TestHandler_Listar_ComFiltros_Retorna200(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := mocks.NewServicoRepository(t)
+	s := servicoExistente(t)
+
+	repo.EXPECT().
+		Listar(mock.Anything, mock.MatchedBy(func(params domainquery.Params) bool {
+			for _, filter := range params.Filters {
+				if filter.Field == "nome" && filter.Value == "Troca" {
+					return true
+				}
+			}
+			return false
+		})).
+		Return(domainquery.Page[*domainservico.Servico]{
+			Items: []*domainservico.Servico{s}, Total: 1, Page: 1, PageSize: 20, TotalPages: 1,
+			Order: "id", Direction: domainquery.DirectionASC,
+		}, nil)
+
+	h := httpservico.NewHandler(nil, nil, appservico.NewListarServicosUseCase(repo), nil, nil, nil, novoQueryParser())
+	engine := gin.New()
+	engine.GET("/v1/servicos", h.Listar)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/servicos?nome=Troca", nil)
+	rec := httptest.NewRecorder()
+	engine.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var resp httpservico.ListarServicosResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	require.Len(t, resp.Items, 1)
+}
+
 func TestHandler_Listar_ListaVazia_Retorna200(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := mocks.NewServicoRepository(t)
