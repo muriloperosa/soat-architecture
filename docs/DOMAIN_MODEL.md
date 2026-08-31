@@ -91,6 +91,7 @@ class OrdemServico:::root {
     +aprovarOrcamento() error
     +rejeitarOrcamento(motivo) error
     +iniciarExecucao(alteradoPor) error
+    +finalizar(alteradoPor) error
     +entregar(alteradoPor) error
 }
 
@@ -316,8 +317,6 @@ note for ItemServico "quantidade permite repetir o mesmo servico\nsem duplicar i
 
 note for Usuario "Entidades e Value Objects sao criados via New...\nO construtor valida as invariantes."
 
-note for OrdemServico "Nao existe metodo finalizar() dedicado.\nA transicao EM_EXECUCAO -> FINALIZADA e permitida pela tabela\nde transicoes (PermiteTransicaoPara) mas nao tem metodo proprio\nno agregado, diferente das demais transicoes."
-
 %% =========================================================
 %% ESTILOS
 %% =========================================================
@@ -390,7 +389,7 @@ FINALIZADA
 ENTREGUE
 ```
 
-Todas as transições têm método próprio no agregado (`IniciarDiagnostico`, `EnviarParaAprovacao`, `AprovarOrcamento`, `IniciarExecucao`, `Entregar`), exceto `EM_EXECUCAO → FINALIZADA`: essa transição é permitida pela tabela `PermiteTransicaoPara`, mas não existe um método `Finalizar()` dedicado no agregado `OrdemServico`.
+Todas as transições têm método próprio no agregado (`IniciarDiagnostico`, `EnviarParaAprovacao`, `AprovarOrcamento`, `IniciarExecucao`, `Finalizar`, `Entregar`).
 
 Fluxo de rejeição:
 
