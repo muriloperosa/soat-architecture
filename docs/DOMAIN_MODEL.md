@@ -20,11 +20,13 @@ class Usuario:::root {
     -nome: string
     -email: Email
     -senha: SenhaHash
+    -requerAlterarSenha: bool
     -ativo: bool
     -dataCadastro: DateTime
     -dataAtualizacao: DateTime
     +NewUsuario(...) (Usuario, error)
     +alterarSenha(...) error
+    +redefinirSenha(...) error
     +atualizar(...) error
     +ativar()
     +inativar()
@@ -55,9 +57,10 @@ class Veiculo:::root {
     -placa: Placa
     -marca: string
     -modelo: string
-    -quilometragemAtual: int
-    -ano: int
+    -quilometragemAtual: uint32
+    -ano: uint16
     -cor: Cor
+    -criadoPor: uint64
     -ativo: bool
     -dataCadastro: DateTime
     -dataAtualizacao: DateTime
@@ -77,23 +80,18 @@ class OrdemServico:::root {
     -status: StatusOrdemServico
     -diagnostico: string?
     -observacoes: string?
+    -criadoPor: uint64
     -dataCadastro: DateTime
     -dataAtualizacao: DateTime
     +NewOrdemServico(...) (OrdemServico, error)
-    +iniciarDiagnostico() error
+    +validarTransicaoPara(novo) error
+    +iniciarDiagnostico(alteradoPor) error
     +informarDiagnostico(texto) error
-    +adicionarServico(...) error
-    +adicionarPeca(...) error
-    +removerServico(...) error
-    +removerPeca(...) error
-    +gerarOrcamento() error
-    +editarOrcamento(...) error
-    +enviarOrcamentoParaAprovacao() error
+    +enviarParaAprovacao(alteradoPor) error
     +aprovarOrcamento() error
     +rejeitarOrcamento(motivo) error
-    +iniciarExecucao() error
-    +finalizar() error
-    +entregar() error
+    +iniciarExecucao(alteradoPor) error
+    +entregar(alteradoPor) error
 }
 
 class Servico:::root {
@@ -102,6 +100,7 @@ class Servico:::root {
     -descricao: string
     -precoBase: float64
     -tempoEstimado: DuracaoEstimada
+    -criadoPor: uint64
     -ativo: bool
     -dataCadastro: DateTime
     -dataAtualizacao: DateTime
@@ -120,6 +119,7 @@ class Peca:::root {
     -preco: float64
     -quantidadeEmEstoque: int
     -estoqueMinimo: int
+    -criadoPor: uint64
     -ativo: bool
     -dataCadastro: DateTime
     -dataAtualizacao: DateTime
@@ -142,15 +142,17 @@ class Orcamento:::entity {
     -valorItemPecas: float64
     -valorTotal: float64
     -observacoes: string?
+    -criadoPor: uint64
     -criadoEm: DateTime
     -atualizadoEm: DateTime
     +NewOrcamento(...) (Orcamento, error)
-    +atualizar(...) error
     +adicionarItemServico(...) error
     +adicionarItemPeca(...) error
+    +alterarQuantidadeItemPeca(itemID, quantidade) error
     +removerItemServico(...) error
     +removerItemPeca(...) error
     +calcularTotal() float64
+    +validarParaEnvio() error
 }
 
 class ItemServico:::entity {
@@ -170,13 +172,14 @@ class ItemPeca:::entity {
     -quantidade: int
     -valor: float64
     +NewItemPeca(...) (ItemPeca, error)
+    +alterarQuantidade(quantidade) error
     +calcularSubtotal() float64
 }
 
 class HistoricoStatus:::entity {
     -id: uint64
     -ordemServicoID: uint64
-    -statusNovo: StatusOrdemServico
+    -status: StatusOrdemServico
     -alteradoEm: DateTime
     -alteradoPor: uint64
     -motivo: string?
@@ -198,9 +201,9 @@ class ReservaPeca:::entity {
 %% =========================================================
 
 class SenhaHash:::vo {
-    -valor: string
-    +NewSenhaHash(valor) (SenhaHash, error)
-    +Verificar(senha) bool
+    -hash: string
+    +NewSenhaHash(senhaPlana) (SenhaHash, error)
+    +Confere(senhaPlana) bool
 }
 
 class Documento:::vo {
@@ -251,6 +254,7 @@ class PapelUsuario:::enumc {
     ADMINISTRADOR
     ATENDENTE
     MECANICO
+    CLIENTE
 }
 
 class TipoPessoa:::enumc {
@@ -312,6 +316,8 @@ note for ItemServico "quantidade permite repetir o mesmo servico\nsem duplicar i
 
 note for Usuario "Entidades e Value Objects sao criados via New...\nO construtor valida as invariantes."
 
+note for OrdemServico "Nao existe metodo finalizar() dedicado.\nA transicao EM_EXECUCAO -> FINALIZADA e permitida pela tabela\nde transicoes (PermiteTransicaoPara) mas nao tem metodo proprio\nno agregado, diferente das demais transicoes."
+
 %% =========================================================
 %% ESTILOS
 %% =========================================================
@@ -322,6 +328,15 @@ classDef vo fill:#FFF0DF,stroke:#B5661D,stroke-width:2px,color:#111111
 classDef enumc fill:#ECE8FF,stroke:#7357C8,stroke-width:2px,color:#111111
 
 ```
+
+## Contextos de apoio (fora do diagrama)
+
+Além dos Aggregate Roots acima, `internal/domain/` tem quatro pacotes que não são agregados de negócio, mas dão suporte a eles:
+
+- **`shared`** = kernel compartilhado: Value Objects `Email`, `SenhaHash`, `DuracaoEstimada`; enum `PapelUsuario`; o framework de erro `AppError`/`ErrorKind` (`not_found`, `validation`, `conflict`, `internal`, `forbidden`, `unauthorized`, `unavailable`) usado por todos os `errors.go` do domínio; as portas `EmailSender` e `TransactionRunner`; e o subpacote `shared/texts` com normalizadores de string (`NormalizeUcFirst`, `NormalizeSpaces`, `NormalizeLower`, `NormalizeUpper`, `OnlyNumbers`).
+- **`auth`** = infraestrutura de autenticação: entidade `RefreshToken` (com `EstaValido()`), projeção `Credencial`, `AppClaims` (JWT), enum `TipoUsuario` (`interno`/`cliente`) e as portas `JWTProvider`, `RefreshTokenRepository`, `CredenciaisRepository`, `UsuarioStatusRepository`. Não referencia `usuario`/`cliente` diretamente — usa `UsuarioID uint64` e implementações duplicadas por endpoint.
+- **`query`** = contrato de paginação/filtro/ordenação (`Params`, `Filter`, `Page[T]`, enums `Direction` e `Operator`) usado pelos métodos `Listar` de `cliente`, `ordemservico`, `peca`, `servico` e `veiculo`. `usuario`, `orcamento` e `reservapeca` não expõem `Listar`.
+- **`relatorio`** = contexto de relatórios: Value Object `Periodo` (valida início antes do fim, fim não futuro, início não anterior a 2026-01-01) e o par `CalcularTransicaoStatusParams`/`TransicaoStatusResultado`, que depende do enum `StatusOrdemServico` de `ordemservico` — a única dependência direta entre pacotes de domínio além de `shared`/`query`.
 
 ## Decisões principais
 
@@ -375,6 +390,8 @@ FINALIZADA
 ENTREGUE
 ```
 
+Todas as transições têm método próprio no agregado (`IniciarDiagnostico`, `EnviarParaAprovacao`, `AprovarOrcamento`, `IniciarExecucao`, `Entregar`), exceto `EM_EXECUCAO → FINALIZADA`: essa transição é permitida pela tabela `PermiteTransicaoPara`, mas não existe um método `Finalizar()` dedicado no agregado `OrdemServico`.
+
 Fluxo de rejeição:
 
 ```text
@@ -409,7 +426,7 @@ Na persistência, `UNIQUE(ordem_servico_id)` garante a relação 1:1.
 
 ### Histórico de status
 
-Cada mudança relevante gera um `HistoricoStatus` com `statusNovo`, `alteradoEm`, `alteradoPor` e `motivo`. Não armazenamos `statusAnterior`.
+Cada mudança relevante gera um `HistoricoStatus` com `status`, `alteradoEm`, `alteradoPor` e `motivo`. Não armazenamos `statusAnterior`.
 
 ### Itens do orçamento
 
@@ -516,7 +533,7 @@ O domínio também mantém seus próprios tipos, protegendo regras e transiçõe
 - ItemServico
 - ItemPeca
 - HistoricoStatus
-- ReservaPeca
+- ReservaPeca (pacote e repositório próprios, mas conceitualmente entidade interna de OrdemServico — não é Aggregate Root)
 
 ## Value Objects
 
@@ -533,16 +550,20 @@ O domínio também mantém seus próprios tipos, protegendo regras e transiçõe
 
 **Cliente:** Documento válido, TipoPessoa compatível, Email válido, Telefone válido, SenhaHash válida, `criadoPor` obrigatório e troca da senha provisória sinalizada por `requerAlterarSenha`.
 
-**Veículo:** Placa válida, ano válido, quilometragem não negativa e sem regressão.
+**Veículo:** Placa válida, ano válido, quilometragem não negativa e sem regressão, `criadoPor` obrigatório.
 
-**Ordem de Serviço:** Cliente e Veículo obrigatórios, número válido, quilometragem de entrada válida, status inicial `RECEBIDA` e no máximo um orçamento.
+**Ordem de Serviço:** Cliente, Veículo e `criadoPor` obrigatórios, número válido, quilometragem de entrada válida, status inicial `RECEBIDA` e no máximo um orçamento.
 
-**Orçamento:** pertence a uma OS, pode ser editado antes da aprovação e após rejeição, mas não após aprovação; totais não negativos.
+**Orçamento:** pertence a uma OS, `criadoPor` obrigatório, pode ser editado antes da aprovação e após rejeição, mas não após aprovação; totais não negativos.
 
-**Peça:** estoque físico e estoque mínimo não negativos; consumo não pode deixar o estoque abaixo do mínimo.
+**Peça:** estoque físico e estoque mínimo não negativos, `criadoPor` obrigatório; consumo não pode deixar o estoque abaixo do mínimo.
 
 **ReservaPeca:** OS e peça obrigatórias, quantidade > 0, uma reserva corrente por combinação OS + peça e operação sem violar o estoque mínimo.
+
+**Serviço:** nome e descrição obrigatórios, `precoBase >= 0`, duração estimada válida, `criadoPor` obrigatório.
 
 **ItemServico:** serviço obrigatório, quantidade > 0, valor válido e duração estimada válida.
 
 **ItemPeca:** peça obrigatória, quantidade > 0 e valor válido.
+
+**Usuario:** nome e papel válidos (`PapelUsuario`), email e senha reaproveitam os VOs de `shared`; troca de senha provisória sinalizada por `requerAlterarSenha`.
