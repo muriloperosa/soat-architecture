@@ -69,25 +69,6 @@ Exemplo de ponta a ponta: `AprovarOrcamentoUseCase` cria as reservas automaticam
 
 Pra testar use case com `TransactionRunner` sem banco real, `test/helpers.TransactionRunnerMock` só chama `fn(ctx)` direto e conta quantas vezes rodou (`Calls`) — o suficiente pra afirmar que o use case delega à transação, sem precisar simular `BEGIN`/`COMMIT`.
 
-
-### Reserva de peças como consequência da aprovação
-
-Não existe endpoint ou caso de uso público para reservar, liberar ou alterar diretamente uma `ReservaPeca`. A reserva é um efeito interno da aprovação do orçamento pelo cliente.
-
-```text
-Orçamento em AGUARDANDO_APROVACAO
-        ↓ cliente aprova
-AprovarOrcamentoUseCase
-        ↓ transação
-valida disponibilidade das peças
-        ↓
-cria reservas conforme ItemPeca
-        ↓
-OS = APROVADA
-```
-
-Quando a quantidade de uma peça de um orçamento já aprovado é alterada, a aprovação anterior é invalidada: as reservas correntes da OS são removidas dentro da transação, a OS retorna para `AGUARDANDO_APROVACAO` e o orçamento atualizado é reenviado ao cliente. Nenhuma nova reserva é criada nessa edição; ela só volta a existir quando o cliente aprovar novamente.
-
 ## Testes de integração
 
 Unitário com mock prova a lógica de cada peça isolada; não prova que as peças se encaixam. `test/integration/` (pacote `integration_test`, atrás da build tag `integration`, `make test-integration`) sobe um MySQL real via `testcontainers`, aplica as migrations de produção e monta `wiring.Container`/router exatamente como em produção — o teste bate no router de verdade, não numa função isolada.
