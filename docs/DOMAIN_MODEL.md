@@ -503,6 +503,32 @@ Quando a quantidade de uma peça é modificada após a OS estar `APROVADA`, as r
 
 A transação e os locks são responsabilidades da infraestrutura de persistência; a regra de disponibilidade continua protegida pelo domínio/aplicação através de `Peca.PodeReservar`.
 
+### Consumo transacional (finalização da OS)
+
+Finalizar uma OS em execução transforma as reservas em consumo físico. O estoque da peça não pode ficar abaixo de `estoqueMinimo`. Qualquer erro desfaz a finalização inteira.
+
+Fluxo:
+
+```text
+BEGIN
+  ↓
+SELECT OS FOR UPDATE
+  ↓
+carregar reservas da OS
+  ↓
+SELECT peça FOR UPDATE
+  ↓
+Peca.consumir(quantidade)
+  ↓
+remover reservas
+  ↓
+OS → FINALIZADA + HistoricoStatus
+  ↓
+COMMIT
+```
+
+Em caso de erro: `ROLLBACK`.
+
 ### Persistência dos enums
 
 Enums de conjunto fechado são persistidos com `ENUM` no MySQL, incluindo `PapelUsuario`, `TipoPessoa` e `StatusOrdemServico`.

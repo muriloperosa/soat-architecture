@@ -819,3 +819,23 @@ func TestRepositoryAtualizarDeveRetornarErroDoBanco(t *testing.T) {
 	require.ErrorIs(t, err, erroBanco)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
+
+func TestRepositoryAtualizar_ParticipaDaTransacaoDoContexto(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewRepository(db)
+	runner := mysql.NewTransactionRunner(db)
+
+	p := novaPecaValida(t)
+	p.AtribuirID(1)
+
+	mock.ExpectBegin()
+	mock.ExpectExec("UPDATE .*").WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+
+	err := runner.Executar(context.Background(), func(ctx context.Context) error {
+		return repository.Atualizar(ctx, p)
+	})
+
+	require.NoError(t, err)
+	require.NoError(t, mock.ExpectationsWereMet())
+}

@@ -18,13 +18,16 @@ import (
 	orcamentomocks "github.com/muriloperosa/soat-architecture/internal/domain/orcamento/mocks"
 	domainordemservico "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
 	ordemservicomocks "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico/mocks"
+	pecamocks "github.com/muriloperosa/soat-architecture/internal/domain/peca/mocks"
 	domainquery "github.com/muriloperosa/soat-architecture/internal/domain/query"
+	reservamocks "github.com/muriloperosa/soat-architecture/internal/domain/reservapeca/mocks"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	domainveiculo "github.com/muriloperosa/soat-architecture/internal/domain/veiculo"
 	veiculomocks "github.com/muriloperosa/soat-architecture/internal/domain/veiculo/mocks"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httpquery"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/middleware"
 	httpordemservico "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/ordemservico"
+	"github.com/muriloperosa/soat-architecture/test/helpers"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -41,7 +44,7 @@ func TestHandlerAbrirRetorna201(t *testing.T) {
 		Run(func(_ context.Context, os *domainordemservico.OrdemServico) { os.AtribuirID(99) }).
 		Return(nil)
 
-	handler := httpordemservico.NewHandler(app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo), nil, nil, nil, nil, nil, nil, nil, nil)
+	handler := httpordemservico.NewHandler(app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo), nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno, Papel: shared.PapelAdmin})
@@ -76,7 +79,7 @@ func TestHandlerAbrirClienteInexistenteRetorna404(t *testing.T) {
 	veiculoRepo := veiculomocks.NewRepository(t)
 	clienteRepo.EXPECT().BuscarPorID(mock.Anything, uint64(999)).Return(nil, domaincliente.ErrClienteNaoEncontrado)
 
-	handler := httpordemservico.NewHandler(app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo), nil, nil, nil, nil, nil, nil, nil, nil)
+	handler := httpordemservico.NewHandler(app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo), nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno})
@@ -101,7 +104,7 @@ func TestHandlerAbrirVeiculoInexistenteRetorna404(t *testing.T) {
 	clienteRepo.EXPECT().BuscarPorID(mock.Anything, uint64(10)).Return(clienteValido(t), nil)
 	veiculoRepo.EXPECT().BuscarPorID(mock.Anything, uint64(999)).Return(nil, domainveiculo.ErrVeiculoNaoEncontrado)
 
-	handler := httpordemservico.NewHandler(app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo), nil, nil, nil, nil, nil, nil, nil, nil)
+	handler := httpordemservico.NewHandler(app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo), nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno})
@@ -141,7 +144,7 @@ func TestHandlerIniciarDiagnosticoRetorna200(t *testing.T) {
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 	repository.EXPECT().Atualizar(mock.Anything, os).Return(nil)
 
-	handler := httpordemservico.NewHandler(nil, app.NewIniciarDiagnosticoUseCase(repository), nil, nil, nil, nil, nil, nil, nil)
+	handler := httpordemservico.NewHandler(nil, app.NewIniciarDiagnosticoUseCase(repository), nil, nil, nil, nil, nil, nil, nil, nil)
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno, Papel: shared.PapelMecanico})
@@ -169,7 +172,7 @@ func TestHandlerInformarDiagnosticoRetorna200(t *testing.T) {
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 	repository.EXPECT().Atualizar(mock.Anything, os).Return(nil)
 
-	handler := httpordemservico.NewHandler(nil, nil, app.NewInformarDiagnosticoUseCase(repository), nil, nil, nil, nil, nil, nil)
+	handler := httpordemservico.NewHandler(nil, nil, app.NewInformarDiagnosticoUseCase(repository), nil, nil, nil, nil, nil, nil, nil)
 	router := gin.New()
 	router.PUT("/v1/ordens-servico/:id/diagnostico", handler.InformarDiagnostico)
 	body := []byte(`{"diagnostico":"Falha na bomba de combustível"}`)
@@ -191,7 +194,7 @@ func TestHandlerInformarDiagnosticoVazioRetorna400(t *testing.T) {
 	require.NoError(t, os.IniciarDiagnostico(30))
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 
-	handler := httpordemservico.NewHandler(nil, nil, app.NewInformarDiagnosticoUseCase(repository), nil, nil, nil, nil, nil, nil)
+	handler := httpordemservico.NewHandler(nil, nil, app.NewInformarDiagnosticoUseCase(repository), nil, nil, nil, nil, nil, nil, nil)
 	router := gin.New()
 	router.PUT("/v1/ordens-servico/:id/diagnostico", handler.InformarDiagnostico)
 	req := httptest.NewRequest(http.MethodPut, "/v1/ordens-servico/42/diagnostico", bytes.NewReader([]byte(`{"diagnostico":"   "}`)))
@@ -209,7 +212,7 @@ func TestHandlerIniciarExecucaoRetorna200(t *testing.T) {
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 	repository.EXPECT().Atualizar(mock.Anything, os).Return(nil)
 
-	handler := httpordemservico.NewHandler(nil, nil, nil, app.NewIniciarExecucaoUseCase(repository), nil, nil, nil, nil, nil)
+	handler := httpordemservico.NewHandler(nil, nil, nil, app.NewIniciarExecucaoUseCase(repository), nil, nil, nil, nil, nil, nil)
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno, Papel: shared.PapelMecanico})
@@ -235,7 +238,7 @@ func TestHandlerIniciarExecucaoTransicaoInvalidaRetorna400(t *testing.T) {
 	os := ordemServicoRecebidaHTTP(t)
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 
-	handler := httpordemservico.NewHandler(nil, nil, nil, app.NewIniciarExecucaoUseCase(repository), nil, nil, nil, nil, nil)
+	handler := httpordemservico.NewHandler(nil, nil, nil, app.NewIniciarExecucaoUseCase(repository), nil, nil, nil, nil, nil, nil)
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno})
@@ -248,6 +251,72 @@ func TestHandlerIniciarExecucaoTransicaoInvalidaRetorna400(t *testing.T) {
 	router.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestHandlerFinalizarRetorna200(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repository := ordemservicomocks.NewOrdemServicoRepository(t)
+	pecaRepo := pecamocks.NewRepository(t)
+	reservaRepo := reservamocks.NewRepository(t)
+	os := ordemServicoEmExecucaoHTTP(t)
+	repository.EXPECT().BuscarPorIDComBloqueio(mock.Anything, uint64(42)).Return(os, nil)
+	reservaRepo.EXPECT().BuscarPorOrdemServico(mock.Anything, uint64(42)).Return(nil, nil)
+	repository.EXPECT().Atualizar(mock.Anything, os).Return(nil)
+
+	handler := httpordemservico.NewHandler(
+		nil, nil, nil, nil,
+		app.NewFinalizarOrdemServicoUseCase(repository, pecaRepo, reservaRepo, &helpers.TransactionRunnerMock{}),
+		nil, nil, nil, nil, nil,
+	)
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno, Papel: shared.PapelMecanico})
+		c.Next()
+	})
+	router.PATCH("/v1/ordens-servico/:id/finalizar", handler.Finalizar)
+
+	req := httptest.NewRequest(http.MethodPatch, "/v1/ordens-servico/42/finalizar", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	var response httpordemservico.OrdemServicoResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+	require.Equal(t, uint64(42), response.ID)
+	require.Equal(t, domainordemservico.StatusFinalizada.String(), response.Status)
+	require.Equal(t, uint64(30), os.HistoricoStatus()[len(os.HistoricoStatus())-1].AlteradoPor())
+}
+
+func TestHandlerFinalizarTransicaoInvalidaRetorna400(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repository := ordemservicomocks.NewOrdemServicoRepository(t)
+	os := ordemServicoRecebidaHTTP(t)
+	repository.EXPECT().BuscarPorIDComBloqueio(mock.Anything, uint64(42)).Return(os, nil)
+
+	handler := httpordemservico.NewHandler(
+		nil, nil, nil, nil,
+		app.NewFinalizarOrdemServicoUseCase(repository, pecamocks.NewRepository(t), reservamocks.NewRepository(t), &helpers.TransactionRunnerMock{}),
+		nil, nil, nil, nil, nil,
+	)
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno})
+		c.Next()
+	})
+	router.PATCH("/v1/ordens-servico/:id/finalizar", handler.Finalizar)
+
+	req := httptest.NewRequest(http.MethodPatch, "/v1/ordens-servico/42/finalizar", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func ordemServicoEmExecucaoHTTP(t *testing.T) *domainordemservico.OrdemServico {
+	t.Helper()
+	os := ordemServicoAprovadaHTTP(t)
+	require.NoError(t, os.IniciarExecucao(30))
+	return os
 }
 
 func ordemServicoAprovadaHTTP(t *testing.T) *domainordemservico.OrdemServico {
@@ -285,7 +354,7 @@ func TestHandlerEntregarRetorna200(t *testing.T) {
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 	repository.EXPECT().Atualizar(mock.Anything, os).Return(nil)
 
-	handler := httpordemservico.NewHandler(nil, nil, nil, nil, app.NewEntregarOrdemServicoUseCase(repository), nil, nil, nil, nil)
+	handler := httpordemservico.NewHandler(nil, nil, nil, nil, nil, app.NewEntregarOrdemServicoUseCase(repository), nil, nil, nil, nil)
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno, Papel: shared.PapelAtendente})
@@ -311,7 +380,7 @@ func TestHandlerEntregarTransicaoInvalidaRetorna400(t *testing.T) {
 	os := ordemServicoRecebidaHTTP(t)
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 
-	handler := httpordemservico.NewHandler(nil, nil, nil, nil, app.NewEntregarOrdemServicoUseCase(repository), nil, nil, nil, nil)
+	handler := httpordemservico.NewHandler(nil, nil, nil, nil, nil, app.NewEntregarOrdemServicoUseCase(repository), nil, nil, nil, nil)
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno})
@@ -381,7 +450,7 @@ func TestHandlerListarOrdensServicoComPaginacaoEFiltros(t *testing.T) {
 	orcamento := domainorcamento.ReidratarOrcamento(100, 42, nil, nil, 300, 150, 450, "Orçamento inicial", 30, time.Now(), time.Now())
 	orcamentoRepository.EXPECT().BuscarPorOrdensServicoIDs(mock.Anything, []uint64{42}).Return([]*domainorcamento.Orcamento{orcamento}, nil)
 
-	handler := httpordemservico.NewHandler(nil, nil, nil, nil, nil, nil, nil, app.NewListarOrdensServicoUseCase(repository, orcamentoRepository), httpquery.NewParser())
+	handler := httpordemservico.NewHandler(nil, nil, nil, nil, nil, nil, nil, nil, app.NewListarOrdensServicoUseCase(repository, orcamentoRepository), httpquery.NewParser())
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno})
@@ -411,7 +480,7 @@ func TestHandlerBuscarOrdemServicoPorIDRetorna200(t *testing.T) {
 	os := ordemServicoRecebidaHTTP(t)
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 
-	handler := httpordemservico.NewHandler(nil, nil, nil, nil, nil, app.NewConsultarOrdemServicoPorIDUseCase(repository), nil, nil, nil)
+	handler := httpordemservico.NewHandler(nil, nil, nil, nil, nil, nil, app.NewConsultarOrdemServicoPorIDUseCase(repository), nil, nil, nil)
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno})
@@ -434,7 +503,7 @@ func TestHandlerBuscarOrdemServicoPorNumeroRetorna200(t *testing.T) {
 	os := ordemServicoRecebidaHTTP(t)
 	repository.EXPECT().BuscarPorNumero(mock.Anything, os.Numero().String()).Return(os, nil)
 
-	handler := httpordemservico.NewHandler(nil, nil, nil, nil, nil, nil, app.NewConsultarOrdemServicoPorNumeroUseCase(repository), nil, nil)
+	handler := httpordemservico.NewHandler(nil, nil, nil, nil, nil, nil, nil, app.NewConsultarOrdemServicoPorNumeroUseCase(repository), nil, nil)
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "30", Tipo: domainauth.TipoInterno})
@@ -456,7 +525,7 @@ func TestHandlerBuscarOrdemServicoPorID_ClienteDaOSRetorna200(t *testing.T) {
 	os := ordemServicoRecebidaHTTP(t)
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 
-	handler := httpordemservico.NewHandler(nil, nil, nil, nil, nil, app.NewConsultarOrdemServicoPorIDUseCase(repository), nil, nil, nil)
+	handler := httpordemservico.NewHandler(nil, nil, nil, nil, nil, nil, app.NewConsultarOrdemServicoPorIDUseCase(repository), nil, nil, nil)
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "10", Tipo: domainauth.TipoCliente, Papel: shared.PapelCliente})
@@ -476,7 +545,7 @@ func TestHandlerBuscarOrdemServicoPorID_ClienteDeOutraOSRetorna403(t *testing.T)
 	os := ordemServicoRecebidaHTTP(t)
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 
-	handler := httpordemservico.NewHandler(nil, nil, nil, nil, nil, app.NewConsultarOrdemServicoPorIDUseCase(repository), nil, nil, nil)
+	handler := httpordemservico.NewHandler(nil, nil, nil, nil, nil, nil, app.NewConsultarOrdemServicoPorIDUseCase(repository), nil, nil, nil)
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "999", Tipo: domainauth.TipoCliente, Papel: shared.PapelCliente})
@@ -496,7 +565,7 @@ func TestHandlerBuscarOrdemServicoPorNumero_ClienteDaOSRetorna200(t *testing.T) 
 	os := ordemServicoRecebidaHTTP(t)
 	repository.EXPECT().BuscarPorNumero(mock.Anything, os.Numero().String()).Return(os, nil)
 
-	handler := httpordemservico.NewHandler(nil, nil, nil, nil, nil, nil, app.NewConsultarOrdemServicoPorNumeroUseCase(repository), nil, nil)
+	handler := httpordemservico.NewHandler(nil, nil, nil, nil, nil, nil, nil, app.NewConsultarOrdemServicoPorNumeroUseCase(repository), nil, nil)
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "10", Tipo: domainauth.TipoCliente, Papel: shared.PapelCliente})
@@ -516,7 +585,7 @@ func TestHandlerBuscarOrdemServicoPorNumero_ClienteDeOutraOSRetorna403(t *testin
 	os := ordemServicoRecebidaHTTP(t)
 	repository.EXPECT().BuscarPorNumero(mock.Anything, os.Numero().String()).Return(os, nil)
 
-	handler := httpordemservico.NewHandler(nil, nil, nil, nil, nil, nil, app.NewConsultarOrdemServicoPorNumeroUseCase(repository), nil, nil)
+	handler := httpordemservico.NewHandler(nil, nil, nil, nil, nil, nil, nil, app.NewConsultarOrdemServicoPorNumeroUseCase(repository), nil, nil)
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(middleware.ClaimsContextKey, &domainauth.AppClaims{Subject: "999", Tipo: domainauth.TipoCliente, Papel: shared.PapelCliente})

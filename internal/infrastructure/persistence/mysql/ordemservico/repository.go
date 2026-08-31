@@ -62,6 +62,15 @@ func (r *Repository) BuscarPorID(ctx context.Context, id uint64) (*domain.OrdemS
 	return toDomain(model)
 }
 
+func (r *Repository) BuscarPorIDComBloqueio(ctx context.Context, id uint64) (*domain.OrdemServico, error) {
+	var model OrdemServicoModel
+	if err := mysql.ComBloqueio(r.consultaComHistorico(ctx)).First(&model, id).Error; err != nil {
+		return nil, traduzirErroConsulta(err)
+	}
+
+	return toDomain(model)
+}
+
 func (r *Repository) BuscarPorNumero(ctx context.Context, numero string) (*domain.OrdemServico, error) {
 	var model OrdemServicoModel
 	if err := r.consultaComHistorico(ctx).Where("numero = ?", numero).First(&model).Error; err != nil {

@@ -1295,6 +1295,70 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/ordens-servico/{id}/finalizar": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Consome as reservas de peças (estoque físico), remove as reservas e altera a Ordem de Serviço EM_EXECUCAO para FINALIZADA, registrando o histórico. Tudo ocorre na mesma transação. Restrito a mecânico ou administrador.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ordens de Serviço"
+                ],
+                "summary": "Finaliza uma Ordem de Serviço",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da Ordem de Serviço",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ordemservico.OrdemServicoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/ordens-servico/{id}/iniciar-diagnostico": {
             "patch": {
                 "security": [

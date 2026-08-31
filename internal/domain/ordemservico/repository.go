@@ -13,4 +13,5 @@ type OrdemServicoRepository interface {
 	BuscarPorNumero(ctx context.Context, numero string) (*OrdemServico, error)
 	Listar(ctx context.Context, params query.Params) (query.Page[*OrdemServico], error)
 	Atualizar(ctx context.Context, ordemServico *OrdemServico) error
+	BuscarPorIDComBloqueio(ctx context.Context, id uint64) (*OrdemServico, error)
 }

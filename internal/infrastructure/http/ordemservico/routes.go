@@ -15,6 +15,7 @@ func RegisterOrdemServicoRoutes(rg *gin.RouterGroup, container *wiring.Container
 		container.IniciarDiagnosticoUC,
 		container.InformarDiagnosticoUC,
 		container.IniciarExecucaoUC,
+		container.FinalizarOrdemServicoUC,
 		container.EntregarOrdemServicoUC,
 		container.ConsultarOrdemServicoPorIDUC,
 		container.ConsultarOrdemServicoPorNumeroUC,
@@ -49,4 +50,5 @@ func RegisterOrdemServicoRoutes(rg *gin.RouterGroup, container *wiring.Container
 	ordensServicoExec.PATCH("/:id/iniciar-diagnostico", handler.IniciarDiagnostico)
 	ordensServicoExec.PUT("/:id/diagnostico", handler.InformarDiagnostico)
 	ordensServicoExec.PATCH("/:id/iniciar-execucao", handler.IniciarExecucao)
+	ordensServicoExec.PATCH("/:id/finalizar", handler.Finalizar)
 }

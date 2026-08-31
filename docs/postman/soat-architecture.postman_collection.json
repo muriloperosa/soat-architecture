@@ -1359,6 +1359,30 @@
               ]
             }
           }
+        },
+        {
+          "name": "Finalizar ordem de serviço",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/finalizar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "{{ordem_servico_id}}",
+                "finalizar"
+              ]
+            }
+          }
         }
       ]
     },

@@ -20,6 +20,7 @@ type Handler struct {
 	iniciarDiagnostico  *app.IniciarDiagnosticoUseCase
 	informarDiagnostico *app.InformarDiagnosticoUseCase
 	iniciarExecucao     *app.IniciarExecucaoUseCase
+	finalizar           *app.FinalizarOrdemServicoUseCase
 	entregar            *app.EntregarOrdemServicoUseCase
 }
 
@@ -28,6 +29,7 @@ func NewHandler(
 	iniciarDiagnostico *app.IniciarDiagnosticoUseCase,
 	informarDiagnostico *app.InformarDiagnosticoUseCase,
 	iniciarExecucao *app.IniciarExecucaoUseCase,
+	finalizar *app.FinalizarOrdemServicoUseCase,
 	entregar *app.EntregarOrdemServicoUseCase,
 	consultarPorID *app.ConsultarOrdemServicoPorIDUseCase,
 	consultarPorNumero *app.ConsultarOrdemServicoPorNumeroUseCase,
@@ -43,6 +45,7 @@ func NewHandler(
 		iniciarDiagnostico:  iniciarDiagnostico,
 		informarDiagnostico: informarDiagnostico,
 		iniciarExecucao:     iniciarExecucao,
+		finalizar:           finalizar,
 		entregar:            entregar,
 	}
 }
@@ -293,6 +296,42 @@ func (h *Handler) IniciarExecucao(c *gin.Context) {
 	output, err := h.iniciarExecucao.Executar(
 		c.Request.Context(),
 		toIniciarExecucaoInput(id, usuarioID),
+	)
+	if err != nil {
+		httperror.RespondError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, toResponse(output))
+}
+
+// @Summary Finaliza uma Ordem de Serviço
+// @Description Consome as reservas de peças (estoque físico), remove as reservas e altera a Ordem de Serviço EM_EXECUCAO para FINALIZADA, registrando o histórico. Tudo ocorre na mesma transação. Restrito a mecânico ou administrador.
+// @Tags Ordens de Serviço
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID da Ordem de Serviço"
+// @Success 200 {object} OrdemServicoResponse
+// @Failure 400 {object} httperror.ErrorResponse
+// @Failure 401 {object} httperror.ErrorResponse
+// @Failure 403 {object} httperror.ErrorResponse
+// @Failure 404 {object} httperror.ErrorResponse
+// @Failure 500 {object} httperror.ErrorResponse
+// @Router /v1/ordens-servico/{id}/finalizar [patch]
+func (h *Handler) Finalizar(c *gin.Context) {
+	id, ok := httprequest.ParseUintParam(c, "id")
+	if !ok {
+		return
+	}
+
+	usuarioID, ok := middleware.SubjectID(c)
+	if !ok {
+		return
+	}
+
+	output, err := h.finalizar.Executar(
+		c.Request.Context(),
+		toFinalizarInput(id, usuarioID),
 	)
 	if err != nil {
 		httperror.RespondError(c, err)

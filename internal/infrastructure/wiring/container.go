@@ -110,6 +110,7 @@ type Container struct {
 	IniciarDiagnosticoUC             *appordemservico.IniciarDiagnosticoUseCase
 	InformarDiagnosticoUC            *appordemservico.InformarDiagnosticoUseCase
 	IniciarExecucaoUC                *appordemservico.IniciarExecucaoUseCase
+	FinalizarOrdemServicoUC          *appordemservico.FinalizarOrdemServicoUseCase
 	EntregarOrdemServicoUC           *appordemservico.EntregarOrdemServicoUseCase
 	ConsultarOrdemServicoPorIDUC     *appordemservico.ConsultarOrdemServicoPorIDUseCase
 	ConsultarOrdemServicoPorNumeroUC *appordemservico.ConsultarOrdemServicoPorNumeroUseCase
@@ -207,6 +208,12 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.IniciarDiagnosticoUC = appordemservico.NewIniciarDiagnosticoUseCase(c.OrdemServicoRepo)
 	c.InformarDiagnosticoUC = appordemservico.NewInformarDiagnosticoUseCase(c.OrdemServicoRepo)
 	c.IniciarExecucaoUC = appordemservico.NewIniciarExecucaoUseCase(c.OrdemServicoRepo)
+	c.FinalizarOrdemServicoUC = appordemservico.NewFinalizarOrdemServicoUseCase(
+		c.OrdemServicoRepo,
+		c.PecaRepo,
+		c.ReservaPecaRepo,
+		c.TransactionRunner,
+	)
 	c.EntregarOrdemServicoUC = appordemservico.NewEntregarOrdemServicoUseCase(c.OrdemServicoRepo)
 	c.ConsultarOrdemServicoPorIDUC = appordemservico.NewConsultarOrdemServicoPorIDUseCase(c.OrdemServicoRepo)
 	c.ConsultarOrdemServicoPorNumeroUC = appordemservico.NewConsultarOrdemServicoPorNumeroUseCase(c.OrdemServicoRepo)

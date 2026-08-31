@@ -129,6 +129,65 @@ func (_c *OrdemServicoRepository_BuscarPorID_Call) RunAndReturn(run func(context
 	return _c
 }
 
+// BuscarPorIDComBloqueio provides a mock function with given fields: ctx, id
+func (_m *OrdemServicoRepository) BuscarPorIDComBloqueio(ctx context.Context, id uint64) (*ordemservico.OrdemServico, error) {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BuscarPorIDComBloqueio")
+	}
+
+	var r0 *ordemservico.OrdemServico
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint64) (*ordemservico.OrdemServico, error)); ok {
+		return rf(ctx, id)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uint64) *ordemservico.OrdemServico); ok {
+		r0 = rf(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ordemservico.OrdemServico)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uint64) error); ok {
+		r1 = rf(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// OrdemServicoRepository_BuscarPorIDComBloqueio_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BuscarPorIDComBloqueio'
+type OrdemServicoRepository_BuscarPorIDComBloqueio_Call struct {
+	*mock.Call
+}
+
+// BuscarPorIDComBloqueio is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint64
+func (_e *OrdemServicoRepository_Expecter) BuscarPorIDComBloqueio(ctx interface{}, id interface{}) *OrdemServicoRepository_BuscarPorIDComBloqueio_Call {
+	return &OrdemServicoRepository_BuscarPorIDComBloqueio_Call{Call: _e.mock.On("BuscarPorIDComBloqueio", ctx, id)}
+}
+
+func (_c *OrdemServicoRepository_BuscarPorIDComBloqueio_Call) Run(run func(ctx context.Context, id uint64)) *OrdemServicoRepository_BuscarPorIDComBloqueio_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uint64))
+	})
+	return _c
+}
+
+func (_c *OrdemServicoRepository_BuscarPorIDComBloqueio_Call) Return(_a0 *ordemservico.OrdemServico, _a1 error) *OrdemServicoRepository_BuscarPorIDComBloqueio_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *OrdemServicoRepository_BuscarPorIDComBloqueio_Call) RunAndReturn(run func(context.Context, uint64) (*ordemservico.OrdemServico, error)) *OrdemServicoRepository_BuscarPorIDComBloqueio_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // BuscarPorNumero provides a mock function with given fields: ctx, numero
 func (_m *OrdemServicoRepository) BuscarPorNumero(ctx context.Context, numero string) (*ordemservico.OrdemServico, error) {
 	ret := _m.Called(ctx, numero)

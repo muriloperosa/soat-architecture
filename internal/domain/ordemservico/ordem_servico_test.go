@@ -372,6 +372,68 @@ func TestIniciarExecucao_ResponsavelObrigatorio(t *testing.T) {
 	require.Len(t, os.HistoricoStatus(), 2)
 }
 
+func osEmExecucao(t *testing.T, id uint64) *ordemservico.OrdemServico {
+	t.Helper()
+	os := osAprovada(t, id)
+	require.NoError(t, os.IniciarExecucao(7))
+	return os
+}
+
+func TestFinalizar_ComSucesso(t *testing.T) {
+	os := osEmExecucao(t, 42)
+	antes := os.DataAtualizacao()
+
+	err := os.Finalizar(9)
+
+	require.NoError(t, err)
+	require.Equal(t, ordemservico.StatusFinalizada, os.Status())
+	require.False(t, os.DataAtualizacao().Before(antes))
+	historico := os.HistoricoStatus()
+	require.Len(t, historico, 4)
+	require.Equal(t, ordemservico.StatusFinalizada, historico[3].Status())
+	require.Equal(t, uint64(42), historico[3].OrdemServicoID())
+	require.Equal(t, uint64(9), historico[3].AlteradoPor())
+	require.Empty(t, historico[3].Motivo())
+	require.Equal(t, os.DataAtualizacao(), historico[3].AlteradoEm())
+}
+
+func TestFinalizar_SomenteOSEmExecucao(t *testing.T) {
+	testes := []struct {
+		nome   string
+		status ordemservico.StatusOrdemServico
+	}{
+		{"recebida", ordemservico.StatusRecebida},
+		{"aprovada", ordemservico.StatusAprovada},
+		{"finalizada", ordemservico.StatusFinalizada},
+	}
+
+	for _, teste := range testes {
+		t.Run(teste.nome, func(t *testing.T) {
+			os := osAprovada(t, 42)
+			os = ordemservico.ReidratarOrdemServico(
+				os.ID(), os.Numero(), os.ClienteID(), os.VeiculoID(), os.QuilometragemEntrada(),
+				teste.status, os.Diagnostico(), os.Observacoes(), os.CriadoPor(),
+				os.HistoricoStatus(), os.DataCadastro(), os.DataAtualizacao(),
+			)
+
+			err := os.Finalizar(7)
+
+			require.ErrorIs(t, err, ordemservico.ErrTransicaoStatusInvalida)
+			require.Equal(t, teste.status, os.Status())
+		})
+	}
+}
+
+func TestFinalizar_ResponsavelObrigatorio(t *testing.T) {
+	os := osEmExecucao(t, 42)
+
+	err := os.Finalizar(0)
+
+	require.ErrorIs(t, err, ordemservico.ErrResponsavelHistoricoObrigatorio)
+	require.Equal(t, ordemservico.StatusEmExecucao, os.Status())
+	require.Len(t, os.HistoricoStatus(), 3)
+}
+
 func osFinalizada(t *testing.T, id uint64) *ordemservico.OrdemServico {
 	t.Helper()
 	numero, err := ordemservico.NewNumeroOrdemServico("OS-2026-0099")
