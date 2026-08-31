@@ -9,7 +9,8 @@ import (
 	"sync"
 	"testing"
 
-	apppeca "github.com/muriloperosa/soat-architecture/internal/application/peca"
+	apporcamento "github.com/muriloperosa/soat-architecture/internal/application/orcamento"
+	appordemservico "github.com/muriloperosa/soat-architecture/internal/application/ordemservico"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	httpordemservico "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/ordemservico"
 	"github.com/stretchr/testify/require"
@@ -22,6 +23,29 @@ func forcarStatusOrdemServico(t *testing.T, id uint64, status string) {
 	}
 }
 
+// aprovarEIniciarExecucao leva uma OS RECEBIDA (com orçamento contendo a
+// peça informada) até EM_EXECUCAO, passando pelo fluxo real de aprovação
+// que é quem cria a ReservaPeca automaticamente (AprovarOrcamentoUseCase).
+func aprovarEIniciarExecucao(t *testing.T, ordemServicoID, usuarioID, pecaID uint64, quantidade int) {
+	t.Helper()
+	ctx := context.Background()
+
+	prepararOrcamentoComPecaAguardando(t, ordemServicoID, usuarioID, pecaID, quantidade)
+
+	clienteID := clienteIDDaOS(t, ordemServicoID)
+	_, err := testContainer.AprovarOrcamentoUC.Executar(ctx, apporcamento.AprovarOrcamentoInput{
+		OrdemServicoID: ordemServicoID,
+		ClienteID:      clienteID,
+	})
+	require.NoError(t, err)
+
+	_, err = testContainer.IniciarExecucaoUC.Executar(ctx, appordemservico.IniciarExecucaoInput{
+		OrdemServicoID: ordemServicoID,
+		UsuarioID:      usuarioID,
+	})
+	require.NoError(t, err)
+}
+
 func TestFinalizarOrdemServico_ConsomeReservasETransicionaParaFinalizada(t *testing.T) {
 	resetDB(t)
 	admin := seedUsuario(t, "Admin Oficina", "admin@oficina.com", "senha123", shared.PapelAdmin)
@@ -30,13 +54,8 @@ func TestFinalizarOrdemServico_ConsomeReservasETransicionaParaFinalizada(t *test
 	loginMecanico := doLogin(t, "mecanico@oficina.com", "senha123")
 
 	aberta := abrirOrdemServicoParaExecucao(t, admin.ID, loginAdmin.AccessToken)
-	forcarStatusOrdemServico(t, aberta.ID, "EM_EXECUCAO")
-
 	pecaID := seedPecaComEstoque(t, admin.ID, 10, 2)
-	_, err := testContainer.ReservarPecaUC.Executar(context.Background(), apppeca.ReservarPecaInput{
-		PecaID: pecaID, OrdemServicoID: aberta.ID, Quantidade: 3,
-	})
-	require.NoError(t, err)
+	aprovarEIniciarExecucao(t, aberta.ID, admin.ID, pecaID, 3)
 
 	var finalizada httpordemservico.OrdemServicoResponse
 	rec := doRequest(
@@ -121,13 +140,8 @@ func TestFinalizarOrdemServico_EstoqueAbaixoDoMinimoFazRollback(t *testing.T) {
 	login := doLogin(t, "admin@oficina.com", "senha123")
 
 	aberta := abrirOrdemServicoParaExecucao(t, admin.ID, login.AccessToken)
-	forcarStatusOrdemServico(t, aberta.ID, "EM_EXECUCAO")
-
 	pecaID := seedPecaComEstoque(t, admin.ID, 10, 2)
-	_, err := testContainer.ReservarPecaUC.Executar(context.Background(), apppeca.ReservarPecaInput{
-		PecaID: pecaID, OrdemServicoID: aberta.ID, Quantidade: 5,
-	})
-	require.NoError(t, err)
+	aprovarEIniciarExecucao(t, aberta.ID, admin.ID, pecaID, 5)
 
 	if err := testDB.Exec("UPDATE pecas SET quantidade_em_estoque = ? WHERE id = ?", 4, pecaID).Error; err != nil {
 		t.Fatalf("erro ao forçar estoque incompatível: %v", err)
@@ -171,13 +185,19 @@ func TestFinalizarOrdemServico_ConcorrenciaNaMesmaPecaSerializaConsumo(t *testin
 	admin := seedUsuario(t, "Admin Oficina", "admin@oficina.com", "senha123", shared.PapelAdmin)
 	login := doLogin(t, "admin@oficina.com", "senha123")
 
+	pecaID := seedPecaComEstoque(t, admin.ID, 10, 0)
+
 	os1 := seedOrdemServico(t, admin.ID)
+	aprovarEIniciarExecucao(t, os1, admin.ID, pecaID, 5)
+
+	// os2 reaproveita o cliente/veículo de os1 (seedOrdemServico usa um CPF
+	// fixo, então chamá-la de novo bateria em "cliente já cadastrado").
 	var clienteID, veiculoID uint64
 	if err := testDB.Raw("SELECT cliente_id, veiculo_id FROM ordens_servico WHERE id = ?", os1).Row().Scan(&clienteID, &veiculoID); err != nil {
 		t.Fatalf("erro ao ler OS semeada: %v", err)
 	}
 	if err := testDB.Exec(
-		"INSERT INTO ordens_servico (numero, cliente_id, veiculo_id, quilometragem_entrada, status, criado_por) VALUES (?, ?, ?, 0, 'EM_EXECUCAO', ?)",
+		"INSERT INTO ordens_servico (numero, cliente_id, veiculo_id, quilometragem_entrada, status, criado_por) VALUES (?, ?, ?, 0, 'RECEBIDA', ?)",
 		"OS-CONC-0002", clienteID, veiculoID, admin.ID,
 	).Error; err != nil {
 		t.Fatalf("erro ao semear segunda OS: %v", err)
@@ -186,17 +206,7 @@ func TestFinalizarOrdemServico_ConcorrenciaNaMesmaPecaSerializaConsumo(t *testin
 	if err := testDB.Raw("SELECT id FROM ordens_servico WHERE numero = ?", "OS-CONC-0002").Scan(&os2).Error; err != nil {
 		t.Fatalf("erro ao buscar segunda OS: %v", err)
 	}
-	forcarStatusOrdemServico(t, os1, "EM_EXECUCAO")
-
-	pecaID := seedPecaComEstoque(t, admin.ID, 10, 0)
-	_, err := testContainer.ReservarPecaUC.Executar(context.Background(), apppeca.ReservarPecaInput{
-		PecaID: pecaID, OrdemServicoID: os1, Quantidade: 5,
-	})
-	require.NoError(t, err)
-	_, err = testContainer.ReservarPecaUC.Executar(context.Background(), apppeca.ReservarPecaInput{
-		PecaID: pecaID, OrdemServicoID: os2, Quantidade: 5,
-	})
-	require.NoError(t, err)
+	aprovarEIniciarExecucao(t, os2, admin.ID, pecaID, 5)
 
 	var wg sync.WaitGroup
 	erros := make(chan error, 2)
