@@ -17,6 +17,18 @@ type AbrirOrdemServicoInput struct {
 	UsuarioID            uint64
 }
 
+type ConsultarOrdemServicoPorIDInput struct {
+	ID              uint64
+	SolicitanteID   uint64
+	TipoSolicitante domainauth.TipoUsuario
+}
+
+type ConsultarOrdemServicoPorNumeroInput struct {
+	Numero          string
+	SolicitanteID   uint64
+	TipoSolicitante domainauth.TipoUsuario
+}
+
 type IniciarDiagnosticoInput struct {
 	OrdemServicoID uint64
 	UsuarioID      uint64

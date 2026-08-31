@@ -18,12 +18,11 @@ func TestConsultarOrdemServicoPorIDUseCase_InternoComSucesso(t *testing.T) {
 	os := ordemServicoConsultaValida(t)
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 
-	out, err := app.NewConsultarOrdemServicoPorIDUseCase(repository).Executar(
-		context.Background(),
-		42,
-		30,
-		domainauth.TipoInterno,
-	)
+	out, err := app.NewConsultarOrdemServicoPorIDUseCase(repository).Executar(context.Background(), app.ConsultarOrdemServicoPorIDInput{
+		ID:              42,
+		SolicitanteID:   30,
+		TipoSolicitante: domainauth.TipoInterno,
+	})
 
 	require.NoError(t, err)
 	require.Equal(t, uint64(42), out.ID)
@@ -37,12 +36,11 @@ func TestConsultarOrdemServicoPorIDUseCase_ClienteDaOSComSucesso(t *testing.T) {
 	os := ordemServicoConsultaValida(t)
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 
-	out, err := app.NewConsultarOrdemServicoPorIDUseCase(repository).Executar(
-		context.Background(),
-		42,
-		os.ClienteID(),
-		domainauth.TipoCliente,
-	)
+	out, err := app.NewConsultarOrdemServicoPorIDUseCase(repository).Executar(context.Background(), app.ConsultarOrdemServicoPorIDInput{
+		ID:              42,
+		SolicitanteID:   os.ClienteID(),
+		TipoSolicitante: domainauth.TipoCliente,
+	})
 
 	require.NoError(t, err)
 	require.Equal(t, os.ID(), out.ID)
@@ -54,12 +52,11 @@ func TestConsultarOrdemServicoPorIDUseCase_ClienteDeOutraOSRetornaForbidden(t *t
 	os := ordemServicoConsultaValida(t)
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 
-	_, err := app.NewConsultarOrdemServicoPorIDUseCase(repository).Executar(
-		context.Background(),
-		42,
-		999,
-		domainauth.TipoCliente,
-	)
+	_, err := app.NewConsultarOrdemServicoPorIDUseCase(repository).Executar(context.Background(), app.ConsultarOrdemServicoPorIDInput{
+		ID:              42,
+		SolicitanteID:   999,
+		TipoSolicitante: domainauth.TipoCliente,
+	})
 
 	require.Error(t, err)
 	var appErr *shared.AppError
@@ -71,12 +68,11 @@ func TestConsultarOrdemServicoPorIDUseCase_NaoEncontrada(t *testing.T) {
 	repository := mocks.NewOrdemServicoRepository(t)
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(999)).Return(nil, domain.ErrOrdemServicoNaoEncontrada)
 
-	_, err := app.NewConsultarOrdemServicoPorIDUseCase(repository).Executar(
-		context.Background(),
-		999,
-		30,
-		domainauth.TipoInterno,
-	)
+	_, err := app.NewConsultarOrdemServicoPorIDUseCase(repository).Executar(context.Background(), app.ConsultarOrdemServicoPorIDInput{
+		ID:              999,
+		SolicitanteID:   30,
+		TipoSolicitante: domainauth.TipoInterno,
+	})
 
 	require.ErrorIs(t, err, domain.ErrOrdemServicoNaoEncontrada)
 }

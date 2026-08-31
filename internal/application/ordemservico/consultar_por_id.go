@@ -3,7 +3,6 @@ package ordemservico
 import (
 	"context"
 
-	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 	domain "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
 )
 
@@ -15,18 +14,13 @@ func NewConsultarOrdemServicoPorIDUseCase(repository domain.OrdemServicoReposito
 	return &ConsultarOrdemServicoPorIDUseCase{repository: repository}
 }
 
-func (uc *ConsultarOrdemServicoPorIDUseCase) Executar(
-	ctx context.Context,
-	id uint64,
-	solicitanteID uint64,
-	tipoSolicitante domainauth.TipoUsuario,
-) (OrdemServicoOutput, error) {
-	ordemServico, err := uc.repository.BuscarPorID(ctx, id)
+func (uc *ConsultarOrdemServicoPorIDUseCase) Executar(ctx context.Context, input ConsultarOrdemServicoPorIDInput) (OrdemServicoOutput, error) {
+	ordemServico, err := uc.repository.BuscarPorID(ctx, input.ID)
 	if err != nil {
 		return OrdemServicoOutput{}, err
 	}
 
-	if err = validarAcessoConsultaOrdemServico(ordemServico, solicitanteID, tipoSolicitante); err != nil {
+	if err = validarAcessoConsultaOrdemServico(ordemServico, input.SolicitanteID, input.TipoSolicitante); err != nil {
 		return OrdemServicoOutput{}, err
 	}
 

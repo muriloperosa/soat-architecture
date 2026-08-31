@@ -114,12 +114,11 @@ func (h *Handler) BuscarPorID(c *gin.Context) {
 		return
 	}
 
-	output, err := h.consultarPorID.Executar(
-		c.Request.Context(),
-		id,
-		solicitanteID,
-		tipoSolicitante,
-	)
+	output, err := h.consultarPorID.Executar(c.Request.Context(), app.ConsultarOrdemServicoPorIDInput{
+		ID:              id,
+		SolicitanteID:   solicitanteID,
+		TipoSolicitante: tipoSolicitante,
+	})
 	if err != nil {
 		httperror.RespondError(c, err)
 		return
@@ -145,12 +144,11 @@ func (h *Handler) BuscarPorNumero(c *gin.Context) {
 		return
 	}
 
-	output, err := h.consultarPorNumero.Executar(
-		c.Request.Context(),
-		c.Param("numero"),
-		solicitanteID,
-		tipoSolicitante,
-	)
+	output, err := h.consultarPorNumero.Executar(c.Request.Context(), app.ConsultarOrdemServicoPorNumeroInput{
+		Numero:          c.Param("numero"),
+		SolicitanteID:   solicitanteID,
+		TipoSolicitante: tipoSolicitante,
+	})
 	if err != nil {
 		httperror.RespondError(c, err)
 		return
