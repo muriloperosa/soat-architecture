@@ -33,6 +33,15 @@ func TestNewReservaPeca_PecaObrigatoria(t *testing.T) {
 	require.ErrorIs(t, err, ErrPecaObrigatoria)
 }
 
+func TestReservaPeca_AtribuirID(t *testing.T) {
+	r, err := NewReservaPeca(10, 20, 3)
+	require.NoError(t, err)
+
+	r.AtribuirID(99)
+
+	require.Equal(t, uint64(99), r.ID())
+}
+
 func TestRestaurarReservaPeca_ReidrataDadosPersistidos(t *testing.T) {
 	criadaEm := time.Now().Add(-time.Hour)
 	atualizadaEm := time.Now()

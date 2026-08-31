@@ -256,3 +256,34 @@ func TestOrcamento_AlterarQuantidadeItemPeca_QuantidadeInvalida(t *testing.T) {
 	require.ErrorIs(t, err, orcamento.ErrQuantidadeInvalida)
 	require.Equal(t, 2, o.ItensPeca()[0].Quantidade())
 }
+
+func TestOrcamento_AlterarQuantidadeItemPeca_ItemNaoEncontrado(t *testing.T) {
+	o := orcamento.ReidratarOrcamento(
+		1, 1,
+		nil,
+		[]orcamento.ItemPeca{orcamento.ReidratarItemPeca(11, 1, 7, "Pastilha", 2, 50)},
+		0, 100, 100, "", 10, time.Now(), time.Now(),
+	)
+
+	err := o.AlterarQuantidadeItemPeca(999, 4)
+	require.ErrorIs(t, err, orcamento.ErrItemPecaNaoEncontrado)
+}
+
+func TestOrcamento_AtribuirID(t *testing.T) {
+	o, err := orcamento.NewOrcamento(10, "", 30)
+	require.NoError(t, err)
+
+	o.AtribuirID(99)
+
+	require.Equal(t, uint64(99), o.ID())
+}
+
+func TestItemServico_OrcamentoID(t *testing.T) {
+	item := orcamento.ReidratarItemServico(1, 42, 5, 2, 100, shared.RestaurarDuracaoEstimada(60))
+	require.Equal(t, uint64(42), item.OrcamentoID())
+}
+
+func TestItemPeca_OrcamentoID(t *testing.T) {
+	item := orcamento.ReidratarItemPeca(1, 42, 7, "Pastilha", 2, 50)
+	require.Equal(t, uint64(42), item.OrcamentoID())
+}
