@@ -6,6 +6,7 @@ import (
 
 	domain "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
 	domainquery "github.com/muriloperosa/soat-architecture/internal/domain/query"
+	"github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql"
 	mysqlquery "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/query"
 	"gorm.io/gorm"
 )
@@ -55,6 +56,15 @@ func (r *Repository) Salvar(ctx context.Context, os *domain.OrdemServico) error 
 func (r *Repository) BuscarPorID(ctx context.Context, id uint64) (*domain.OrdemServico, error) {
 	var model OrdemServicoModel
 	if err := r.consultaComHistorico(ctx).First(&model, id).Error; err != nil {
+		return nil, traduzirErroConsulta(err)
+	}
+
+	return toDomain(model)
+}
+
+func (r *Repository) BuscarPorIDComBloqueio(ctx context.Context, id uint64) (*domain.OrdemServico, error) {
+	var model OrdemServicoModel
+	if err := mysql.ComBloqueio(r.consultaComHistorico(ctx)).First(&model, id).Error; err != nil {
 		return nil, traduzirErroConsulta(err)
 	}
 
@@ -119,7 +129,7 @@ func (r *Repository) Listar(
 
 func (r *Repository) Atualizar(ctx context.Context, os *domain.OrdemServico) error {
 	model := toModel(os)
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return mysql.DBFromContext(ctx, r.db).WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		result := tx.
 			Model(&OrdemServicoModel{}).
 			Where("id = ?", model.ID).
@@ -154,7 +164,7 @@ func (r *Repository) Atualizar(ctx context.Context, os *domain.OrdemServico) err
 }
 
 func (r *Repository) consultaComHistorico(ctx context.Context) *gorm.DB {
-	return r.db.WithContext(ctx).Preload("Historicos", func(db *gorm.DB) *gorm.DB {
+	return mysql.DBFromContext(ctx, r.db).WithContext(ctx).Preload("Historicos", func(db *gorm.DB) *gorm.DB {
 		return db.Order("alterado_em ASC")
 	})
 }

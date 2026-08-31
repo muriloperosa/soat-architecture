@@ -29,6 +29,10 @@ func toIniciarExecucaoInput(ordemServicoID, usuarioID uint64) app.IniciarExecuca
 	return app.IniciarExecucaoInput{OrdemServicoID: ordemServicoID, UsuarioID: usuarioID}
 }
 
+func toFinalizarInput(ordemServicoID, usuarioID uint64) app.FinalizarOrdemServicoInput {
+	return app.FinalizarOrdemServicoInput{OrdemServicoID: ordemServicoID, UsuarioID: usuarioID}
+}
+
 func toEntregarInput(ordemServicoID, usuarioID uint64) app.EntregarOrdemServicoInput {
 	return app.EntregarOrdemServicoInput{OrdemServicoID: ordemServicoID, UsuarioID: usuarioID}
 }

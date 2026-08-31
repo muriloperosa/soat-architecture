@@ -148,7 +148,7 @@ func (r *Repository) Listar(
 func (r *Repository) Atualizar(ctx context.Context, peca *domain.Peca) error {
 	model := toModel(peca)
 
-	result := r.db.
+	result := mysql.DBFromContext(ctx, r.db).
 		WithContext(ctx).
 		Model(&PecaModel{}).
 		Where("id = ?", model.ID).

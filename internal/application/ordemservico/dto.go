@@ -32,6 +32,11 @@ type IniciarExecucaoInput struct {
 	UsuarioID      uint64
 }
 
+type FinalizarOrdemServicoInput struct {
+	OrdemServicoID uint64
+	UsuarioID      uint64
+}
+
 type EntregarOrdemServicoInput struct {
 	OrdemServicoID uint64
 	UsuarioID      uint64

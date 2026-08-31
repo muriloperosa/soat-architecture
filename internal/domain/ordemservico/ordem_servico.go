@@ -201,6 +201,25 @@ func (o *OrdemServico) IniciarExecucao(alteradoPor uint64) error {
 	return nil
 }
 
+// Finalizar move uma OS em execução para finalizada e registra quem realizou a transição.
+// O consumo físico das reservas é orquestrado pelo use case, nesta mesma transação.
+func (o *OrdemServico) Finalizar(alteradoPor uint64) error {
+	if err := o.ValidarTransicaoPara(StatusFinalizada); err != nil {
+		return err
+	}
+
+	historico, err := NewHistoricoStatus(StatusFinalizada, alteradoPor, "", time.Now())
+	if err != nil {
+		return err
+	}
+	historico.atribuirOrdemServicoID(o.id)
+
+	o.status = StatusFinalizada
+	o.dataAtualizacao = historico.AlteradoEm()
+	o.historicoStatus = append(o.historicoStatus, historico)
+	return nil
+}
+
 // Entregar move uma OS finalizada para entregue e registra quem realizou a transição.
 func (o *OrdemServico) Entregar(alteradoPor uint64) error {
 	if err := o.ValidarTransicaoPara(StatusEntregue); err != nil {
