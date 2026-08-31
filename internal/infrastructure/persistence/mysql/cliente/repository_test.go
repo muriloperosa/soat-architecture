@@ -297,6 +297,51 @@ func TestRepositoryBuscarPorDocumentoDeveRetornarErroDoBanco(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestRepositoryBuscarPorEmail(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewRepository(db)
+
+	mock.ExpectQuery("SELECT .* FROM .*").WillReturnRows(clienteRows())
+
+	cliente, err := repository.BuscarPorEmail(context.Background(), "joao@email.com")
+
+	require.NoError(t, err)
+	require.NotNil(t, cliente)
+	require.Equal(t, uint64(1), cliente.ID())
+	require.Equal(t, "joao@email.com", cliente.Email().String())
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestRepositoryBuscarPorEmailDeveRetornarClienteNaoEncontrado(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewRepository(db)
+
+	mock.ExpectQuery("SELECT .* FROM .*").WillReturnError(gorm.ErrRecordNotFound)
+
+	cliente, err := repository.BuscarPorEmail(context.Background(), "naoexiste@email.com")
+
+	require.Nil(t, cliente)
+	require.ErrorIs(t, err, domain.ErrClienteNaoEncontrado)
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestRepositoryBuscarPorEmailDeveRetornarErroDoBanco(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewRepository(db)
+
+	erroBanco := errors.New("erro ao consultar banco")
+	mock.ExpectQuery("SELECT .* FROM .*").WillReturnError(erroBanco)
+
+	cliente, err := repository.BuscarPorEmail(context.Background(), "joao@email.com")
+
+	require.Nil(t, cliente)
+	require.ErrorIs(t, err, erroBanco)
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestRepositoryAtualizar(t *testing.T) {
 	db, mock := newRepositoryTestDB(t)
 	repository := NewRepository(db)
