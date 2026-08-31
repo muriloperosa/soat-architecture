@@ -58,7 +58,9 @@ test-integration:
 
 coverage:
 	@mkdir -p test/reports
-	go test ./... -coverprofile=test/reports/coverage.out
+	go test ./... -coverprofile=test/reports/coverage.out.raw
+	@head -1 test/reports/coverage.out.raw > test/reports/coverage.out
+	@grep -v '/mocks/' test/reports/coverage.out.raw | tail -n +2 >> test/reports/coverage.out
 	go tool cover -func=test/reports/coverage.out | tail -1
 	go tool cover -html=test/reports/coverage.out -o test/reports/coverage.html
 
