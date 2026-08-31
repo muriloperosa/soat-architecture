@@ -5,18 +5,27 @@ import (
 	"errors"
 
 	domainorcamento "github.com/muriloperosa/soat-architecture/internal/domain/orcamento"
+	domainordemservico "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 )
 
 type RemoverServicoOrcamentoUseCase struct {
-	orcamentoRepository domainorcamento.OrcamentoRepository
+	orcamentoRepository    domainorcamento.OrcamentoRepository
+	ordemServicoRepository domainordemservico.OrdemServicoRepository
 }
 
-func NewRemoverServicoOrcamentoUseCase(orcamentoRepository domainorcamento.OrcamentoRepository) *RemoverServicoOrcamentoUseCase {
-	return &RemoverServicoOrcamentoUseCase{orcamentoRepository: orcamentoRepository}
+func NewRemoverServicoOrcamentoUseCase(
+	orcamentoRepository domainorcamento.OrcamentoRepository,
+	ordemServicoRepository domainordemservico.OrdemServicoRepository,
+) *RemoverServicoOrcamentoUseCase {
+	return &RemoverServicoOrcamentoUseCase{orcamentoRepository: orcamentoRepository, ordemServicoRepository: ordemServicoRepository}
 }
 
 func (uc *RemoverServicoOrcamentoUseCase) Executar(ctx context.Context, input RemoverServicoOrcamentoInput) (OrcamentoOutput, error) {
+	if err := validarOrcamentoEditavel(ctx, uc.ordemServicoRepository, input.OrdemServicoID); err != nil {
+		return OrcamentoOutput{}, err
+	}
+
 	orcamento, err := uc.orcamentoRepository.BuscarPorOrdemServicoID(ctx, input.OrdemServicoID)
 	if err != nil {
 		if errors.Is(err, domainorcamento.ErrOrcamentoNaoEncontrado) {

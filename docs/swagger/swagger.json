@@ -1502,21 +1502,85 @@
                 }
             }
         },
-        "/v1/ordens-servico/{id}/orcamento/finalizar": {
+        "/v1/ordens-servico/{id}/orcamento/aprovar": {
             "patch": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Move a OS de EM_DIAGNOSTICO para AGUARDANDO_APROVACAO e, como efeito da transição, envia (simulado) o e-mail do orçamento ao cliente. Restrito a mecânico ou administrador.",
+                "description": "Cliente autenticado aprova o orçamento somente quando a OS está AGUARDANDO_APROVACAO e pertence a ele.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Orçamentos"
                 ],
-                "summary": "Finaliza o orçamento e envia para aprovação",
+                "summary": "Aprova o orçamento da própria Ordem de Serviço",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da Ordem de Serviço",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/orcamento.FluxoOrcamentoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/ordens-servico/{id}/orcamento/enviar-aprovacao": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Move a OS de EM_DIAGNOSTICO ou REJEITADA para AGUARDANDO_APROVACAO, exige orçamento com itens e envia o orçamento ao cliente. Restrito a mecânico ou administrador.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orçamentos"
+                ],
+                "summary": "Envia o orçamento para aprovação",
                 "parameters": [
                     {
                         "type": "integer",
@@ -1713,6 +1777,89 @@
                 }
             }
         },
+        "/v1/ordens-servico/{id}/orcamento/itens-peca/{itemId}/quantidade": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Altera a quantidade do item de peça. Se o orçamento já estiver aprovado, remove as reservas anteriores, volta a OS para AGUARDANDO_APROVACAO e reenvia o orçamento ao cliente. A nova reserva só é criada após nova aprovação.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orçamentos"
+                ],
+                "summary": "Altera a quantidade de uma peça do orçamento",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da Ordem de Serviço",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ID do item de peça",
+                        "name": "itemId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Nova quantidade",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/orcamento.AlterarQuantidadePecaOrcamentoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/orcamento.OrcamentoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/ordens-servico/{id}/orcamento/itens-servico": {
             "post": {
                 "security": [
@@ -1825,6 +1972,82 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/orcamento.OrcamentoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/ordens-servico/{id}/orcamento/rejeitar": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cliente autenticado rejeita o orçamento somente quando a OS está AGUARDANDO_APROVACAO e pertence a ele. O motivo é registrado no histórico da OS.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orçamentos"
+                ],
+                "summary": "Rejeita o orçamento da própria Ordem de Serviço",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da Ordem de Serviço",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Motivo da rejeição",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/orcamento.RejeitarOrcamentoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/orcamento.FluxoOrcamentoResponse"
                         }
                     },
                     "400": {
@@ -4023,6 +4246,31 @@
                 }
             }
         },
+        "orcamento.AlterarQuantidadePecaOrcamentoRequest": {
+            "type": "object",
+            "required": [
+                "quantidade"
+            ],
+            "properties": {
+                "quantidade": {
+                    "type": "integer",
+                    "example": 3
+                }
+            }
+        },
+        "orcamento.FluxoOrcamentoResponse": {
+            "type": "object",
+            "properties": {
+                "ordem_servico_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "status": {
+                    "type": "string",
+                    "example": "APROVADA"
+                }
+            }
+        },
         "orcamento.GerarOrcamentoRequest": {
             "type": "object",
             "properties": {
@@ -4128,6 +4376,18 @@
                 "valor_total": {
                     "type": "number",
                     "example": 250
+                }
+            }
+        },
+        "orcamento.RejeitarOrcamentoRequest": {
+            "type": "object",
+            "required": [
+                "motivo"
+            ],
+            "properties": {
+                "motivo": {
+                    "type": "string",
+                    "example": "Valor acima do esperado"
                 }
             }
         },

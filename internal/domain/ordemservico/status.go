@@ -53,7 +53,7 @@ func (s StatusOrdemServico) PermiteTransicaoPara(novo StatusOrdemServico) bool {
 	case StatusRejeitada:
 		return novo == StatusAguardandoAprovacao
 	case StatusAprovada:
-		return novo == StatusEmExecucao
+		return novo == StatusEmExecucao || novo == StatusAguardandoAprovacao
 	case StatusEmExecucao:
 		return novo == StatusFinalizada
 	case StatusFinalizada:

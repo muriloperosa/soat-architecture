@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	domainorcamento "github.com/muriloperosa/soat-architecture/internal/domain/orcamento"
+	domainordemservico "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
 	domainpeca "github.com/muriloperosa/soat-architecture/internal/domain/peca"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 )
@@ -13,21 +14,28 @@ import (
 // copiando a descrição e o valor vigentes no momento da inclusão para
 // preservar o histórico do orçamento.
 type AdicionarPecaOrcamentoUseCase struct {
-	orcamentoRepository domainorcamento.OrcamentoRepository
-	pecaRepository      domainpeca.Repository
+	orcamentoRepository    domainorcamento.OrcamentoRepository
+	pecaRepository         domainpeca.Repository
+	ordemServicoRepository domainordemservico.OrdemServicoRepository
 }
 
 func NewAdicionarPecaOrcamentoUseCase(
 	orcamentoRepository domainorcamento.OrcamentoRepository,
 	pecaRepository domainpeca.Repository,
+	ordemServicoRepository domainordemservico.OrdemServicoRepository,
 ) *AdicionarPecaOrcamentoUseCase {
 	return &AdicionarPecaOrcamentoUseCase{
-		orcamentoRepository: orcamentoRepository,
-		pecaRepository:      pecaRepository,
+		orcamentoRepository:    orcamentoRepository,
+		pecaRepository:         pecaRepository,
+		ordemServicoRepository: ordemServicoRepository,
 	}
 }
 
 func (uc *AdicionarPecaOrcamentoUseCase) Executar(ctx context.Context, input AdicionarPecaOrcamentoInput) (OrcamentoOutput, error) {
+	if err := validarOrcamentoEditavel(ctx, uc.ordemServicoRepository, input.OrdemServicoID); err != nil {
+		return OrcamentoOutput{}, err
+	}
+
 	orcamento, err := uc.orcamentoRepository.BuscarPorOrdemServicoID(ctx, input.OrdemServicoID)
 	if err != nil {
 		if errors.Is(err, domainorcamento.ErrOrcamentoNaoEncontrado) {

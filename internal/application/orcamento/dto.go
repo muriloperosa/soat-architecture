@@ -1,6 +1,9 @@
 package orcamento
 
-import domain "github.com/muriloperosa/soat-architecture/internal/domain/orcamento"
+import (
+	domain "github.com/muriloperosa/soat-architecture/internal/domain/orcamento"
+	domainordemservico "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
+)
 
 type GerarOrcamentoInput struct {
 	OrdemServicoID uint64
@@ -20,6 +23,13 @@ type AdicionarPecaOrcamentoInput struct {
 	Quantidade     int
 }
 
+type AlterarQuantidadePecaOrcamentoInput struct {
+	OrdemServicoID uint64
+	ItemPecaID     uint64
+	Quantidade     int
+	UsuarioID      uint64
+}
+
 type RemoverServicoOrcamentoInput struct {
 	OrdemServicoID uint64
 	ItemServicoID  uint64
@@ -30,9 +40,20 @@ type RemoverPecaOrcamentoInput struct {
 	ItemPecaID     uint64
 }
 
-type FinalizarOrcamentoInput struct {
+type EnviarOrcamentoParaAprovacaoInput struct {
 	OrdemServicoID uint64
 	UsuarioID      uint64
+}
+
+type AprovarOrcamentoInput struct {
+	OrdemServicoID uint64
+	ClienteID      uint64
+}
+
+type RejeitarOrcamentoInput struct {
+	OrdemServicoID uint64
+	ClienteID      uint64
+	Motivo         string
 }
 
 type ItemServicoOutput struct {
@@ -98,5 +119,19 @@ func toOutput(o *domain.Orcamento) OrcamentoOutput {
 		Observacoes:       o.Observacoes(),
 		ItensServico:      itensServico,
 		ItensPeca:         itensPeca,
+	}
+}
+
+// FluxoOrcamentoOutput representa o resultado das decisões que alteram o
+// status da Ordem de Serviço.
+type FluxoOrcamentoOutput struct {
+	OrdemServicoID uint64
+	Status         string
+}
+
+func toFluxoOutput(os *domainordemservico.OrdemServico) FluxoOrcamentoOutput {
+	return FluxoOrcamentoOutput{
+		OrdemServicoID: os.ID(),
+		Status:         string(os.Status()),
 	}
 }

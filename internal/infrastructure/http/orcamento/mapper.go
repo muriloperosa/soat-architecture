@@ -26,6 +26,15 @@ func toAdicionarPecaInput(ordemServicoID uint64, request AdicionarPecaOrcamentoR
 	}
 }
 
+func toAlterarQuantidadePecaInput(ordemServicoID, itemPecaID, usuarioID uint64, request AlterarQuantidadePecaOrcamentoRequest) app.AlterarQuantidadePecaOrcamentoInput {
+	return app.AlterarQuantidadePecaOrcamentoInput{
+		OrdemServicoID: ordemServicoID,
+		ItemPecaID:     itemPecaID,
+		Quantidade:     request.Quantidade,
+		UsuarioID:      usuarioID,
+	}
+}
+
 func toRemoverServicoInput(ordemServicoID, itemServicoID uint64) app.RemoverServicoOrcamentoInput {
 	return app.RemoverServicoOrcamentoInput{
 		OrdemServicoID: ordemServicoID,
@@ -74,5 +83,12 @@ func toResponse(output app.OrcamentoOutput) OrcamentoResponse {
 		Observacoes:       output.Observacoes,
 		ItensServico:      itensServico,
 		ItensPeca:         itensPeca,
+	}
+}
+
+func toFluxoResponse(output app.FluxoOrcamentoOutput) FluxoOrcamentoResponse {
+	return FluxoOrcamentoResponse{
+		OrdemServicoID: output.OrdemServicoID,
+		Status:         output.Status,
 	}
 }

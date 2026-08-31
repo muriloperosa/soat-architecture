@@ -14,6 +14,10 @@ type AdicionarPecaOrcamentoRequest struct {
 	Quantidade int    `json:"quantidade" binding:"required" example:"2"`
 }
 
+type AlterarQuantidadePecaOrcamentoRequest struct {
+	Quantidade int `json:"quantidade" binding:"required" example:"3"`
+}
+
 type ItemServicoResponse struct {
 	ID                   uint64  `json:"id" example:"1"`
 	ServicoID            uint64  `json:"servico_id" example:"1"`
@@ -41,4 +45,13 @@ type OrcamentoResponse struct {
 	Observacoes       string                `json:"observacoes" example:"Aguardando aprovação do cliente"`
 	ItensServico      []ItemServicoResponse `json:"itens_servico"`
 	ItensPeca         []ItemPecaResponse    `json:"itens_peca"`
+}
+
+type RejeitarOrcamentoRequest struct {
+	Motivo string `json:"motivo" binding:"required" example:"Valor acima do esperado"`
+}
+
+type FluxoOrcamentoResponse struct {
+	OrdemServicoID uint64 `json:"ordem_servico_id" example:"1"`
+	Status         string `json:"status" example:"APROVADA"`
 }

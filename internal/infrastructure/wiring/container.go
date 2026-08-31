@@ -90,8 +90,6 @@ type Container struct {
 	ListarPecasUC              *apppeca.ListarPecasUseCase
 	ReporEstoquePecaUC         *apppeca.ReporEstoqueUseCase
 	ConsultarDisponibilidadeUC *apppeca.ConsultarDisponibilidadeUseCase
-	ReservarPecaUC             *apppeca.ReservarPecaUseCase
-	LiberarReservaPecaUC       *apppeca.LiberarReservaPecaUseCase
 
 	CadastrarVeiculoUC         *appveiculo.CadastrarVeiculoUseCase
 	AtualizarVeiculoUC         *appveiculo.AtualizarVeiculoUseCase
@@ -117,12 +115,15 @@ type Container struct {
 	ConsultarOrdemServicoPorNumeroUC *appordemservico.ConsultarOrdemServicoPorNumeroUseCase
 	ListarOrdensServicoUC            *appordemservico.ListarOrdensServicoUseCase
 
-	GerarOrcamentoUC            *apporcamento.GerarOrcamentoUseCase
-	AdicionarServicoOrcamentoUC *apporcamento.AdicionarServicoOrcamentoUseCase
-	AdicionarPecaOrcamentoUC    *apporcamento.AdicionarPecaOrcamentoUseCase
-	RemoverServicoOrcamentoUC   *apporcamento.RemoverServicoOrcamentoUseCase
-	RemoverPecaOrcamentoUC      *apporcamento.RemoverPecaOrcamentoUseCase
-	FinalizarOrcamentoUC        *apporcamento.FinalizarOrcamentoUseCase
+	GerarOrcamentoUC                 *apporcamento.GerarOrcamentoUseCase
+	AdicionarServicoOrcamentoUC      *apporcamento.AdicionarServicoOrcamentoUseCase
+	AdicionarPecaOrcamentoUC         *apporcamento.AdicionarPecaOrcamentoUseCase
+	RemoverServicoOrcamentoUC        *apporcamento.RemoverServicoOrcamentoUseCase
+	RemoverPecaOrcamentoUC           *apporcamento.RemoverPecaOrcamentoUseCase
+	AlterarQuantidadePecaOrcamentoUC *apporcamento.AlterarQuantidadePecaOrcamentoUseCase
+	EnviarOrcamentoParaAprovacaoUC   *apporcamento.EnviarOrcamentoParaAprovacaoUseCase
+	AprovarOrcamentoUC               *apporcamento.AprovarOrcamentoUseCase
+	RejeitarOrcamentoUC              *apporcamento.RejeitarOrcamentoUseCase
 
 	ConsultarTransicaoStatusUC *apprelatorio.ConsultarTransicaoStatusUseCase
 }
@@ -182,8 +183,6 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.ListarPecasUC = apppeca.NewListarPecasUseCase(c.PecaRepo)
 	c.ReporEstoquePecaUC = apppeca.NewReporEstoqueUseCase(c.PecaRepo)
 	c.ConsultarDisponibilidadeUC = apppeca.NewConsultarDisponibilidadeUseCase(c.PecaRepo, c.ReservaPecaRepo)
-	c.ReservarPecaUC = apppeca.NewReservarPecaUseCase(c.PecaRepo, c.ReservaPecaRepo, c.TransactionRunner)
-	c.LiberarReservaPecaUC = apppeca.NewLiberarReservaPecaUseCase(c.ReservaPecaRepo, c.TransactionRunner)
 
 	c.CadastrarVeiculoUC = appveiculo.NewCadastrarVeiculoUseCase(c.VeiculoRepo)
 	c.AtualizarVeiculoUC = appveiculo.NewAtualizarVeiculoUseCase(c.VeiculoRepo)
@@ -214,11 +213,14 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.ListarOrdensServicoUC = appordemservico.NewListarOrdensServicoUseCase(c.OrdemServicoRepo, c.OrcamentoRepo)
 
 	c.GerarOrcamentoUC = apporcamento.NewGerarOrcamentoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo)
-	c.AdicionarServicoOrcamentoUC = apporcamento.NewAdicionarServicoOrcamentoUseCase(c.OrcamentoRepo, c.ServicoRepo)
-	c.AdicionarPecaOrcamentoUC = apporcamento.NewAdicionarPecaOrcamentoUseCase(c.OrcamentoRepo, c.PecaRepo)
-	c.RemoverServicoOrcamentoUC = apporcamento.NewRemoverServicoOrcamentoUseCase(c.OrcamentoRepo)
-	c.RemoverPecaOrcamentoUC = apporcamento.NewRemoverPecaOrcamentoUseCase(c.OrcamentoRepo)
-	c.FinalizarOrcamentoUC = apporcamento.NewFinalizarOrcamentoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo, c.ClienteRepository, c.EmailSender)
+	c.AdicionarServicoOrcamentoUC = apporcamento.NewAdicionarServicoOrcamentoUseCase(c.OrcamentoRepo, c.ServicoRepo, c.OrdemServicoRepo)
+	c.AdicionarPecaOrcamentoUC = apporcamento.NewAdicionarPecaOrcamentoUseCase(c.OrcamentoRepo, c.PecaRepo, c.OrdemServicoRepo)
+	c.RemoverServicoOrcamentoUC = apporcamento.NewRemoverServicoOrcamentoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo)
+	c.RemoverPecaOrcamentoUC = apporcamento.NewRemoverPecaOrcamentoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo)
+	c.AlterarQuantidadePecaOrcamentoUC = apporcamento.NewAlterarQuantidadePecaOrcamentoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo, c.ReservaPecaRepo, c.PecaRepo, c.ClienteRepository, c.TransactionRunner, c.EmailSender)
+	c.EnviarOrcamentoParaAprovacaoUC = apporcamento.NewEnviarOrcamentoParaAprovacaoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo, c.ClienteRepository, c.EmailSender)
+	c.AprovarOrcamentoUC = apporcamento.NewAprovarOrcamentoUseCase(c.OrdemServicoRepo, c.OrcamentoRepo, c.PecaRepo, c.ReservaPecaRepo, c.TransactionRunner)
+	c.RejeitarOrcamentoUC = apporcamento.NewRejeitarOrcamentoUseCase(c.OrdemServicoRepo)
 
 	c.ConsultarTransicaoStatusUC = apprelatorio.NewConsultarTransicaoStatusUseCase(c.RelatorioRepo)
 

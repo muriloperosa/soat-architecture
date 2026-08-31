@@ -15,4 +15,5 @@ var (
 	ErrDiagnosticoObrigatorio          = shared.NewValidationError("diagnóstico é obrigatório")
 	ErrDiagnosticoStatusInvalido       = shared.NewValidationError("diagnóstico só pode ser informado quando a ordem de serviço estiver em diagnóstico")
 	ErrOrdemServicoNaoEncontrada       = shared.NewNotFoundError("ordem de serviço não encontrada")
+	ErrMotivoRejeicaoObrigatorio       = shared.NewValidationError("motivo da rejeição é obrigatório")
 )

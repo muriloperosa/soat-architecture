@@ -4,9 +4,9 @@ import "time"
 
 // ReservaPeca representa a quantidade de uma Peca comprometida com uma
 // Ordem de Serviço. Não é aggregate root: é uma entidade interna do
-// agregado OrdemServico, criada/removida por OrdemServico.adicionarPeca()/
-// removerPeca() (ainda não implementados). Uma OS possui no máximo uma
-// reserva por peça (UNIQUE ordem_servico_id+peca_id na migration).
+// agregado OrdemServico. Ela é criada automaticamente quando o cliente
+// aprova o orçamento. Uma OS possui no máximo uma reserva por peça
+// (UNIQUE ordem_servico_id+peca_id na migration).
 // Disponibilidade de uma peça = estoque físico - soma das reservas.
 type ReservaPeca struct {
 	id             uint64
@@ -55,39 +55,9 @@ func RestaurarReservaPeca(id, ordemServicoID, pecaID uint64, quantidade int, cri
 	}
 }
 
-// Aumentar soma quantidade à reserva (ex. a OS reserva mais unidades da
-// mesma peça). Quem garante que o novo total não fura o estoque mínimo é
-// o orquestrador (ReservarPecaUseCase), não a reserva.
-func (r *ReservaPeca) Aumentar(quantidade int) error {
-	if quantidade <= 0 {
-		return ErrQuantidadeInvalida
-	}
-
-	r.quantidade += quantidade
-	r.atualizadaEm = time.Now()
-
-	return nil
-}
-
-// Reduzir libera quantidade da reserva. Não é possível liberar mais do
-// que está reservado. Se o resultado chegar a zero, a reserva deixou de
-// existir — quem chama isso deve remover o registro
-// (Repository.Remover), nunca persistir quantidade zero (violaria o
-// CHECK quantidade > 0 da migration).
-func (r *ReservaPeca) Reduzir(quantidade int) error {
-	if quantidade <= 0 {
-		return ErrQuantidadeInvalida
-	}
-
-	if quantidade > r.quantidade {
-		return ErrQuantidadeSuperiorAReservada
-	}
-
-	r.quantidade -= quantidade
-	r.atualizadaEm = time.Now()
-
-	return nil
-}
+// A quantidade da reserva nasce do orçamento aprovado e não é alterada
+// diretamente. Qualquer mudança de quantidade deve acontecer no orçamento,
+// invalidar a aprovação anterior e gerar novas reservas após nova aprovação.
 
 func (r *ReservaPeca) AtribuirID(id uint64) {
 	r.id = id

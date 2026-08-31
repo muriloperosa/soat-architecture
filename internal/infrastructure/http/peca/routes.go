@@ -26,4 +26,5 @@ func RegisterPecaRoutes(rg *gin.RouterGroup, c *wiring.Container) {
 	consulta := autenticado.Group("", middleware.AuthorizationMiddleware(domainauth.TipoInterno))
 	consulta.GET("/:id", h.ConsultarPorID)
 	consulta.GET("", h.Listar)
+
 }

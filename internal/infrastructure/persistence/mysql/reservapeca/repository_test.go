@@ -121,53 +121,6 @@ func TestRepositorySalvarDeveRetornarErroDoBanco(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestRepositoryAtualizar(t *testing.T) {
-	db, mock := newRepositoryTestDB(t)
-	repository := NewRepository(db)
-
-	r := novaReservaValida(t)
-	r.AtribuirID(1)
-
-	mock.ExpectExec("UPDATE .*").WillReturnResult(sqlmock.NewResult(0, 1))
-
-	err := repository.Atualizar(context.Background(), r)
-
-	require.NoError(t, err)
-	require.NoError(t, mock.ExpectationsWereMet())
-}
-
-func TestRepositoryAtualizarDeveRetornarReservaNaoEncontrada(t *testing.T) {
-	db, mock := newRepositoryTestDB(t)
-	repository := NewRepository(db)
-
-	r := novaReservaValida(t)
-	r.AtribuirID(999)
-
-	mock.ExpectExec("UPDATE .*").WillReturnResult(sqlmock.NewResult(0, 0))
-
-	err := repository.Atualizar(context.Background(), r)
-
-	require.ErrorIs(t, err, domain.ErrReservaNaoEncontrada)
-	require.NoError(t, mock.ExpectationsWereMet())
-}
-
-func TestRepositoryAtualizarDeveRetornarErroDoBanco(t *testing.T) {
-	db, mock := newRepositoryTestDB(t)
-	repository := NewRepository(db)
-
-	r := novaReservaValida(t)
-	r.AtribuirID(1)
-
-	erroBanco := errors.New("erro ao atualizar reserva")
-
-	mock.ExpectExec("UPDATE .*").WillReturnError(erroBanco)
-
-	err := repository.Atualizar(context.Background(), r)
-
-	require.ErrorIs(t, err, erroBanco)
-	require.NoError(t, mock.ExpectationsWereMet())
-}
-
 func TestRepositoryBuscarPorOrdemEPeca(t *testing.T) {
 	db, mock := newRepositoryTestDB(t)
 	repository := NewRepository(db)
@@ -216,55 +169,6 @@ func TestRepositoryBuscarPorOrdemEPecaDeveRetornarErroDoBanco(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestRepositoryBuscarPorOrdemEPecaComBloqueio(t *testing.T) {
-	db, mock := newRepositoryTestDB(t)
-	repository := NewRepository(db)
-
-	mock.ExpectQuery("SELECT .* FROM .* FOR UPDATE").WillReturnRows(reservaRows())
-
-	r, err := repository.BuscarPorOrdemEPecaComBloqueio(context.Background(), 1, 2)
-
-	require.NoError(t, err)
-	require.NotNil(t, r)
-	require.Equal(t, uint64(1), r.ID())
-
-	require.NoError(t, mock.ExpectationsWereMet())
-}
-
-func TestRepositoryBuscarPorOrdemEPecaComBloqueioDeveRetornarReservaNaoEncontrada(t *testing.T) {
-	db, mock := newRepositoryTestDB(t)
-	repository := NewRepository(db)
-
-	mock.ExpectQuery("SELECT .* FROM .* FOR UPDATE").WillReturnError(gorm.ErrRecordNotFound)
-
-	r, err := repository.BuscarPorOrdemEPecaComBloqueio(context.Background(), 1, 999)
-
-	require.Nil(t, r)
-	require.ErrorIs(t, err, domain.ErrReservaNaoEncontrada)
-
-	require.NoError(t, mock.ExpectationsWereMet())
-}
-
-func TestRepositoryBuscarPorOrdemEPecaComBloqueio_ParticipaDaTransacaoDoContexto(t *testing.T) {
-	db, mock := newRepositoryTestDB(t)
-	repository := NewRepository(db)
-	runner := mysql.NewTransactionRunner(db)
-
-	mock.ExpectBegin()
-	mock.ExpectQuery("SELECT .* FROM .* FOR UPDATE").WillReturnRows(reservaRows())
-	mock.ExpectCommit()
-
-	err := runner.Executar(context.Background(), func(ctx context.Context) error {
-		r, err := repository.BuscarPorOrdemEPecaComBloqueio(ctx, 1, 2)
-		require.NoError(t, err)
-		require.NotNil(t, r)
-		return nil
-	})
-
-	require.NoError(t, err)
-	require.NoError(t, mock.ExpectationsWereMet())
-}
-
 func TestRepositoryBuscarPorOrdemServico(t *testing.T) {
 	db, mock := newRepositoryTestDB(t)
 	repository := NewRepository(db)
@@ -300,8 +204,20 @@ func TestRepositorySomarQuantidadeReservada(t *testing.T) {
 	db, mock := newRepositoryTestDB(t)
 	repository := NewRepository(db)
 
-	rows := sqlmock.NewRows([]string{"COALESCE(SUM(quantidade), 0)"}).AddRow(7)
-	mock.ExpectQuery("SELECT .* FROM .*").WillReturnRows(rows)
+	rows := sqlmock.NewRows([]string{
+		"id",
+		"ordem_servico_id",
+		"peca_id",
+		"quantidade",
+		"criada_em",
+		"atualizada_em",
+	}).
+		AddRow(1, 10, 2, 3, time.Now(), time.Now()).
+		AddRow(2, 11, 2, 4, time.Now(), time.Now())
+
+	mock.ExpectQuery(`SELECT .* FROM .*reservas_pecas.* WHERE peca_id = .* FOR UPDATE`).
+		WithArgs(2).
+		WillReturnRows(rows)
 
 	total, err := repository.SomarQuantidadeReservada(context.Background(), 2)
 
@@ -310,7 +226,6 @@ func TestRepositorySomarQuantidadeReservada(t *testing.T) {
 
 	require.NoError(t, mock.ExpectationsWereMet())
 }
-
 func TestRepositorySomarQuantidadeReservadaDeveRetornarErroDoBanco(t *testing.T) {
 	db, mock := newRepositoryTestDB(t)
 	repository := NewRepository(db)

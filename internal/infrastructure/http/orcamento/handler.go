@@ -11,12 +11,13 @@ import (
 )
 
 type Handler struct {
-	gerar            *app.GerarOrcamentoUseCase
-	adicionarServico *app.AdicionarServicoOrcamentoUseCase
-	adicionarPeca    *app.AdicionarPecaOrcamentoUseCase
-	removerServico   *app.RemoverServicoOrcamentoUseCase
-	removerPeca      *app.RemoverPecaOrcamentoUseCase
-	finalizar        *app.FinalizarOrcamentoUseCase
+	gerar                 *app.GerarOrcamentoUseCase
+	adicionarServico      *app.AdicionarServicoOrcamentoUseCase
+	adicionarPeca         *app.AdicionarPecaOrcamentoUseCase
+	removerServico        *app.RemoverServicoOrcamentoUseCase
+	removerPeca           *app.RemoverPecaOrcamentoUseCase
+	alterarQuantidadePeca *app.AlterarQuantidadePecaOrcamentoUseCase
+	enviarParaAprovacao   *app.EnviarOrcamentoParaAprovacaoUseCase
 }
 
 func NewHandler(
@@ -25,15 +26,17 @@ func NewHandler(
 	adicionarPeca *app.AdicionarPecaOrcamentoUseCase,
 	removerServico *app.RemoverServicoOrcamentoUseCase,
 	removerPeca *app.RemoverPecaOrcamentoUseCase,
-	finalizar *app.FinalizarOrcamentoUseCase,
+	alterarQuantidadePeca *app.AlterarQuantidadePecaOrcamentoUseCase,
+	enviarParaAprovacao *app.EnviarOrcamentoParaAprovacaoUseCase,
 ) *Handler {
 	return &Handler{
-		gerar:            gerar,
-		adicionarServico: adicionarServico,
-		adicionarPeca:    adicionarPeca,
-		removerServico:   removerServico,
-		removerPeca:      removerPeca,
-		finalizar:        finalizar,
+		gerar:                 gerar,
+		adicionarServico:      adicionarServico,
+		adicionarPeca:         adicionarPeca,
+		removerServico:        removerServico,
+		removerPeca:           removerPeca,
+		alterarQuantidadePeca: alterarQuantidadePeca,
+		enviarParaAprovacao:   enviarParaAprovacao,
 	}
 }
 
@@ -151,6 +154,54 @@ func (h *Handler) AdicionarPeca(c *gin.Context) {
 	c.JSON(http.StatusOK, toResponse(output))
 }
 
+// @Summary Altera a quantidade de uma peça do orçamento
+// @Description Altera a quantidade do item de peça. Se o orçamento já estiver aprovado, remove as reservas anteriores, volta a OS para AGUARDANDO_APROVACAO e reenvia o orçamento ao cliente. A nova reserva só é criada após nova aprovação.
+// @Tags Orçamentos
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID da Ordem de Serviço"
+// @Param itemId path int true "ID do item de peça"
+// @Param request body AlterarQuantidadePecaOrcamentoRequest true "Nova quantidade"
+// @Success 200 {object} OrcamentoResponse
+// @Failure 400 {object} httperror.ErrorResponse
+// @Failure 401 {object} httperror.ErrorResponse
+// @Failure 403 {object} httperror.ErrorResponse
+// @Failure 404 {object} httperror.ErrorResponse
+// @Failure 500 {object} httperror.ErrorResponse
+// @Router /v1/ordens-servico/{id}/orcamento/itens-peca/{itemId}/quantidade [patch]
+func (h *Handler) AlterarQuantidadePeca(c *gin.Context) {
+	ordemServicoID, ok := httprequest.ParseUintParam(c, "id")
+	if !ok {
+		return
+	}
+	itemPecaID, ok := httprequest.ParseUintParam(c, "itemId")
+	if !ok {
+		return
+	}
+	usuarioID, ok := middleware.SubjectID(c)
+	if !ok {
+		return
+	}
+
+	var request AlterarQuantidadePecaOrcamentoRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		httperror.RespondValidationError(c, "Request body inválido.")
+		return
+	}
+
+	output, err := h.alterarQuantidadePeca.Executar(
+		c.Request.Context(),
+		toAlterarQuantidadePecaInput(ordemServicoID, itemPecaID, usuarioID, request),
+	)
+	if err != nil {
+		httperror.RespondError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, toResponse(output))
+}
+
 // @Summary Remove um serviço do orçamento
 // @Description Remove um item de serviço do orçamento da OS. Restrito a mecânico ou administrador.
 // @Tags Orçamentos
@@ -219,8 +270,8 @@ func (h *Handler) RemoverPeca(c *gin.Context) {
 	c.JSON(http.StatusOK, toResponse(output))
 }
 
-// @Summary Finaliza o orçamento e envia para aprovação
-// @Description Move a OS de EM_DIAGNOSTICO para AGUARDANDO_APROVACAO e, como efeito da transição, envia (simulado) o e-mail do orçamento ao cliente. Restrito a mecânico ou administrador.
+// @Summary Envia o orçamento para aprovação
+// @Description Move a OS de EM_DIAGNOSTICO ou REJEITADA para AGUARDANDO_APROVACAO, exige orçamento com itens e envia o orçamento ao cliente. Restrito a mecânico ou administrador.
 // @Tags Orçamentos
 // @Produce json
 // @Security BearerAuth
@@ -231,8 +282,8 @@ func (h *Handler) RemoverPeca(c *gin.Context) {
 // @Failure 403 {object} httperror.ErrorResponse
 // @Failure 404 {object} httperror.ErrorResponse
 // @Failure 500 {object} httperror.ErrorResponse
-// @Router /v1/ordens-servico/{id}/orcamento/finalizar [patch]
-func (h *Handler) Finalizar(c *gin.Context) {
+// @Router /v1/ordens-servico/{id}/orcamento/enviar-aprovacao [patch]
+func (h *Handler) EnviarParaAprovacao(c *gin.Context) {
 	ordemServicoID, ok := httprequest.ParseUintParam(c, "id")
 	if !ok {
 		return
@@ -243,7 +294,7 @@ func (h *Handler) Finalizar(c *gin.Context) {
 		return
 	}
 
-	output, err := h.finalizar.Executar(c.Request.Context(), app.FinalizarOrcamentoInput{
+	output, err := h.enviarParaAprovacao.Executar(c.Request.Context(), app.EnviarOrcamentoParaAprovacaoInput{
 		OrdemServicoID: ordemServicoID,
 		UsuarioID:      usuarioID,
 	})

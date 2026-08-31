@@ -160,7 +160,6 @@ class ItemServico:::entity {
     -valor: float64
     -tempoEstimado: DuracaoEstimada
     +NewItemServico(...) (ItemServico, error)
-    +alterarQuantidade(quantidade) error
     +calcularSubtotal() float64
 }
 
@@ -171,7 +170,6 @@ class ItemPeca:::entity {
     -quantidade: int
     -valor: float64
     +NewItemPeca(...) (ItemPeca, error)
-    +alterarQuantidade(quantidade) error
     +calcularSubtotal() float64
 }
 
@@ -193,7 +191,6 @@ class ReservaPeca:::entity {
     -criadaEm: DateTime
     -atualizadaEm: DateTime
     +NewReservaPeca(...) (ReservaPeca, error)
-    +alterarQuantidade(quantidade) error
 }
 
 %% =========================================================
@@ -305,11 +302,11 @@ note for Veiculo "quilometragemAtual = ultima quilometragem conhecida.\nNao pode
 
 note for OrdemServico "quilometragemEntrada preserva a quilometragem da abertura.\nCada OS possui no maximo um Orcamento.\nSe REJEITADA, o mesmo Orcamento pode ser editado e reenviado."
 
-note for Orcamento "O Orcamento nao possui status proprio.\nA aprovacao/rejeicao pertence ao status da OS.\nApos APROVADA, o Orcamento deixa de ser editavel."
+note for Orcamento "O Orcamento nao possui status proprio.\nA aprovacao/rejeicao pertence ao status da OS.\nAlterar quantidade de peca apos APROVADA invalida a aprovacao, remove reservas e exige nova aprovacao."
 
 note for Peca "quantidadeEmEstoque representa o estoque fisico.\nAs reservas sao controladas por ReservaPeca.\nconsumir() nao pode deixar o estoque abaixo de estoqueMinimo."
 
-note for ReservaPeca "Representa a quantidade de uma Peca reservada para uma OS.\nDisponibilidade = estoque fisico - soma das reservas.\nUma OS possui no maximo uma reserva por Peca.\nA persistencia deve ser transacional."
+note for ReservaPeca "Representa a quantidade de uma Peca reservada para uma OS aprovada.\nE criada automaticamente a partir dos ItemPeca na aprovacao.\nNao possui operacao publica de alteracao manual.\nUma OS possui no maximo uma reserva por Peca."
 
 note for ItemServico "quantidade permite repetir o mesmo servico\nsem duplicar itens. subtotal = valor * quantidade."
 
@@ -388,11 +385,25 @@ REJEITADA
 AGUARDANDO_APROVACAO
 ```
 
+Fluxo de alteração de peça após aprovação:
+
+```text
+APROVADA
+  ↓ alterar quantidade de ItemPeca
+remover reservas atuais
+  ↓
+AGUARDANDO_APROVACAO
+  ↓ cliente aprova novamente
+recriar reservas conforme orçamento
+  ↓
+APROVADA
+```
+
 ### Orçamento
 
 Cada Ordem de Serviço possui no máximo um orçamento. O orçamento não possui status próprio: aprovação e rejeição pertencem ao status da OS.
 
-Se rejeitado, o mesmo orçamento pode ser editado e reenviado. Depois de aprovado, deixa de ser editável.
+Se rejeitado, o mesmo orçamento pode ser editado e reenviado. Em uma OS `APROVADA`, a edição comum permanece bloqueada; a alteração explícita da quantidade de um `ItemPeca` invalida a aprovação anterior, remove as reservas da OS, move a OS para `AGUARDANDO_APROVACAO` e reenvia o orçamento ao cliente. A nova reserva só é criada após uma nova aprovação.
 
 Na persistência, `UNIQUE(ordem_servico_id)` garante a relação 1:1.
 
@@ -432,7 +443,9 @@ Para consumo, a operação também não pode deixar o estoque físico abaixo de 
 
 ### Reserva de peça
 
-`ReservaPeca` é uma entidade que representa a quantidade de uma peça comprometida com uma Ordem de Serviço.
+`ReservaPeca` é uma entidade que representa a quantidade de uma peça comprometida com uma Ordem de Serviço após a aprovação do orçamento. Ela não é manipulada diretamente por endpoint: é criada automaticamente por `AprovarOrcamentoUseCase` a partir das quantidades dos `ItemPeca`.
+
+Se houver mais de um `ItemPeca` para a mesma peça, suas quantidades são agrupadas antes da criação da reserva.
 
 Uma mesma combinação de OS e peça possui no máximo uma reserva corrente:
 
@@ -440,31 +453,39 @@ Uma mesma combinação de OS e peça possui no máximo uma reserva corrente:
 UNIQUE(ordem_servico_id, peca_id)
 ```
 
-A tabela `reservas_pecas` é a única fonte de verdade para as quantidades reservadas. Não existe `pecas.quantidade_reservada`.
+A tabela `reservas_pecas` é a única fonte de verdade para as quantidades reservadas. Não existe `pecas.quantidade_reservada`. A reserva não possui operação pública de alteração de quantidade; mudanças são feitas no orçamento e exigem nova aprovação quando a OS já estava aprovada.
 
 ### Reserva transacional
 
-A persistência da reserva deve ocorrer em uma transação para impedir que duas operações concorrentes utilizem a mesma disponibilidade.
+A criação das reservas e a aprovação da OS ocorrem na mesma transação para impedir que aprovações concorrentes utilizem a mesma disponibilidade.
 
 Fluxo:
 
 ```text
 BEGIN
   ↓
-SELECT peça FOR UPDATE
+carregar orçamento e agrupar ItemPeca por pecaID
   ↓
-consultar SUM(reservas_pecas.quantidade)
+bloquear as peças em ordem de ID (SELECT ... FOR UPDATE)
   ↓
-validar estoque mínimo
+ler reservas correntes da peça com FOR UPDATE
   ↓
-INSERT/UPDATE reservas_pecas
+somar quantidades reservadas
+  ↓
+validar: estoque - reservado - quantidadeOrcamento >= estoqueMinimo
+  ↓
+INSERT reservas_pecas
+  ↓
+OS = APROVADA
   ↓
 COMMIT
 ```
 
-Em caso de erro: `ROLLBACK`.
+Em caso de falta de estoque ou qualquer erro: `ROLLBACK`; nem a reserva nem a aprovação parcial permanecem persistidas.
 
-A transação e o bloqueio são responsabilidades da infraestrutura de persistência; a regra que determina se a reserva é válida continua protegida pelo domínio/aplicação.
+Quando a quantidade de uma peça é modificada após a OS estar `APROVADA`, as reservas atuais são removidas dentro de transação e a OS retorna para `AGUARDANDO_APROVACAO`. A edição não cria a nova reserva: a recriação ocorre somente na aprovação seguinte.
+
+A transação e os locks são responsabilidades da infraestrutura de persistência; a regra de disponibilidade continua protegida pelo domínio/aplicação através de `Peca.PodeReservar`.
 
 ### Persistência dos enums
 

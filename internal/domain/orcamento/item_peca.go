@@ -62,6 +62,18 @@ func ReidratarItemPeca(id, orcamentoID, pecaID uint64, descricao string, quantid
 	}
 }
 
+// AlterarQuantidade altera a quantidade do item do orçamento. A reserva de
+// estoque não é atualizada aqui: quando um orçamento já aprovado é alterado,
+// a application invalida as reservas antigas e exige nova aprovação.
+func (i *ItemPeca) AlterarQuantidade(quantidade int) error {
+	if quantidade <= 0 {
+		return ErrQuantidadeInvalida
+	}
+
+	i.quantidade = quantidade
+	return nil
+}
+
 // CalcularSubtotal aplica subtotal = valor × quantidade.
 func (i ItemPeca) CalcularSubtotal() float64 {
 	return i.valor * float64(i.quantidade)
