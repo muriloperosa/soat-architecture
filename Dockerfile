@@ -9,7 +9,7 @@ COPY . .
 RUN CGO_ENABLED=0 go build -o /out/api ./cmd/api
 
 # --- estágio 2: runtime ---
-FROM alpine:3.23.5
+FROM alpine:3.23.6
 RUN apk add --no-cache ca-certificates && \
     adduser -D -H -u 1000 app
 WORKDIR /app
