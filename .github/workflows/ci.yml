@@ -110,18 +110,28 @@ jobs:
 
       - name: Enforce 80% coverage per package
         id: coverage_gate
-        run: "$(go env GOPATH)/bin/go-test-coverage --config=.testcoverage.yml"
+        shell: bash
+        run: |
+          set -o pipefail
+          "$(go env GOPATH)/bin/go-test-coverage" --config=.testcoverage.yml --github-action-output=true | tee coverage-gate.log
 
       - name: Add coverage summary
         if: always() && hashFiles('coverage.out') != ''
         env:
           COVERAGE_GATE_RESULT: ${{ steps.coverage_gate.outcome }}
+          ELIGIBLE_COVERAGE: ${{ steps.coverage_gate.outputs['total-coverage'] }}
         shell: bash
         run: |
-          total_coverage="$(go tool cover -func="$COVERAGE_FILE" | awk '/^total:/ { print $3 }')"
-          if [[ -z "$total_coverage" ]]; then
-            echo "Could not read total coverage from $COVERAGE_FILE" >&2
-            exit 1
+          raw_coverage="$(go tool cover -func="$COVERAGE_FILE" | awk '/^total:/ { print $3 }' || true)"
+          eligible_coverage="$(awk '/^Total test coverage:/ { print $4 }' coverage-gate.log 2>/dev/null | tail -n 1 || true)"
+          if [[ -z "$eligible_coverage" ]]; then
+            eligible_coverage="${ELIGIBLE_COVERAGE}%"
+          fi
+          if [[ -z "$raw_coverage" ]]; then
+            raw_coverage="indisponível"
+          fi
+          if [[ -z "$eligible_coverage" || "$eligible_coverage" == "%" ]]; then
+            eligible_coverage="indisponível"
           fi
 
           case "$COVERAGE_GATE_RESULT" in
@@ -135,9 +145,12 @@ jobs:
             echo
             echo "| Métrica | Resultado |"
             echo "| --- | ---: |"
-            echo "| Cobertura total | **${total_coverage}** |"
+            echo "| Cobertura bruta do perfil | ${raw_coverage} |"
+            echo "| Cobertura no escopo do gate | **${eligible_coverage}** |"
             echo "| Mínimo por pacote | **80%** |"
             echo "| Gate de cobertura | ${gate_result} |"
+            echo
+            echo "A cobertura bruta inclui código fora do gate. O cálculo do gate exclui mocks, código gerado (`.gen.go` e `.pb.go`), `cmd/`, `docs/swagger/`, `migrations/` e `test/helpers/`, conforme `.testcoverage.yml`."
             echo
             echo "O perfil completo está disponível no artefato `go-coverage`."
           } >> "$GITHUB_STEP_SUMMARY"
