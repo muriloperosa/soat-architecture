@@ -33,17 +33,16 @@ flowchart TD
 
 Os jobs de qualidade (formatação, vet e build), testes unitários/cobertura, integração, SCA e SAST são independentes e executam em paralelo. Apenas etapas com dependência de dados ou resultados devem compartilhar job ou declarar `needs`; por exemplo, gerar o profile precede a checagem de cobertura, e gerar o JSON do scanner precede a política correspondente.
 
-Paralelismo reduz o tempo de espera, mas não reduz necessariamente o consumo de minutos: os minutos de todos os jobs continuam sendo somados. Para controlar uso/custo, limite execuções redundantes com `concurrency` (já configurado), mantenha jobs focados e curtos e use filtros de paths para não rodar a suíte quando apenas Markdown mudar. O workflow ignora `**/*.md` em pushes e PRs; qualquer mudança de código, configuração ou workflow continua disparando a CI. `workflow_dispatch` sempre permite executar manualmente, inclusive para validar apenas alterações documentais. Não execute testes simultaneamente duplicados: cobertura já roda os testes unitários e deve ser a mesma execução que alimenta o verificador de cobertura.
+Paralelismo reduz o tempo de espera, mas não reduz necessariamente o consumo de minutos: os minutos de todos os jobs continuam sendo somados. Para controlar uso/custo, limite execuções redundantes com `concurrency` (já configurado), mantenha jobs focados e curtos e use filtros de paths para não rodar a suíte quando apenas Markdown mudar. O workflow ignora `**/*.md` em pushes e PRs; mudanças de código, configuração e workflow na `main` continuam disparando a CI. Não execute testes simultaneamente duplicados: cobertura já roda os testes unitários e deve ser a mesma execução que alimenta o verificador de cobertura.
 
 ## Gatilhos
 
-O workflow principal deve executar em:
+Automaticamente, o workflow principal executa em eventos relacionados à branch `main`:
 
-- `pull_request` direcionado à `main`;
-- `push` em todas as branches, incluindo branches de trabalho e release;
-- `workflow_dispatch` para execução manual.
+- `pull_request` cujo destino seja a `main`;
+- `push` na `main`, incluindo o commit criado pelo merge de um PR ou um push direto.
 
-As branches podem ser usadas para trabalho e release, sem convenção obrigatória de nome. Os pushes executam o workflow diretamente na branch, sem exigir merge ou pull request para `main`. Pull requests direcionados à `main` também executam as mesmas verificações.
+O evento `workflow_dispatch` também permite iniciar a CI manualmente pela aba **Actions**, útil para testes. Nesse caso, selecione a branch que deseja validar; o filtro de Markdown não se aplica à execução manual. Pushes em branches de trabalho e release não executam esta CI automaticamente; elas são validadas ao abrir ou atualizar um PR direcionado à `main`. O PR recebe os checks antes do merge, e o push resultante do merge dispara uma nova execução na `main`. Pushes apenas com arquivos Markdown continuam ignorados pelo filtro de paths.
 
 Use `concurrency` com grupo baseado no workflow e na branch ou número do PR, com cancelamento de execuções anteriores. Isso evita consumir runners em commits superados.
 
@@ -224,7 +223,7 @@ Os nomes dos checks devem ser estáveis, pois a proteção de branch referencia 
 
 Definido:
 
-- branch principal: `main`; as demais branches podem ser de trabalho ou release, sem padrão obrigatório; CI executa em push em todas as branches e em PR para `main`;
+- branch principal: `main`; a CI executa em PR destinado à `main`, em push na `main` (incluindo merges) e manualmente via `workflow_dispatch`; branches de trabalho e release não disparam a CI automaticamente em push;
 - cobertura: pelo menos 80% por pacote elegível de `application`, `domain` e `infrastructure`, aplicada por `go-test-coverage`, excluindo mocks/código gerado e os pacotes sem lógica testável listados em `.testcoverage.yml`;
 - SCA: bloquear achados críticos/altos confirmados e alcançáveis;
 - SAST: bloquear achados críticos/altos com alta confiança;

@@ -6,7 +6,7 @@ on:
     paths-ignore:
       - '**/*.md'
   push:
-    branches: ['**']
+    branches: [main]
     paths-ignore:
       - '**/*.md'
   workflow_dispatch:
@@ -150,9 +150,9 @@ jobs:
             echo "| Mínimo por pacote | **80%** |"
             echo "| Gate de cobertura | ${gate_result} |"
             echo
-            echo "A cobertura bruta inclui código fora do gate. O cálculo do gate exclui mocks, código gerado (`.gen.go` e `.pb.go`), `cmd/`, `docs/swagger/`, `migrations/` e `test/helpers/`, conforme `.testcoverage.yml`."
+            echo 'A cobertura bruta inclui código fora do gate. O cálculo do gate exclui mocks, código gerado (`.gen.go` e `.pb.go`), `cmd/`, `docs/swagger/`, `migrations/` e `test/helpers/`, conforme `.testcoverage.yml`.'
             echo
-            echo "O perfil completo está disponível no artefato `go-coverage`."
+            echo 'O perfil completo está disponível no artefato `go-coverage`.'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload coverage profile
