@@ -108,6 +108,22 @@ func TestRepositoryAtualizarFazRollbackQuandoNovoHistoricoFalha(t *testing.T) {
 	require.NoError(t, mockDB.ExpectationsWereMet())
 }
 
+func TestRepositoryAtualizarRetornaErroQuandoOrdemNaoExiste(t *testing.T) {
+	db, mockDB := newRepositoryTestDB(t)
+	repository := NewOrdemServicoRepository(db)
+	os := ordemServicoPersistida(t)
+	require.NoError(t, os.IniciarDiagnostico(7))
+
+	mockDB.ExpectBegin()
+	mockDB.ExpectExec("UPDATE `ordens_servico`").WillReturnResult(sqlmock.NewResult(0, 0))
+	mockDB.ExpectRollback()
+
+	err := repository.Atualizar(context.Background(), os)
+
+	require.ErrorIs(t, err, domain.ErrOrdemServicoNaoEncontrada)
+	require.NoError(t, mockDB.ExpectationsWereMet())
+}
+
 func ordemServicoPersistida(t *testing.T) *domain.OrdemServico {
 	t.Helper()
 	numero, err := domain.NewNumeroOrdemServico("OS-20260827-a1b2c3d4e5f6")
@@ -212,6 +228,85 @@ func TestRepositoryListarUsaPadroes(t *testing.T) {
 	require.Equal(t, "id", page.Order)
 	require.Equal(t, query.DirectionASC, page.Direction)
 	require.NoError(t, mockDB.ExpectationsWereMet())
+}
+
+func TestRepositoryListarRetornaErrosDeConsultaEMapeamento(t *testing.T) {
+	t.Run("falha na contagem", func(t *testing.T) {
+		db, mockDB := newRepositoryTestDB(t)
+		infraErr := errors.New("falha na contagem")
+		mockDB.ExpectQuery("SELECT count\\(\\*\\) FROM .*ordens_servico.*").WillReturnError(infraErr)
+		_, err := NewOrdemServicoRepository(db).Listar(context.Background(), query.Params{})
+		require.ErrorIs(t, err, infraErr)
+	})
+
+	t.Run("falha na consulta de dados", func(t *testing.T) {
+		db, mockDB := newRepositoryTestDB(t)
+		infraErr := errors.New("falha ao listar")
+		mockDB.ExpectQuery("SELECT count\\(\\*\\) FROM .*ordens_servico.*").WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+		mockDB.ExpectQuery("SELECT \\* FROM .*ordens_servico.* ORDER BY id ASC LIMIT .* ").WillReturnError(infraErr)
+		_, err := NewOrdemServicoRepository(db).Listar(context.Background(), query.Params{})
+		require.Error(t, err)
+	})
+
+	t.Run("falha ao mapear modelo", func(t *testing.T) {
+		db, mockDB := newRepositoryTestDB(t)
+		mockDB.ExpectQuery("SELECT count\\(\\*\\) FROM .*ordens_servico.*").WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+		rows := sqlmock.NewRows(ordemServicoColumns()).AddRow(42, "", 10, 20, 52300, "RECEBIDA", "", "", 30, time.Now(), time.Now())
+		mockDB.ExpectQuery("SELECT \\* FROM .*ordens_servico.* ORDER BY id ASC LIMIT .* ").WillReturnRows(rows)
+		_, err := NewOrdemServicoRepository(db).Listar(context.Background(), query.Params{})
+		require.Error(t, err)
+	})
+}
+
+func TestRepositoryBuscarPorIDTraduzNaoEncontrada(t *testing.T) {
+	db, mockDB := newRepositoryTestDB(t)
+	mockDB.ExpectQuery("SELECT .* FROM .*ordens_servico.*").WillReturnError(gorm.ErrRecordNotFound)
+
+	os, err := NewOrdemServicoRepository(db).BuscarPorID(context.Background(), 999)
+
+	require.Nil(t, os)
+	require.ErrorIs(t, err, domain.ErrOrdemServicoNaoEncontrada)
+}
+
+func TestRepositoryBuscarPorIDCarregaOrdemEHistorico(t *testing.T) {
+	db, mockDB := newRepositoryTestDB(t)
+	agora := time.Date(2026, time.October, 12, 12, 0, 0, 0, time.UTC)
+	mockDB.ExpectQuery("SELECT .* FROM .*ordens_servico.*").WillReturnRows(ordemServicoRows())
+	mockDB.ExpectQuery("SELECT .* FROM .*historicos_status.*").WillReturnRows(sqlmock.NewRows([]string{"id", "ordem_servico_id", "status", "alterado_por", "motivo", "alterado_em"}).AddRow(8, 42, "RECEBIDA", 30, "", agora))
+
+	os, err := NewOrdemServicoRepository(db).BuscarPorID(context.Background(), 42)
+
+	require.NoError(t, err)
+	require.Equal(t, uint64(42), os.ID())
+	require.Len(t, os.HistoricoStatus(), 1)
+}
+
+func TestRepositoryBuscarPorNumeroTraduzNaoEncontrada(t *testing.T) {
+	db, mockDB := newRepositoryTestDB(t)
+	mockDB.ExpectQuery("SELECT .* FROM .*ordens_servico.*numero.*").WillReturnError(gorm.ErrRecordNotFound)
+
+	os, err := NewOrdemServicoRepository(db).BuscarPorNumero(context.Background(), "OS-NAO-EXISTE")
+
+	require.Nil(t, os)
+	require.ErrorIs(t, err, domain.ErrOrdemServicoNaoEncontrada)
+}
+
+func TestRepositoryBuscarPorNumeroCarregaOrdem(t *testing.T) {
+	db, mockDB := newRepositoryTestDB(t)
+	agora := time.Date(2026, time.October, 12, 12, 0, 0, 0, time.UTC)
+	mockDB.ExpectQuery("SELECT .* FROM .*ordens_servico.*numero.*").WillReturnRows(ordemServicoRows())
+	mockDB.ExpectQuery("SELECT .* FROM .*historicos_status.*").WillReturnRows(sqlmock.NewRows([]string{"id", "ordem_servico_id", "status", "alterado_por", "motivo", "alterado_em"}).AddRow(8, 42, "RECEBIDA", 30, "", agora))
+
+	os, err := NewOrdemServicoRepository(db).BuscarPorNumero(context.Background(), "OS-20260830-a1b2c3d4e5f6")
+
+	require.NoError(t, err)
+	require.Equal(t, uint64(42), os.ID())
+	require.Equal(t, "OS-20260830-a1b2c3d4e5f6", os.Numero().String())
+}
+
+func TestTraduzirErroConsultaPreservaErroDeInfraestrutura(t *testing.T) {
+	infraErr := errors.New("erro do banco")
+	require.Same(t, infraErr, traduzirErroConsulta(infraErr))
 }
 
 func TestRepositoryBuscarPorIDComBloqueio(t *testing.T) {

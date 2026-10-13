@@ -154,6 +154,18 @@ func TestRepositoryListarRejeitaCampoDeFiltroNaoPermitido(t *testing.T) {
 	require.Equal(t, shared.KindValidation, appErr.Kind)
 }
 
+func TestRepositoryListarRetornaErroNaConsultaDeDados(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewRepository(db)
+	errConsulta := errors.New("falha ao consultar clientes")
+	mock.ExpectQuery("SELECT count\\(\\*\\) FROM .*").WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+	mock.ExpectQuery("SELECT \\* FROM .* ORDER BY id ASC LIMIT .*").WillReturnError(errConsulta)
+
+	_, err := repository.Listar(context.Background(), query.Params{})
+	require.ErrorIs(t, err, errConsulta)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestNewRepository(t *testing.T) {
 	db, _ := newRepositoryTestDB(t)
 

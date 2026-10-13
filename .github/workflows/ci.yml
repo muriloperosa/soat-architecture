@@ -1,0 +1,265 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - '**/*.md'
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**/*.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  GO_VERSION: '1.26.6'
+  COVERAGE_FILE: coverage.out
+
+jobs:
+  quality:
+    name: Format, vet and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: go.sum
+
+      - name: Check formatting
+        shell: bash
+        run: |
+          files=$(gofmt -l $(git ls-files '*.go'))
+          if [[ -n "$files" ]]; then
+            echo "Go files need gofmt:"
+            echo "$files"
+            exit 1
+          fi
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Build
+        run: go build ./...
+
+  generated:
+    name: Generated mocks and Swagger
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: go.sum
+
+      - name: Install generators
+        run: |
+          go install github.com/vektra/mockery/v2@v2.53.7
+          go install github.com/swaggo/swag/cmd/swag@v1.16.6
+
+      - name: Regenerate mocks and Swagger
+        run: |
+          "$(go env GOPATH)/bin/mockery"
+          "$(go env GOPATH)/bin/swag" init -g cmd/api/main.go -o docs/swagger
+
+      - name: Ensure generated files are committed
+        run: |
+          git diff --exit-code
+          test -z "$(git status --porcelain)"
+
+  unit:
+    name: Unit tests and coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: go.sum
+
+      - name: Unit tests and coverage profile
+        run: go test ./... -coverprofile="${COVERAGE_FILE}" -covermode=atomic
+
+      - name: Install go-test-coverage
+        run: go install github.com/vladopajic/go-test-coverage/v2@v2.20.0
+
+      - name: Enforce 80% coverage per package
+        id: coverage_gate
+        shell: bash
+        run: |
+          set -o pipefail
+          "$(go env GOPATH)/bin/go-test-coverage" --config=.testcoverage.yml --github-action-output=true | tee coverage-gate.log
+
+      - name: Add coverage summary
+        if: always() && hashFiles('coverage.out') != ''
+        env:
+          COVERAGE_GATE_RESULT: ${{ steps.coverage_gate.outcome }}
+          ELIGIBLE_COVERAGE: ${{ steps.coverage_gate.outputs['total-coverage'] }}
+        shell: bash
+        run: |
+          raw_coverage="$(go tool cover -func="$COVERAGE_FILE" | awk '/^total:/ { print $3 }' || true)"
+          eligible_coverage="$(awk '/^Total test coverage:/ { print $4 }' coverage-gate.log 2>/dev/null | tail -n 1 || true)"
+          if [[ -z "$eligible_coverage" ]]; then
+            eligible_coverage="${ELIGIBLE_COVERAGE}%"
+          fi
+          if [[ -z "$raw_coverage" ]]; then
+            raw_coverage="indisponível"
+          fi
+          if [[ -z "$eligible_coverage" || "$eligible_coverage" == "%" ]]; then
+            eligible_coverage="indisponível"
+          fi
+
+          case "$COVERAGE_GATE_RESULT" in
+            success) gate_result="✅ Aprovado" ;;
+            failure) gate_result="❌ Falhou" ;;
+            *) gate_result="⏭️ Não executado" ;;
+          esac
+
+          {
+            echo "## Cobertura de testes"
+            echo
+            echo "| Métrica | Resultado |"
+            echo "| --- | ---: |"
+            echo "| Cobertura bruta do perfil | ${raw_coverage} |"
+            echo "| Cobertura no escopo do gate | **${eligible_coverage}** |"
+            echo "| Mínimo por pacote | **80%** |"
+            echo "| Gate de cobertura | ${gate_result} |"
+            echo
+            echo 'A cobertura bruta inclui código fora do gate. O cálculo do gate exclui mocks, código gerado (`.gen.go` e `.pb.go`), `cmd/`, `docs/swagger/`, `migrations/` e `test/helpers/`, conforme `.testcoverage.yml`.'
+            echo
+            echo 'O perfil completo está disponível no artefato `go-coverage`.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage profile
+        if: always() && hashFiles('coverage.out') != ''
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: go-coverage
+          path: coverage.out
+          retention-days: 7
+
+  integration:
+    name: Integration tests (MySQL 8)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: go.sum
+
+      - name: Run integration tests
+        run: go test -tags integration ./test/integration/... -v
+
+  image:
+    name: Build Docker image (no push)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [quality, unit, integration]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Build image
+        run: docker build --tag "soat-architecture:${GITHUB_SHA}" .
+
+  sca:
+    name: SCA (govulncheck)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: go.sum
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+
+      - name: Scan reachable vulnerabilities
+        run: "$(go env GOPATH)/bin/govulncheck -json ./... > govulncheck.json"
+
+      - name: Enforce SCA severity policy
+        if: always() && hashFiles('govulncheck.json') != ''
+        run: go run ./.github/scripts/check_security.go govulncheck govulncheck.json
+
+      - name: Upload SCA report
+        if: always() && hashFiles('govulncheck.json') != ''
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: govulncheck-report
+          path: govulncheck.json
+          retention-days: 7
+
+  sast:
+    name: SAST (gosec)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: go.sum
+
+      - name: Install gosec
+        run: go install github.com/securego/gosec/v2/cmd/gosec@v2.22.8
+
+      - name: Scan source
+        run: "$(go env GOPATH)/bin/gosec -fmt=json -out=gosec.json ./..."
+
+      - name: Enforce SAST severity policy
+        if: always() && hashFiles('gosec.json') != ''
+        run: go run ./.github/scripts/check_security.go gosec gosec.json
+
+      - name: Upload SAST report
+        if: always() && hashFiles('gosec.json') != ''
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: gosec-report
+          path: gosec.json
+          retention-days: 7

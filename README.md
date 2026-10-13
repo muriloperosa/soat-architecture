@@ -17,6 +17,7 @@ O versionamento do schema do banco é feito com `golang-migrate`, migrations em 
 - [ADRs](docs/adr/): decisões estruturais registradas e justificadas
 - [Modelo de domínio](docs/DOMAIN_MODEL.md): agregados, entidades e Value Objects
 - [Segurança](docs/SECURITY.md): ferramentas de SCA, SAST e DAST usadas e a justificativa de cada uma
+- [CI/CD](docs/CI_CD.md): proposta de pipeline de CI com GitHub Actions, testes, segurança e proteção dos workflows
 - [Swagger](docs/swagger/): documentação da API gerada a partir dos handlers (UI disponível em `/swagger/index.html` com a aplicação no ar)
 - [Coleção Postman](.dev/postman/): coleção pronta para testar os endpoints da API
 

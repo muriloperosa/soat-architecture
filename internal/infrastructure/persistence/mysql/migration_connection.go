@@ -17,9 +17,17 @@ func NewMigrationConnection(cfg *config.Config) (*gorm.DB, error) {
 		return nil, ErrConfigNotFound
 	}
 
-	dsn := buildMigrationDSN(cfg)
+	return openMigrationConnection(mysql.Open(buildMigrationDSN(cfg)))
+}
 
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+func openMigrationConnection(dialector gorm.Dialector) (*gorm.DB, error) {
+	return openMigrationConnectionWithOpen(dialector, func(dialector gorm.Dialector) (*gorm.DB, error) {
+		return gorm.Open(dialector, &gorm.Config{DisableAutomaticPing: true})
+	}, func(sqlDB *sql.DB) error { return sqlDB.Ping() })
+}
+
+func openMigrationConnectionWithOpen(dialector gorm.Dialector, open func(gorm.Dialector) (*gorm.DB, error), ping func(*sql.DB) error) (*gorm.DB, error) {
+	db, err := open(dialector)
 	if err != nil {
 		return nil, shared.NewInternalError("failed to connect to MySQL", err)
 	}
@@ -29,9 +37,12 @@ func NewMigrationConnection(cfg *config.Config) (*gorm.DB, error) {
 		return nil, shared.NewInternalError("failed to get underlying sql.DB", err)
 	}
 
-	configureMigrationPool(sqlDB)
+	return pingMigrationConnection(db, sqlDB, ping)
+}
 
-	if err := sqlDB.Ping(); err != nil {
+func pingMigrationConnection(db *gorm.DB, sqlDB *sql.DB, ping func(*sql.DB) error) (*gorm.DB, error) {
+	configureMigrationPool(sqlDB)
+	if err := ping(sqlDB); err != nil {
 		return nil, shared.NewInternalError("failed to ping MySQL", err)
 	}
 

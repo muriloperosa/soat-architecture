@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"io"
 	"time"
 
 	domaincliente "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
@@ -76,8 +77,12 @@ func (uc *AbrirOrdemServicoUseCase) Executar(
 }
 
 func gerarNumeroOrdemServico() (string, error) {
+	return gerarNumeroOrdemServicoComLeitor(rand.Reader)
+}
+
+func gerarNumeroOrdemServicoComLeitor(leitor io.Reader) (string, error) {
 	token := make([]byte, 6)
-	if _, err := rand.Read(token); err != nil {
+	if _, err := io.ReadFull(leitor, token); err != nil {
 		return "", err
 	}
 

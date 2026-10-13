@@ -61,6 +61,20 @@ func TestConsultarOrdemServicoPorNumeroUseCase_ClienteDeOutraOSRetornaForbidden(
 	require.Equal(t, shared.KindForbidden, appErr.Kind)
 }
 
+func TestConsultarOrdemServicoPorNumeroUseCase_ClienteSemIDRetornaUnauthorized(t *testing.T) {
+	os := ordemServicoConsultaValida(t)
+	repository := mocks.NewOrdemServicoRepository(t)
+	repository.EXPECT().BuscarPorNumero(mock.Anything, os.Numero().String()).Return(os, nil)
+
+	_, err := app.NewConsultarOrdemServicoPorNumeroUseCase(repository).Executar(context.Background(), app.ConsultarOrdemServicoPorNumeroInput{
+		Numero: os.Numero().String(), TipoSolicitante: domainauth.TipoCliente,
+	})
+
+	var appErr *shared.AppError
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindUnauthorized, appErr.Kind)
+}
+
 func TestConsultarOrdemServicoPorNumeroUseCase_NaoEncontrada(t *testing.T) {
 	repository := mocks.NewOrdemServicoRepository(t)
 	repository.EXPECT().BuscarPorNumero(mock.Anything, "OS-INEXISTENTE").Return(nil, domain.ErrOrdemServicoNaoEncontrada)
