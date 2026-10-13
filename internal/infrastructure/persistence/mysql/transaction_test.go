@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	gormmysql "gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func newTestDB(t *testing.T) (*gorm.DB, sqlmock.Sqlmock) {
@@ -46,6 +47,17 @@ func TestDBFromContext_ComTransacaoNoContexto_RetornaTx(t *testing.T) {
 	ctx := context.WithValue(context.Background(), txContextKey{}, tx)
 
 	require.Same(t, tx, DBFromContext(ctx, db))
+}
+
+func TestComBloqueioAdicionaForUpdate(t *testing.T) {
+	db, _ := newTestDB(t)
+
+	statement := ComBloqueio(db.Session(&gorm.Session{DryRun: true})).Model(&struct{}{}).Find(&struct{}{}).Statement
+	lockingClause, ok := statement.Clauses["FOR"]
+	require.True(t, ok)
+	locking, ok := lockingClause.Expression.(clause.Locking)
+	require.True(t, ok)
+	require.Equal(t, "UPDATE", locking.Strength)
 }
 
 func TestTransactionRunner_Executar_ComSucesso_Commita(t *testing.T) {

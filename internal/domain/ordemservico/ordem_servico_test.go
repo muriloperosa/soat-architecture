@@ -1,4 +1,4 @@
-package ordemservico_test
+package ordemservico
 
 import (
 	"math"
@@ -6,13 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewOrdemServico(t *testing.T) {
 	antes := time.Now()
-	os, err := ordemservico.NewOrdemServico(
+	os, err := NewOrdemServico(
 		" OS-2026-0001 ",
 		10,
 		20,
@@ -29,7 +28,7 @@ func TestNewOrdemServico(t *testing.T) {
 	require.Equal(t, uint64(10), os.ClienteID())
 	require.Equal(t, uint64(20), os.VeiculoID())
 	require.Equal(t, 52_300, os.QuilometragemEntrada())
-	require.Equal(t, ordemservico.StatusRecebida, os.Status())
+	require.Equal(t, StatusRecebida, os.Status())
 	require.Equal(t, "diagnóstico inicial", os.Diagnostico())
 	require.Equal(t, "cliente aguardando", os.Observacoes())
 	require.Equal(t, uint64(30), os.CriadoPor())
@@ -40,7 +39,7 @@ func TestNewOrdemServico(t *testing.T) {
 	historico := os.HistoricoStatus()
 	require.Len(t, historico, 1)
 	require.Equal(t, uint64(0), historico[0].ID())
-	require.Equal(t, ordemservico.StatusRecebida, historico[0].Status())
+	require.Equal(t, StatusRecebida, historico[0].Status())
 	require.Equal(t, uint64(30), historico[0].AlteradoPor())
 	require.Equal(t, os.DataCadastro(), historico[0].AlteradoEm())
 	require.Empty(t, historico[0].Motivo())
@@ -56,18 +55,18 @@ func TestNewOrdemServicoValidaInvariantes(t *testing.T) {
 		criadoPor     uint64
 		erroEsperado  error
 	}{
-		{"cliente obrigatório", "OS-1", 0, 2, 0, 3, ordemservico.ErrClienteObrigatorio},
-		{"veículo obrigatório", "OS-1", 1, 0, 0, 3, ordemservico.ErrVeiculoObrigatorio},
-		{"número obrigatório", "   ", 1, 2, 0, 3, ordemservico.ErrNumeroObrigatorio},
-		{"número acima do limite", strings.Repeat("A", 51), 1, 2, 0, 3, ordemservico.ErrNumeroInvalido},
-		{"quilometragem negativa", "OS-1", 1, 2, -1, 3, ordemservico.ErrQuilometragemEntradaInvalida},
-		{"quilometragem acima do INT UNSIGNED", "OS-1", 1, 2, int(uint64(math.MaxUint32) + 1), 3, ordemservico.ErrQuilometragemEntradaInvalida},
-		{"responsável obrigatório", "OS-1", 1, 2, 0, 0, ordemservico.ErrCriadoPorObrigatorio},
+		{"cliente obrigatório", "OS-1", 0, 2, 0, 3, ErrClienteObrigatorio},
+		{"veículo obrigatório", "OS-1", 1, 0, 0, 3, ErrVeiculoObrigatorio},
+		{"número obrigatório", "   ", 1, 2, 0, 3, ErrNumeroObrigatorio},
+		{"número acima do limite", strings.Repeat("A", 51), 1, 2, 0, 3, ErrNumeroInvalido},
+		{"quilometragem negativa", "OS-1", 1, 2, -1, 3, ErrQuilometragemEntradaInvalida},
+		{"quilometragem acima do INT UNSIGNED", "OS-1", 1, 2, int(uint64(math.MaxUint32) + 1), 3, ErrQuilometragemEntradaInvalida},
+		{"responsável obrigatório", "OS-1", 1, 2, 0, 0, ErrCriadoPorObrigatorio},
 	}
 
 	for _, teste := range testes {
 		t.Run(teste.nome, func(t *testing.T) {
-			os, err := ordemservico.NewOrdemServico(
+			os, err := NewOrdemServico(
 				teste.numero,
 				teste.clienteID,
 				teste.veiculoID,
@@ -84,46 +83,46 @@ func TestNewOrdemServicoValidaInvariantes(t *testing.T) {
 }
 
 func TestStatusOrdemServicoSuportaTodosOsValoresDoFluxo(t *testing.T) {
-	statusValidos := []ordemservico.StatusOrdemServico{
-		ordemservico.StatusRecebida,
-		ordemservico.StatusEmDiagnostico,
-		ordemservico.StatusAguardandoAprovacao,
-		ordemservico.StatusAprovada,
-		ordemservico.StatusRejeitada,
-		ordemservico.StatusEmExecucao,
-		ordemservico.StatusFinalizada,
-		ordemservico.StatusEntregue,
+	statusValidos := []StatusOrdemServico{
+		StatusRecebida,
+		StatusEmDiagnostico,
+		StatusAguardandoAprovacao,
+		StatusAprovada,
+		StatusRejeitada,
+		StatusEmExecucao,
+		StatusFinalizada,
+		StatusEntregue,
 	}
 
 	for _, esperado := range statusValidos {
-		status, err := ordemservico.NewStatusOrdemServico(esperado.String())
+		status, err := NewStatusOrdemServico(esperado.String())
 		require.NoError(t, err)
 		require.Equal(t, esperado, status)
 		require.True(t, status.IsValid())
 	}
 
-	status, err := ordemservico.NewStatusOrdemServico("CANCELADA")
-	require.ErrorIs(t, err, ordemservico.ErrStatusInvalido)
+	status, err := NewStatusOrdemServico("CANCELADA")
+	require.ErrorIs(t, err, ErrStatusInvalido)
 	require.Zero(t, status)
 }
 
 func TestReidratarOrdemServico(t *testing.T) {
-	numero, err := ordemservico.NewNumeroOrdemServico("OS-2026-0042")
+	numero, err := NewNumeroOrdemServico("OS-2026-0042")
 	require.NoError(t, err)
 
 	cadastro := time.Date(2026, time.August, 20, 10, 0, 0, 0, time.UTC)
 	atualizacao := cadastro.Add(2 * time.Hour)
-	historico := []ordemservico.HistoricoStatus{
-		ordemservico.ReidratarHistoricoStatus(7, 42, ordemservico.StatusEmDiagnostico, atualizacao, 3, "início do diagnóstico"),
+	historico := []HistoricoStatus{
+		ReidratarHistoricoStatus(7, 42, StatusEmDiagnostico, atualizacao, 3, "início do diagnóstico"),
 	}
 
-	os := ordemservico.ReidratarOrdemServico(
+	os := ReidratarOrdemServico(
 		42,
 		numero,
 		10,
 		20,
 		52_300,
-		ordemservico.StatusEmDiagnostico,
+		StatusEmDiagnostico,
 		"ruído no motor",
 		"",
 		3,
@@ -137,19 +136,19 @@ func TestReidratarOrdemServico(t *testing.T) {
 	require.Equal(t, uint64(10), os.ClienteID())
 	require.Equal(t, uint64(20), os.VeiculoID())
 	require.Equal(t, 52_300, os.QuilometragemEntrada())
-	require.Equal(t, ordemservico.StatusEmDiagnostico, os.Status())
+	require.Equal(t, StatusEmDiagnostico, os.Status())
 	require.Equal(t, "ruído no motor", os.Diagnostico())
 	require.Equal(t, uint64(3), os.CriadoPor())
 	require.Equal(t, cadastro, os.DataCadastro())
 	require.Equal(t, atualizacao, os.DataAtualizacao())
 	require.Equal(t, historico, os.HistoricoStatus())
 
-	historico[0] = ordemservico.HistoricoStatus{}
-	require.Equal(t, ordemservico.StatusEmDiagnostico, os.HistoricoStatus()[0].Status())
+	historico[0] = HistoricoStatus{}
+	require.Equal(t, StatusEmDiagnostico, os.HistoricoStatus()[0].Status())
 }
 
 func TestAtribuirIDPropagaIdentidadeAoHistoricoInicial(t *testing.T) {
-	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 0, "", "", 3)
+	os, err := NewOrdemServico("OS-1", 1, 2, 0, "", "", 3)
 	require.NoError(t, err)
 
 	os.AtribuirID(99)
@@ -159,7 +158,7 @@ func TestAtribuirIDPropagaIdentidadeAoHistoricoInicial(t *testing.T) {
 }
 
 func TestAtribuirIDsHistoricoPendenteAtribuiApenasHistoricosSemID(t *testing.T) {
-	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 0, "", "", 3)
+	os, err := NewOrdemServico("OS-1", 1, 2, 0, "", "", 3)
 	require.NoError(t, err)
 	os.AtribuirID(42)
 
@@ -176,15 +175,15 @@ func TestAtribuirIDsHistoricoPendenteAtribuiApenasHistoricosSemID(t *testing.T) 
 }
 
 func TestNewHistoricoStatusValidaDados(t *testing.T) {
-	_, err := ordemservico.NewHistoricoStatus("INVALIDO", 1, "", time.Now())
-	require.ErrorIs(t, err, ordemservico.ErrStatusInvalido)
+	_, err := NewHistoricoStatus("INVALIDO", 1, "", time.Now())
+	require.ErrorIs(t, err, ErrStatusInvalido)
 
-	_, err = ordemservico.NewHistoricoStatus(ordemservico.StatusRecebida, 0, "", time.Now())
-	require.ErrorIs(t, err, ordemservico.ErrResponsavelHistoricoObrigatorio)
+	_, err = NewHistoricoStatus(StatusRecebida, 0, "", time.Now())
+	require.ErrorIs(t, err, ErrResponsavelHistoricoObrigatorio)
 }
 
 func TestIniciarDiagnostico_ComSucesso(t *testing.T) {
-	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 100, "diagnóstico anterior", "", 3)
+	os, err := NewOrdemServico("OS-1", 1, 2, 100, "diagnóstico anterior", "", 3)
 	require.NoError(t, err)
 	os.AtribuirID(42)
 	antes := os.DataAtualizacao()
@@ -192,12 +191,12 @@ func TestIniciarDiagnostico_ComSucesso(t *testing.T) {
 	err = os.IniciarDiagnostico(7)
 
 	require.NoError(t, err)
-	require.Equal(t, ordemservico.StatusEmDiagnostico, os.Status())
+	require.Equal(t, StatusEmDiagnostico, os.Status())
 	require.Empty(t, os.Diagnostico())
 	require.False(t, os.DataAtualizacao().Before(antes))
 	historico := os.HistoricoStatus()
 	require.Len(t, historico, 2)
-	require.Equal(t, ordemservico.StatusEmDiagnostico, historico[1].Status())
+	require.Equal(t, StatusEmDiagnostico, historico[1].Status())
 	require.Equal(t, uint64(42), historico[1].OrdemServicoID())
 	require.Equal(t, uint64(7), historico[1].AlteradoPor())
 	require.Empty(t, historico[1].Motivo())
@@ -205,30 +204,30 @@ func TestIniciarDiagnostico_ComSucesso(t *testing.T) {
 }
 
 func TestIniciarDiagnostico_SomenteOSRecebida(t *testing.T) {
-	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
+	os, err := NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
 	require.NoError(t, err)
 	require.NoError(t, os.IniciarDiagnostico(7))
 
 	err = os.IniciarDiagnostico(7)
 
-	require.ErrorIs(t, err, ordemservico.ErrTransicaoStatusInvalida)
-	require.Equal(t, ordemservico.StatusEmDiagnostico, os.Status())
+	require.ErrorIs(t, err, ErrTransicaoStatusInvalida)
+	require.Equal(t, StatusEmDiagnostico, os.Status())
 	require.Len(t, os.HistoricoStatus(), 2)
 }
 
 func TestIniciarDiagnostico_ResponsavelObrigatorio(t *testing.T) {
-	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
+	os, err := NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
 	require.NoError(t, err)
 
 	err = os.IniciarDiagnostico(0)
 
-	require.ErrorIs(t, err, ordemservico.ErrResponsavelHistoricoObrigatorio)
-	require.Equal(t, ordemservico.StatusRecebida, os.Status())
+	require.ErrorIs(t, err, ErrResponsavelHistoricoObrigatorio)
+	require.Equal(t, StatusRecebida, os.Status())
 	require.Len(t, os.HistoricoStatus(), 1)
 }
 
 func TestInformarDiagnostico_ComSucesso(t *testing.T) {
-	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
+	os, err := NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
 	require.NoError(t, err)
 	require.NoError(t, os.IniciarDiagnostico(7))
 	quantidadeHistoricos := len(os.HistoricoStatus())
@@ -241,32 +240,32 @@ func TestInformarDiagnostico_ComSucesso(t *testing.T) {
 }
 
 func TestInformarDiagnostico_ValidaEstadoEConteudo(t *testing.T) {
-	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
+	os, err := NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
 	require.NoError(t, err)
 
 	err = os.InformarDiagnostico("Falha na bomba")
-	require.ErrorIs(t, err, ordemservico.ErrDiagnosticoStatusInvalido)
+	require.ErrorIs(t, err, ErrDiagnosticoStatusInvalido)
 
 	require.NoError(t, os.IniciarDiagnostico(7))
 	err = os.InformarDiagnostico("   ")
-	require.ErrorIs(t, err, ordemservico.ErrDiagnosticoObrigatorio)
+	require.ErrorIs(t, err, ErrDiagnosticoObrigatorio)
 	require.Empty(t, os.Diagnostico())
 }
 
 func TestValidarTransicaoParaAguardandoAprovacao_ExigeDiagnostico(t *testing.T) {
-	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
+	os, err := NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
 	require.NoError(t, err)
 	require.NoError(t, os.IniciarDiagnostico(7))
 
-	err = os.ValidarTransicaoPara(ordemservico.StatusAguardandoAprovacao)
-	require.ErrorIs(t, err, ordemservico.ErrDiagnosticoObrigatorio)
+	err = os.ValidarTransicaoPara(StatusAguardandoAprovacao)
+	require.ErrorIs(t, err, ErrDiagnosticoObrigatorio)
 
 	require.NoError(t, os.InformarDiagnostico("Falha na bomba de combustível"))
-	require.NoError(t, os.ValidarTransicaoPara(ordemservico.StatusAguardandoAprovacao))
+	require.NoError(t, os.ValidarTransicaoPara(StatusAguardandoAprovacao))
 }
 
 func TestEnviarParaAprovacao_ComSucesso(t *testing.T) {
-	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
+	os, err := NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
 	require.NoError(t, err)
 	os.AtribuirID(42)
 	require.NoError(t, os.IniciarDiagnostico(7))
@@ -276,55 +275,55 @@ func TestEnviarParaAprovacao_ComSucesso(t *testing.T) {
 	err = os.EnviarParaAprovacao(7)
 
 	require.NoError(t, err)
-	require.Equal(t, ordemservico.StatusAguardandoAprovacao, os.Status())
+	require.Equal(t, StatusAguardandoAprovacao, os.Status())
 	require.False(t, os.DataAtualizacao().Before(antes))
 	historico := os.HistoricoStatus()
 	require.Len(t, historico, 3)
-	require.Equal(t, ordemservico.StatusAguardandoAprovacao, historico[2].Status())
+	require.Equal(t, StatusAguardandoAprovacao, historico[2].Status())
 	require.Equal(t, uint64(42), historico[2].OrdemServicoID())
 	require.Equal(t, uint64(7), historico[2].AlteradoPor())
 }
 
 func TestEnviarParaAprovacao_ExigeDiagnostico(t *testing.T) {
-	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
+	os, err := NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
 	require.NoError(t, err)
 	require.NoError(t, os.IniciarDiagnostico(7))
 
 	err = os.EnviarParaAprovacao(7)
 
-	require.ErrorIs(t, err, ordemservico.ErrDiagnosticoObrigatorio)
-	require.Equal(t, ordemservico.StatusEmDiagnostico, os.Status())
+	require.ErrorIs(t, err, ErrDiagnosticoObrigatorio)
+	require.Equal(t, StatusEmDiagnostico, os.Status())
 }
 
 func TestEnviarParaAprovacao_SomenteOSEmDiagnostico(t *testing.T) {
-	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
+	os, err := NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
 	require.NoError(t, err)
 
 	err = os.EnviarParaAprovacao(7)
 
-	require.ErrorIs(t, err, ordemservico.ErrTransicaoStatusInvalida)
-	require.Equal(t, ordemservico.StatusRecebida, os.Status())
+	require.ErrorIs(t, err, ErrTransicaoStatusInvalida)
+	require.Equal(t, StatusRecebida, os.Status())
 }
 
-func osAprovada(t *testing.T, id uint64) *ordemservico.OrdemServico {
+func osAprovada(t *testing.T, id uint64) *OrdemServico {
 	t.Helper()
-	numero, err := ordemservico.NewNumeroOrdemServico("OS-2026-0077")
+	numero, err := NewNumeroOrdemServico("OS-2026-0077")
 	require.NoError(t, err)
 
 	cadastro := time.Date(2026, time.August, 10, 9, 0, 0, 0, time.UTC)
 	atualizacao := cadastro.Add(4 * time.Hour)
-	historico := []ordemservico.HistoricoStatus{
-		ordemservico.ReidratarHistoricoStatus(1, id, ordemservico.StatusRecebida, cadastro, 3, ""),
-		ordemservico.ReidratarHistoricoStatus(2, id, ordemservico.StatusAprovada, atualizacao, 3, ""),
+	historico := []HistoricoStatus{
+		ReidratarHistoricoStatus(1, id, StatusRecebida, cadastro, 3, ""),
+		ReidratarHistoricoStatus(2, id, StatusAprovada, atualizacao, 3, ""),
 	}
 
-	return ordemservico.ReidratarOrdemServico(
+	return ReidratarOrdemServico(
 		id,
 		numero,
 		10,
 		20,
 		52_300,
-		ordemservico.StatusAprovada,
+		StatusAprovada,
 		"motor revisado",
 		"",
 		3,
@@ -341,11 +340,11 @@ func TestIniciarExecucao_ComSucesso(t *testing.T) {
 	err := os.IniciarExecucao(7)
 
 	require.NoError(t, err)
-	require.Equal(t, ordemservico.StatusEmExecucao, os.Status())
+	require.Equal(t, StatusEmExecucao, os.Status())
 	require.False(t, os.DataAtualizacao().Before(antes))
 	historico := os.HistoricoStatus()
 	require.Len(t, historico, 3)
-	require.Equal(t, ordemservico.StatusEmExecucao, historico[2].Status())
+	require.Equal(t, StatusEmExecucao, historico[2].Status())
 	require.Equal(t, uint64(42), historico[2].OrdemServicoID())
 	require.Equal(t, uint64(7), historico[2].AlteradoPor())
 	require.Empty(t, historico[2].Motivo())
@@ -355,17 +354,17 @@ func TestIniciarExecucao_ComSucesso(t *testing.T) {
 func TestIniciarExecucao_SomenteOSAprovada(t *testing.T) {
 	testes := []struct {
 		nome   string
-		status ordemservico.StatusOrdemServico
+		status StatusOrdemServico
 	}{
-		{"recebida", ordemservico.StatusRecebida},
-		{"rejeitada", ordemservico.StatusRejeitada},
-		{"aguardando aprovação", ordemservico.StatusAguardandoAprovacao},
+		{"recebida", StatusRecebida},
+		{"rejeitada", StatusRejeitada},
+		{"aguardando aprovação", StatusAguardandoAprovacao},
 	}
 
 	for _, teste := range testes {
 		t.Run(teste.nome, func(t *testing.T) {
 			os := osAprovada(t, 42)
-			os = ordemservico.ReidratarOrdemServico(
+			os = ReidratarOrdemServico(
 				os.ID(), os.Numero(), os.ClienteID(), os.VeiculoID(), os.QuilometragemEntrada(),
 				teste.status, os.Diagnostico(), os.Observacoes(), os.CriadoPor(),
 				os.HistoricoStatus(), os.DataCadastro(), os.DataAtualizacao(),
@@ -373,7 +372,7 @@ func TestIniciarExecucao_SomenteOSAprovada(t *testing.T) {
 
 			err := os.IniciarExecucao(7)
 
-			require.ErrorIs(t, err, ordemservico.ErrTransicaoStatusInvalida)
+			require.ErrorIs(t, err, ErrTransicaoStatusInvalida)
 			require.Equal(t, teste.status, os.Status())
 		})
 	}
@@ -384,12 +383,12 @@ func TestIniciarExecucao_ResponsavelObrigatorio(t *testing.T) {
 
 	err := os.IniciarExecucao(0)
 
-	require.ErrorIs(t, err, ordemservico.ErrResponsavelHistoricoObrigatorio)
-	require.Equal(t, ordemservico.StatusAprovada, os.Status())
+	require.ErrorIs(t, err, ErrResponsavelHistoricoObrigatorio)
+	require.Equal(t, StatusAprovada, os.Status())
 	require.Len(t, os.HistoricoStatus(), 2)
 }
 
-func osEmExecucao(t *testing.T, id uint64) *ordemservico.OrdemServico {
+func osEmExecucao(t *testing.T, id uint64) *OrdemServico {
 	t.Helper()
 	os := osAprovada(t, id)
 	require.NoError(t, os.IniciarExecucao(7))
@@ -403,11 +402,11 @@ func TestFinalizar_ComSucesso(t *testing.T) {
 	err := os.Finalizar(9)
 
 	require.NoError(t, err)
-	require.Equal(t, ordemservico.StatusFinalizada, os.Status())
+	require.Equal(t, StatusFinalizada, os.Status())
 	require.False(t, os.DataAtualizacao().Before(antes))
 	historico := os.HistoricoStatus()
 	require.Len(t, historico, 4)
-	require.Equal(t, ordemservico.StatusFinalizada, historico[3].Status())
+	require.Equal(t, StatusFinalizada, historico[3].Status())
 	require.Equal(t, uint64(42), historico[3].OrdemServicoID())
 	require.Equal(t, uint64(9), historico[3].AlteradoPor())
 	require.Empty(t, historico[3].Motivo())
@@ -417,17 +416,17 @@ func TestFinalizar_ComSucesso(t *testing.T) {
 func TestFinalizar_SomenteOSEmExecucao(t *testing.T) {
 	testes := []struct {
 		nome   string
-		status ordemservico.StatusOrdemServico
+		status StatusOrdemServico
 	}{
-		{"recebida", ordemservico.StatusRecebida},
-		{"aprovada", ordemservico.StatusAprovada},
-		{"finalizada", ordemservico.StatusFinalizada},
+		{"recebida", StatusRecebida},
+		{"aprovada", StatusAprovada},
+		{"finalizada", StatusFinalizada},
 	}
 
 	for _, teste := range testes {
 		t.Run(teste.nome, func(t *testing.T) {
 			os := osAprovada(t, 42)
-			os = ordemservico.ReidratarOrdemServico(
+			os = ReidratarOrdemServico(
 				os.ID(), os.Numero(), os.ClienteID(), os.VeiculoID(), os.QuilometragemEntrada(),
 				teste.status, os.Diagnostico(), os.Observacoes(), os.CriadoPor(),
 				os.HistoricoStatus(), os.DataCadastro(), os.DataAtualizacao(),
@@ -435,7 +434,7 @@ func TestFinalizar_SomenteOSEmExecucao(t *testing.T) {
 
 			err := os.Finalizar(7)
 
-			require.ErrorIs(t, err, ordemservico.ErrTransicaoStatusInvalida)
+			require.ErrorIs(t, err, ErrTransicaoStatusInvalida)
 			require.Equal(t, teste.status, os.Status())
 		})
 	}
@@ -446,30 +445,30 @@ func TestFinalizar_ResponsavelObrigatorio(t *testing.T) {
 
 	err := os.Finalizar(0)
 
-	require.ErrorIs(t, err, ordemservico.ErrResponsavelHistoricoObrigatorio)
-	require.Equal(t, ordemservico.StatusEmExecucao, os.Status())
+	require.ErrorIs(t, err, ErrResponsavelHistoricoObrigatorio)
+	require.Equal(t, StatusEmExecucao, os.Status())
 	require.Len(t, os.HistoricoStatus(), 3)
 }
 
-func osFinalizada(t *testing.T, id uint64) *ordemservico.OrdemServico {
+func osFinalizada(t *testing.T, id uint64) *OrdemServico {
 	t.Helper()
-	numero, err := ordemservico.NewNumeroOrdemServico("OS-2026-0099")
+	numero, err := NewNumeroOrdemServico("OS-2026-0099")
 	require.NoError(t, err)
 
 	cadastro := time.Date(2026, time.August, 1, 9, 0, 0, 0, time.UTC)
 	atualizacao := cadastro.Add(3 * time.Hour)
-	historico := []ordemservico.HistoricoStatus{
-		ordemservico.ReidratarHistoricoStatus(1, id, ordemservico.StatusRecebida, cadastro, 3, ""),
-		ordemservico.ReidratarHistoricoStatus(2, id, ordemservico.StatusFinalizada, atualizacao, 3, ""),
+	historico := []HistoricoStatus{
+		ReidratarHistoricoStatus(1, id, StatusRecebida, cadastro, 3, ""),
+		ReidratarHistoricoStatus(2, id, StatusFinalizada, atualizacao, 3, ""),
 	}
 
-	return ordemservico.ReidratarOrdemServico(
+	return ReidratarOrdemServico(
 		id,
 		numero,
 		10,
 		20,
 		52_300,
-		ordemservico.StatusFinalizada,
+		StatusFinalizada,
 		"motor revisado",
 		"",
 		3,
@@ -486,11 +485,11 @@ func TestEntregar_ComSucesso(t *testing.T) {
 	err := os.Entregar(7)
 
 	require.NoError(t, err)
-	require.Equal(t, ordemservico.StatusEntregue, os.Status())
+	require.Equal(t, StatusEntregue, os.Status())
 	require.False(t, os.DataAtualizacao().Before(antes))
 	historico := os.HistoricoStatus()
 	require.Len(t, historico, 3)
-	require.Equal(t, ordemservico.StatusEntregue, historico[2].Status())
+	require.Equal(t, StatusEntregue, historico[2].Status())
 	require.Equal(t, uint64(42), historico[2].OrdemServicoID())
 	require.Equal(t, uint64(7), historico[2].AlteradoPor())
 	require.Empty(t, historico[2].Motivo())
@@ -498,13 +497,13 @@ func TestEntregar_ComSucesso(t *testing.T) {
 }
 
 func TestEntregar_SomenteOSFinalizada(t *testing.T) {
-	os, err := ordemservico.NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
+	os, err := NewOrdemServico("OS-1", 1, 2, 100, "", "", 3)
 	require.NoError(t, err)
 
 	err = os.Entregar(7)
 
-	require.ErrorIs(t, err, ordemservico.ErrTransicaoStatusInvalida)
-	require.Equal(t, ordemservico.StatusRecebida, os.Status())
+	require.ErrorIs(t, err, ErrTransicaoStatusInvalida)
+	require.Equal(t, StatusRecebida, os.Status())
 	require.Len(t, os.HistoricoStatus(), 1)
 }
 
@@ -513,8 +512,8 @@ func TestEntregar_ResponsavelObrigatorio(t *testing.T) {
 
 	err := os.Entregar(0)
 
-	require.ErrorIs(t, err, ordemservico.ErrResponsavelHistoricoObrigatorio)
-	require.Equal(t, ordemservico.StatusFinalizada, os.Status())
+	require.ErrorIs(t, err, ErrResponsavelHistoricoObrigatorio)
+	require.Equal(t, StatusFinalizada, os.Status())
 	require.Len(t, os.HistoricoStatus(), 2)
 }
 
@@ -524,20 +523,20 @@ func TestEntregar_NaoPermiteTransicaoDeEntregueParaExecucao(t *testing.T) {
 
 	err := os.Entregar(7)
 
-	require.ErrorIs(t, err, ordemservico.ErrTransicaoStatusInvalida)
-	require.Equal(t, ordemservico.StatusEntregue, os.Status())
-	require.False(t, ordemservico.StatusEntregue.PermiteTransicaoPara(ordemservico.StatusEmExecucao))
+	require.ErrorIs(t, err, ErrTransicaoStatusInvalida)
+	require.Equal(t, StatusEntregue, os.Status())
+	require.False(t, StatusEntregue.PermiteTransicaoPara(StatusEmExecucao))
 }
 
 func TestStatusOrdemServicoDefineTransicoesPermitidas(t *testing.T) {
-	permitidas := map[ordemservico.StatusOrdemServico][]ordemservico.StatusOrdemServico{
-		ordemservico.StatusRecebida:            {ordemservico.StatusEmDiagnostico},
-		ordemservico.StatusEmDiagnostico:       {ordemservico.StatusAguardandoAprovacao},
-		ordemservico.StatusAguardandoAprovacao: {ordemservico.StatusAprovada, ordemservico.StatusRejeitada},
-		ordemservico.StatusRejeitada:           {ordemservico.StatusAguardandoAprovacao},
-		ordemservico.StatusAprovada:            {ordemservico.StatusEmExecucao, ordemservico.StatusAguardandoAprovacao},
-		ordemservico.StatusEmExecucao:          {ordemservico.StatusFinalizada},
-		ordemservico.StatusFinalizada:          {ordemservico.StatusEntregue},
+	permitidas := map[StatusOrdemServico][]StatusOrdemServico{
+		StatusRecebida:            {StatusEmDiagnostico},
+		StatusEmDiagnostico:       {StatusAguardandoAprovacao},
+		StatusAguardandoAprovacao: {StatusAprovada, StatusRejeitada},
+		StatusRejeitada:           {StatusAguardandoAprovacao},
+		StatusAprovada:            {StatusEmExecucao, StatusAguardandoAprovacao},
+		StatusEmExecucao:          {StatusFinalizada},
+		StatusFinalizada:          {StatusEntregue},
 	}
 
 	for atual, proximos := range permitidas {
@@ -546,13 +545,13 @@ func TestStatusOrdemServicoDefineTransicoesPermitidas(t *testing.T) {
 		}
 	}
 
-	require.False(t, ordemservico.StatusRecebida.PermiteTransicaoPara(ordemservico.StatusFinalizada))
-	require.False(t, ordemservico.StatusEntregue.PermiteTransicaoPara(ordemservico.StatusRecebida))
+	require.False(t, StatusRecebida.PermiteTransicaoPara(StatusFinalizada))
+	require.False(t, StatusEntregue.PermiteTransicaoPara(StatusRecebida))
 }
 
-func osParaFluxoOrcamento(t *testing.T) *ordemservico.OrdemServico {
+func osParaFluxoOrcamento(t *testing.T) *OrdemServico {
 	t.Helper()
-	o, err := ordemservico.NewOrdemServico("OS-20260830-a1b2c3d4e5f6", 10, 20, 52300, "", "", 1)
+	o, err := NewOrdemServico("OS-20260830-a1b2c3d4e5f6", 10, 20, 52300, "", "", 1)
 	require.NoError(t, err)
 	o.AtribuirID(42)
 	return o
@@ -565,9 +564,9 @@ func TestOrdemServico_FluxoOrcamento_Aprovar(t *testing.T) {
 	require.NoError(t, o.EnviarParaAprovacao(2))
 
 	require.NoError(t, o.AprovarOrcamento())
-	require.Equal(t, ordemservico.StatusAprovada, o.Status())
+	require.Equal(t, StatusAprovada, o.Status())
 	ultimo := o.HistoricoStatus()[len(o.HistoricoStatus())-1]
-	require.Equal(t, ordemservico.StatusAprovada, ultimo.Status())
+	require.Equal(t, StatusAprovada, ultimo.Status())
 	require.Equal(t, uint64(2), ultimo.AlteradoPor())
 }
 
@@ -579,9 +578,9 @@ func TestOrdemServico_OrcamentoAprovadoPodeVoltarParaAguardandoAposAlteracao(t *
 	require.NoError(t, o.AprovarOrcamento())
 
 	require.NoError(t, o.EnviarParaAprovacao(3))
-	require.Equal(t, ordemservico.StatusAguardandoAprovacao, o.Status())
+	require.Equal(t, StatusAguardandoAprovacao, o.Status())
 	ultimo := o.HistoricoStatus()[len(o.HistoricoStatus())-1]
-	require.Equal(t, ordemservico.StatusAguardandoAprovacao, ultimo.Status())
+	require.Equal(t, StatusAguardandoAprovacao, ultimo.Status())
 	require.Equal(t, uint64(3), ultimo.AlteradoPor())
 }
 
@@ -592,13 +591,13 @@ func TestOrdemServico_FluxoOrcamento_RejeitarRegistraMotivoEPermiteReenvio(t *te
 	require.NoError(t, o.EnviarParaAprovacao(2))
 
 	require.NoError(t, o.RejeitarOrcamento("Valor acima do esperado"))
-	require.Equal(t, ordemservico.StatusRejeitada, o.Status())
+	require.Equal(t, StatusRejeitada, o.Status())
 	historico := o.HistoricoStatus()
 	require.Equal(t, "Valor acima do esperado", historico[len(historico)-1].Motivo())
 	require.Equal(t, uint64(2), historico[len(historico)-1].AlteradoPor())
 
 	require.NoError(t, o.EnviarParaAprovacao(2))
-	require.Equal(t, ordemservico.StatusAguardandoAprovacao, o.Status())
+	require.Equal(t, StatusAguardandoAprovacao, o.Status())
 }
 
 func TestOrdemServico_RejeitarOrcamento_ExigeMotivo(t *testing.T) {
@@ -608,13 +607,18 @@ func TestOrdemServico_RejeitarOrcamento_ExigeMotivo(t *testing.T) {
 	require.NoError(t, o.EnviarParaAprovacao(2))
 
 	err := o.RejeitarOrcamento("  ")
-	require.ErrorIs(t, err, ordemservico.ErrMotivoRejeicaoObrigatorio)
-	require.Equal(t, ordemservico.StatusAguardandoAprovacao, o.Status())
+	require.ErrorIs(t, err, ErrMotivoRejeicaoObrigatorio)
+	require.Equal(t, StatusAguardandoAprovacao, o.Status())
 }
 
 func TestOrdemServico_AprovarERejeitar_SomenteAguardandoAprovacao(t *testing.T) {
 	o := osParaFluxoOrcamento(t)
 
-	require.ErrorIs(t, o.AprovarOrcamento(), ordemservico.ErrTransicaoStatusInvalida)
-	require.ErrorIs(t, o.RejeitarOrcamento("motivo"), ordemservico.ErrTransicaoStatusInvalida)
+	require.ErrorIs(t, o.AprovarOrcamento(), ErrTransicaoStatusInvalida)
+	require.ErrorIs(t, o.RejeitarOrcamento("motivo"), ErrTransicaoStatusInvalida)
+}
+
+func TestUltimoAlteradoPorSemHistorico(t *testing.T) {
+	var os OrdemServico
+	require.Zero(t, os.ultimoAlteradoPor())
 }

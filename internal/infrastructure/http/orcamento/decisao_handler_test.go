@@ -110,6 +110,19 @@ func TestDecisaoHandler_Aprovar_ClienteDeOutraOS_Retorna403(t *testing.T) {
 	require.Equal(t, http.StatusForbidden, rec.Code)
 }
 
+func TestDecisaoHandler_AprovarSemClaims_Retorna401(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	h := httporcamento.NewDecisaoHandler(nil, nil)
+	router := gin.New()
+	router.PATCH("/v1/ordens-servico/:id/orcamento/aprovar", h.Aprovar)
+
+	req := httptest.NewRequest(http.MethodPatch, "/v1/ordens-servico/42/orcamento/aprovar", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
 func TestDecisaoHandler_Rejeitar_ComSucesso_Retorna200(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := ordemservicomocks.NewOrdemServicoRepository(t)

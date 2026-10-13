@@ -64,6 +64,32 @@ func TestConsultarOrdemServicoPorIDUseCase_ClienteDeOutraOSRetornaForbidden(t *t
 	require.Equal(t, shared.KindForbidden, appErr.Kind)
 }
 
+func TestConsultarOrdemServicoPorIDUseCase_ClienteSemIDRetornaUnauthorized(t *testing.T) {
+	repository := mocks.NewOrdemServicoRepository(t)
+	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(ordemServicoConsultaValida(t), nil)
+
+	_, err := app.NewConsultarOrdemServicoPorIDUseCase(repository).Executar(context.Background(), app.ConsultarOrdemServicoPorIDInput{
+		ID: 42, TipoSolicitante: domainauth.TipoCliente,
+	})
+
+	var appErr *shared.AppError
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindUnauthorized, appErr.Kind)
+}
+
+func TestConsultarOrdemServicoPorIDUseCase_TipoSolicitanteDesconhecidoRetornaUnauthorized(t *testing.T) {
+	repository := mocks.NewOrdemServicoRepository(t)
+	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(ordemServicoConsultaValida(t), nil)
+
+	_, err := app.NewConsultarOrdemServicoPorIDUseCase(repository).Executar(context.Background(), app.ConsultarOrdemServicoPorIDInput{
+		ID: 42, SolicitanteID: 10,
+	})
+
+	var appErr *shared.AppError
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindUnauthorized, appErr.Kind)
+}
+
 func TestConsultarOrdemServicoPorIDUseCase_NaoEncontrada(t *testing.T) {
 	repository := mocks.NewOrdemServicoRepository(t)
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(999)).Return(nil, domain.ErrOrdemServicoNaoEncontrada)

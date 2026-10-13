@@ -33,10 +33,7 @@ func (uc *ListarServicosUseCase) Executar(
 		return ListarServicosOutput{}, shared.NewInternalError("erro ao listar serviços", err)
 	}
 
-	items := make([]ServicoOutput, 0, len(page.Items))
-	for _, entity := range page.Items {
-		items = append(items, toOutput(entity))
-	}
+	items := toOutputList(page.Items)
 
 	return ListarServicosOutput{
 		Items:      items,

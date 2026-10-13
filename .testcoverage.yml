@@ -8,10 +8,7 @@ exclude:
     - /mocks/
     - \.gen\.go$
     - \.pb\.go$
-    - routes\.go$
     - ^cmd/
     - ^docs/swagger(/|$)
-    - ^migrations$
-    - ^test/helpers$
-    - ^internal/infrastructure/wiring$
-    - ^internal/infrastructure/persistence/mysql$
+    - ^migrations/
+    - ^test/helpers/
