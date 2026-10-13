@@ -8,7 +8,10 @@ exclude:
     - /mocks/
     - \.gen\.go$
     - \.pb\.go$
-    - ^github\.com/muriloperosa/soat-architecture/internal/application/query$
-    - ^github\.com/muriloperosa/soat-architecture/internal/infrastructure/http/health$
-    - ^github\.com/muriloperosa/soat-architecture/internal/infrastructure/wiring$
-    - ^github\.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql$
+    - routes\.go$
+    - ^cmd/
+    - ^docs/swagger(/|$)
+    - ^migrations$
+    - ^test/helpers$
+    - ^internal/infrastructure/wiring$
+    - ^internal/infrastructure/persistence/mysql$

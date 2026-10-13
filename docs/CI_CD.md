@@ -79,9 +79,9 @@ go build ./...
 
 O alvo atual `make test` executa os testes unitários com cobertura. A compilação explícita continua útil porque deixa essa garantia visível como etapa própria.
 
-O gate de cobertura é **mínimo de 80% por pacote elegível** nos pacotes de `internal/application`, `internal/domain` e `internal/infrastructure` que possam ser testados de forma significativa. O workflow usa `go-test-coverage` com configuração versionada em `.testcoverage.yml`, que exclui mocks/código gerado e os pacotes sem lógica testável documentados na configuração. A regra é aplicada imediatamente: pacotes abaixo de 80% fazem o job falhar e devem receber testes até alcançar a meta. Não há baseline temporário nem tolerância de regressão.
+O gate de cobertura é **mínimo de 80% por pacote elegível** nos pacotes de `internal/application`, `internal/domain` e `internal/infrastructure` que possam ser testados de forma significativa. O workflow usa `go-test-coverage` com configuração versionada em `.testcoverage.yml`. Além de mocks e código gerado, ficam fora do cálculo os executáveis em `cmd`, a documentação Swagger gerada, migrações e helpers de teste, o pacote de composição `wiring`, o pacote raiz de conexão/bootstrap MySQL e os arquivos `routes.go`, que apenas registram rotas e são validados nos testes de integração. Os pacotes de repositório por domínio continuam sujeitos ao limite. Pacotes elegíveis abaixo de 80% fazem o job falhar e devem receber testes até alcançar a meta. Não há baseline temporário nem tolerância de regressão.
 
-Na prática, a verificação gera um profile com `go test -coverprofile` e `go-test-coverage` compara cada pacote contra 80%. O resultado é visível no log e o profile é publicado como artefato. Pacotes HTTP e `application/orcamento` ainda abaixo de 80% deixam o check vermelho até que seus testes atinjam a meta.
+Na prática, a verificação gera um profile com `go test -coverprofile` e `go-test-coverage` compara cada pacote elegível contra 80%. O resultado é visível no log e o profile é publicado como artefato.
 
 ### Testes de integração
 
