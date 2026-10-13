@@ -16,15 +16,24 @@ O escopo inicial cobre **CI**: compilação, testes, validações estáticas e s
 
 ```mermaid
 flowchart TD
-    PR[Pull request ou push] --> STATIC[Validações estáticas]
-    STATIC --> UNIT[Testes unitários e build]
-    UNIT --> INTEGRATION[Testes de integração com MySQL]
-    INTEGRATION --> SECURITY[Análises SCA e SAST]
-    SECURITY --> GATE[Checks obrigatórios para merge]
+    PR[Pull request ou push] --> STATIC[Formatação, vet e build]
+    PR --> UNIT[Testes unitários e cobertura]
+    PR --> INTEGRATION[Testes de integração com MySQL]
+    PR --> SECURITY[Análises SCA e SAST]
+    STATIC --> IMAGE[Build da imagem Docker]
+    UNIT --> IMAGE
+    INTEGRATION --> IMAGE
+    STATIC --> GATE[Checks de CI]
+    UNIT --> GATE
+    INTEGRATION --> GATE
+    IMAGE --> GATE
+    SECURITY --> GATE
     MAIN[Execução agendada ou manual] --> DAST[DAST autenticado em stack isolada]
 ```
 
-O diagrama representa a sequência lógica. Em uma implementação, os jobs independentes podem executar em paralelo, reservando dependências (`needs`) para o job final que reúne os resultados.
+Os jobs de qualidade (formatação, vet e build), testes unitários/cobertura, integração, SCA e SAST são independentes e executam em paralelo. Apenas etapas com dependência de dados ou resultados devem compartilhar job ou declarar `needs`; por exemplo, gerar o profile precede a checagem de cobertura, e gerar o JSON do scanner precede a política correspondente.
+
+Paralelismo reduz o tempo de espera, mas não reduz necessariamente o consumo de minutos: os minutos de todos os jobs continuam sendo somados. Para controlar uso/custo, limite execuções redundantes com `concurrency` (já configurado), mantenha jobs focados e curtos e use filtros de paths para não rodar a suíte quando apenas Markdown mudar. O workflow ignora `**/*.md` em pushes e PRs; qualquer mudança de código, configuração ou workflow continua disparando a CI. `workflow_dispatch` sempre permite executar manualmente, inclusive para validar apenas alterações documentais. Não execute testes simultaneamente duplicados: cobertura já roda os testes unitários e deve ser a mesma execução que alimenta o verificador de cobertura.
 
 ## Gatilhos
 
@@ -42,6 +51,10 @@ Não use `pull_request_target` para executar código do pull request. Esse event
 
 ## Jobs propostos
 
+O workflow implementado separa as verificações em jobs paralelos: `quality`, `generated`, `unit`, `integration`, `sca` e `sast`. Isso permite que falhas rápidas de formatação/build apareçam sem aguardar os testes mais longos. O job `generated` executa as mesmas gerações de mocks e Swagger do hook local e falha se os arquivos gerados não estiverem commitados. Após qualidade e testes passarem, `image` constrói a imagem Docker sem publicar. O perfil de cobertura e os relatórios de segurança são processados no mesmo job que os gera, evitando upload/download entre jobs.
+
+Cada job possui `timeout-minutes` para limitar consumo em execução travada. Os checkouts usam `actions/checkout@v4` com `persist-credentials: false`, pois nenhum job precisa enviar alterações de volta ao repositório. `setup-go` está fixado por SHA; `upload-artifact` usa a versão `v7.0.2`.
+
 ### Validação estática
 
 Executada em runner Linux hospedado pelo GitHub:
@@ -50,9 +63,8 @@ Executada em runner Linux hospedado pelo GitHub:
 2. Instalação da versão de Go indicada pelo `go.mod`, atualmente `1.26.6`.
 3. Cache de dependências usando o `go.sum`.
 4. Verificação de formatação (`gofmt -l`).
-5. Verificação de módulos (`go mod tidy` sem alterações pendentes, se o projeto adotar essa regra).
-6. `go vet ./...`.
-7. Validação de geração de mocks e Swagger, quando os geradores forem instalados em versões controladas.
+5. `go vet ./...`.
+6. Validação de geração de mocks e Swagger em job próprio, com versões controladas dos geradores.
 
 Para geração, gere os arquivos em um checkout limpo e falhe se `git diff --exit-code` encontrar alterações. Dessa forma, o pipeline acusa arquivos derivados desatualizados sem modificar o commit.
 
@@ -82,6 +94,10 @@ go test -tags integration ./test/integration/... -v
 ```
 
 Use um runner hospedado com Docker disponível. Não é necessário iniciar um serviço MySQL adicional no workflow: o próprio Testcontainers gerencia o banco de teste. Não passe `.env` nem credenciais de produção; as configurações usadas no teste são efêmeras.
+
+### Build da imagem Docker
+
+Depois de passarem qualidade, testes unitários/cobertura e integração, o job `image` executa `docker build` usando o Dockerfile do projeto. Essa etapa valida a imagem que futuramente poderá ser publicada; no estado atual, a imagem é construída apenas no runner e não é enviada a um registry.
 
 ### SCA: vulnerabilidades em dependências
 
@@ -137,7 +153,7 @@ Nunca aponte esse scan para produção ou para o banco de desenvolvimento. A sta
 - Defina `permissions` explicitamente no workflow e, se possível, por job. Para CI de leitura, normalmente basta `contents: read`.
 - Não exponha secrets nos jobs de `pull_request`, em especial para PRs de forks.
 - Não execute código de PR com `pull_request_target` e contexto privilegiado.
-- Fixe actions de terceiros por SHA completo revisado, em vez de tags mutáveis. Registre uma política para atualizar esses SHAs regularmente.
+- Fixe actions de terceiros por SHA completo revisado, em vez de tags mutáveis. O workflow mantém `actions/checkout@v4` como exceção explícita; para imutabilidade estrita, fixe também essa action por SHA. Registre uma política para atualizar referências regularmente.
 - Use versões explícitas de Go e ferramentas; evite instalar ferramentas com `@latest` em cada execução.
 - Não faça upload de `.env`, tokens, dumps do banco ou relatórios que contenham dados sensíveis.
 - Separe permissões e segredos de deploy da CI. O workflow de deploy deve usar GitHub Environments, aprovação quando apropriado e credenciais de curta duração sempre que possível.
@@ -156,8 +172,8 @@ Cache é para dependências baixadas e aceleração. Artefatos são para resulta
 | Testes de integração | `make test-integration` | Testcontainers requer Docker |
 | Lint estático | `make lint` (`go vet ./...`) | Considere adicionar formatação como check explícito |
 | Build | `go build ./...` | Checa todos os pacotes compiláveis |
-| Mocks | `make mocks` | Verificar diff e fixar versão do gerador |
-| Swagger | `make swagger` | Verificar diff e fixar versão do gerador |
+| Mocks e Swagger | `mockery` + `swag init` | Regenera em checkout limpo e falha se houver diff |
+| Imagem Docker | `docker build` | Executado após qualidade e testes; ainda sem push |
 | Cobertura | `go test ./... -coverprofile=coverage.out` + `go-test-coverage` | 80% por pacote elegível; falha direta abaixo da meta |
 | SCA | `govulncheck -json ./...` + `check_security.go` | Bloqueia alta/crítica alcançável; publica JSON |
 | SAST | `gosec -fmt=json ...` + `check_security.go` | Bloqueia alta/crítica com alta confiança; publica JSON |
