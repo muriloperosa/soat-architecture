@@ -81,7 +81,7 @@ O alvo atual `make test` executa os testes unitários com cobertura. A compilaç
 
 O gate de cobertura é **mínimo de 80% por pacote elegível** nos pacotes de `internal/application`, `internal/domain` e `internal/infrastructure` que possam ser testados de forma significativa. O workflow usa `go-test-coverage` com configuração versionada em `.testcoverage.yml`. Além de mocks e código gerado, ficam fora do cálculo os executáveis em `cmd`, a documentação Swagger gerada, migrações e helpers de teste, e os arquivos `routes.go`, que apenas registram rotas e são validados nos testes de integração. O pacote de composição `wiring` e o pacote raiz de conexão/bootstrap MySQL permanecem no gate; seus construtores são exercitados com dependências controladas. Os pacotes de repositório por domínio também continuam sujeitos ao limite. Pacotes elegíveis abaixo de 80% fazem o job falhar e devem receber testes até alcançar a meta. Não há baseline temporário nem tolerância de regressão.
 
-Na prática, a verificação gera um profile com `go test -coverprofile` e `go-test-coverage` compara cada pacote elegível contra 80%. O resultado é visível no log e o profile é publicado como artefato.
+Na prática, a verificação gera um profile com `go test -coverprofile` e `go-test-coverage` compara cada pacote elegível contra 80%. O total de cobertura e o resultado do gate também aparecem em uma tabela no resumo da execução do GitHub Actions. O profile completo continua publicado como artefato para inspeção detalhada.
 
 ### Testes de integração
 

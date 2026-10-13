@@ -109,7 +109,38 @@ jobs:
         run: go install github.com/vladopajic/go-test-coverage/v2@v2.20.0
 
       - name: Enforce 80% coverage per package
+        id: coverage_gate
         run: "$(go env GOPATH)/bin/go-test-coverage --config=.testcoverage.yml"
+
+      - name: Add coverage summary
+        if: always() && hashFiles('coverage.out') != ''
+        env:
+          COVERAGE_GATE_RESULT: ${{ steps.coverage_gate.outcome }}
+        shell: bash
+        run: |
+          total_coverage="$(go tool cover -func="$COVERAGE_FILE" | awk '/^total:/ { print $3 }')"
+          if [[ -z "$total_coverage" ]]; then
+            echo "Could not read total coverage from $COVERAGE_FILE" >&2
+            exit 1
+          fi
+
+          case "$COVERAGE_GATE_RESULT" in
+            success) gate_result="✅ Aprovado" ;;
+            failure) gate_result="❌ Falhou" ;;
+            *) gate_result="⏭️ Não executado" ;;
+          esac
+
+          {
+            echo "## Cobertura de testes"
+            echo
+            echo "| Métrica | Resultado |"
+            echo "| --- | ---: |"
+            echo "| Cobertura total | **${total_coverage}** |"
+            echo "| Mínimo por pacote | **80%** |"
+            echo "| Gate de cobertura | ${gate_result} |"
+            echo
+            echo "O perfil completo está disponível no artefato `go-coverage`."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload coverage profile
         if: always() && hashFiles('coverage.out') != ''
