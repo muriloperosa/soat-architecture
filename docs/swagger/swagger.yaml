@@ -559,8 +559,14 @@ definitions:
       preco:
         example: 89.9
         type: number
+      quantidade_disponivel:
+        example: 16
+        type: integer
       quantidade_em_estoque:
         example: 20
+        type: integer
+      quantidade_reservada:
+        example: 4
         type: integer
     type: object
   peca.ReporEstoqueRequest:
@@ -1434,7 +1440,11 @@ paths:
   /v1/ordens-servico:
     get:
       description: Lista Ordens de Serviço com paginação, ordenação e filtros diretos
-        por campo. Usuários do tipo cliente visualizam somente as próprias Ordens
+        por campo. Sem o parâmetro order, prioriza RECEBIDA, EM_DIAGNOSTICO, AGUARDANDO_APROVACAO,
+        APROVADA/REJEITADA e EM_EXECUCAO, nessa ordem; dentro de cada prioridade,
+        mostra primeiro as OS mais antigas (data_cadastro ASC). FINALIZADA e ENTREGUE
+        são excluídas da listagem. Ao informar order, a ordenação padrão por status
+        é substituída. Usuários do tipo cliente visualizam somente as próprias Ordens
         de Serviço.
       parameters:
       - default: 1
@@ -1443,8 +1453,8 @@ paths:
         minimum: 1
         name: page
         type: integer
-      - default: id
-        description: Campo de ordenação
+      - description: Campo de ordenação; omitido, usa prioridade do status e data
+          de cadastro crescente
         enum:
         - id
         - numero

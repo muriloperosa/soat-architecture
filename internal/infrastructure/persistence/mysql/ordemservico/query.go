@@ -62,6 +62,6 @@ func NewQueryBuilder() *mysqlquery.Builder {
 				Operators: mysqlquery.DateOperators,
 			},
 		},
-		"id",
+		"status",
 	)
 }
