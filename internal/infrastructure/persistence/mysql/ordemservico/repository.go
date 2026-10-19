@@ -91,6 +91,7 @@ func (r *Repository) Listar(
 	ctx context.Context,
 	params domainquery.Params,
 ) (domainquery.Page[*domain.OrdemServico], error) {
+	ordenacaoPadrao := params.Order == ""
 	normalized, err := r.queryBuilder.Normalize(params)
 	if err != nil {
 		return domainquery.Page[*domain.OrdemServico]{}, err
@@ -103,6 +104,7 @@ func (r *Repository) Listar(
 	if err != nil {
 		return domainquery.Page[*domain.OrdemServico]{}, err
 	}
+	filtered = filtered.Where("status NOT IN (?, ?)", domain.StatusFinalizada, domain.StatusEntregue)
 
 	var total int64
 	if err = filtered.Count(&total).Error; err != nil {
@@ -110,7 +112,19 @@ func (r *Repository) Listar(
 	}
 
 	models := make([]OrdemServicoModel, 0)
-	if err = r.queryBuilder.ApplyPagination(filtered, normalized).Find(&models).Error; err != nil {
+	var query *gorm.DB
+	if ordenacaoPadrao {
+		offset := (normalized.Page - 1) * r.queryBuilder.PageSize()
+		query = filtered.
+			Order("CASE status WHEN 'RECEBIDA' THEN 1 WHEN 'EM_DIAGNOSTICO' THEN 2 WHEN 'AGUARDANDO_APROVACAO' THEN 3 WHEN 'APROVADA' THEN 4 WHEN 'REJEITADA' THEN 4 WHEN 'EM_EXECUCAO' THEN 5 ELSE 6 END ASC").
+			Order("data_cadastro ASC").
+			Order("id ASC").
+			Offset(offset).
+			Limit(r.queryBuilder.PageSize())
+	} else {
+		query = r.queryBuilder.ApplyPagination(filtered, normalized)
+	}
+	if err = query.Find(&models).Error; err != nil {
 		return domainquery.Page[*domain.OrdemServico]{}, err
 	}
 

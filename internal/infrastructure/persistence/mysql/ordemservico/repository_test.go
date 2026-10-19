@@ -155,11 +155,13 @@ func TestRepositoryListarComPaginacaoOrdenacaoEFiltros(t *testing.T) {
 
 	mockDB.
 		ExpectQuery(
-			"SELECT count\\(\\*\\) FROM .*ordens_servico.*WHERE.*status.*=.*\\?.*AND.*cliente_id.*=.*\\?",
+			"SELECT count\\(\\*\\) FROM .*ordens_servico.*WHERE.*status.*=.*\\?.*AND.*cliente_id.*=.*\\?.*AND.*status NOT IN \\(\\?, \\?\\)",
 		).
 		WithArgs(
 			"RECEBIDA",
 			uint64(10),
+			domain.StatusFinalizada,
+			domain.StatusEntregue,
 		).
 		WillReturnRows(
 			sqlmock.NewRows([]string{"count"}).
@@ -168,11 +170,13 @@ func TestRepositoryListarComPaginacaoOrdenacaoEFiltros(t *testing.T) {
 
 	mockDB.
 		ExpectQuery(
-			"SELECT \\* FROM .*ordens_servico.*WHERE.*status.*=.*\\?.*AND.*cliente_id.*=.*\\?.*ORDER BY.*data_cadastro.*DESC.*LIMIT.*OFFSET.*",
+			"SELECT \\* FROM .*ordens_servico.*WHERE.*status.*=.*\\?.*AND.*cliente_id.*=.*\\?.*AND.*status NOT IN \\(\\?, \\?\\).*ORDER BY.*data_cadastro.*DESC.*LIMIT.*OFFSET.*",
 		).
 		WithArgs(
 			"RECEBIDA",
 			uint64(10),
+			domain.StatusFinalizada,
+			domain.StatusEntregue,
 			20,
 			20,
 		).
@@ -198,9 +202,11 @@ func TestRepositoryListarUsaPadroes(t *testing.T) {
 	db, mockDB := newRepositoryTestDB(t)
 	repository := NewOrdemServicoRepository(db)
 
-	mockDB.ExpectQuery("SELECT count\\(\\*\\) FROM .*ordens_servico.*").
+	mockDB.ExpectQuery("SELECT count\\(\\*\\) FROM .*ordens_servico.*WHERE status NOT IN \\(\\?, \\?\\)").
+		WithArgs(domain.StatusFinalizada, domain.StatusEntregue).
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
-	mockDB.ExpectQuery("SELECT \\* FROM .*ordens_servico.* ORDER BY id ASC LIMIT .*").
+	mockDB.ExpectQuery("SELECT \\* FROM .*ordens_servico.*WHERE status NOT IN \\(\\?, \\?\\) ORDER BY CASE status WHEN 'RECEBIDA' THEN 1 WHEN 'EM_DIAGNOSTICO' THEN 2 WHEN 'AGUARDANDO_APROVACAO' THEN 3 WHEN 'APROVADA' THEN 4 WHEN 'REJEITADA' THEN 4 WHEN 'EM_EXECUCAO' THEN 5 ELSE 6 END ASC,data_cadastro ASC,id ASC LIMIT .*").
+		WithArgs(domain.StatusFinalizada, domain.StatusEntregue, 20).
 		WillReturnRows(sqlmock.NewRows(ordemServicoColumns()))
 
 	page, err := repository.Listar(context.Background(), query.Params{})
@@ -209,7 +215,7 @@ func TestRepositoryListarUsaPadroes(t *testing.T) {
 	require.Equal(t, 1, page.Page)
 	require.Equal(t, 20, page.PageSize)
 	require.Zero(t, page.TotalPages)
-	require.Equal(t, "id", page.Order)
+	require.Equal(t, "status", page.Order)
 	require.Equal(t, query.DirectionASC, page.Direction)
 	require.NoError(t, mockDB.ExpectationsWereMet())
 }
