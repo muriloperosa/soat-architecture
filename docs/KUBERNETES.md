@@ -40,7 +40,7 @@ Todos os recursos ficam no namespace `oficina`.
 |---|---|---|
 | Deployment | `oficina-api` | Pods da API, com probes, limites de recurso e encerramento gracioso |
 | Service | `oficina-api` | Endereço estável da API. `NodePort` no Minikube, `LoadBalancer` no EKS |
-| HorizontalPodAutoscaler | `oficina-api` | Escala a API de 2 a 6 réplicas por CPU (70%) e memória (80%) |
+| HorizontalPodAutoscaler | `oficina-api` | Escala a API de 2 a 6 réplicas por CPU (70%) e memória (90%) |
 | ConfigMap | `oficina-api-config` | Variáveis de ambiente não sensíveis (porta, host e nome do banco, pool de conexões, TTL do JWT) |
 | Secret | `oficina-api-secrets` | `DB_PASSWORD` e `JWT_SECRET`, gerados a partir de um arquivo local que não vai para o git |
 | Job | `oficina-migrate` | Aplica as migrations de `migrations/mysql/` uma vez a cada deploy |
@@ -90,15 +90,15 @@ kubectl kustomize k8s/migrate
 
 | Ponto | Configuração | Motivo |
 |---|---|---|
-| Requests e limits | API: requests `100m` CPU / `64Mi`, limits `500m` / `256Mi` | O HPA calcula a utilização em relação aos requests. Sem eles as metas ficam `<unknown>` e nada escala. Os limits impedem que um pod sozinho consuma o nó |
-| `GOMEMLIMIT` | `230MiB`, cerca de 90% do limite de memória | O Go ajusta o `GOMAXPROCS` ao limite de CPU do container, mas não enxerga o limite de memória. Sem `GOMEMLIMIT` o coletor de lixo só roda quando o heap dobra de tamanho, e sob carga o processo pode passar dos 256Mi antes de uma coleta e ser morto pelo kernel (OOMKilled). Com o limite, o GC fica mais agressivo perto dele. Os 10% restantes cobrem a memória fora do heap (pilhas, binário). Se o limite do container mudar, este valor precisa acompanhar |
+| Requests e limits | API: CPU `100m` de request e `500m` de limit; memória `128Mi` de request e de limit | O HPA calcula a utilização em relação aos requests. Sem eles as metas ficam `<unknown>` e nada escala. O CPU tem folga entre request e limit para absorver picos. A memória tem request igual ao limit: o pod reserva no nó tudo o que pode usar, então não é despejado primeiro quando falta memória no nó, e a porcentagem que o HPA enxerga é a mesma que leva ao OOMKill |
+| `GOMEMLIMIT` | `115MiB`, cerca de 90% do limite de memória | O Go ajusta o `GOMAXPROCS` ao limite de CPU do container, mas não enxerga o limite de memória. Sem `GOMEMLIMIT` o coletor de lixo só roda quando o heap dobra de tamanho, e sob carga o processo pode passar dos 128Mi antes de uma coleta e ser morto pelo kernel (OOMKilled). Com o limite, o GC fica mais agressivo perto dele. Os 10% restantes cobrem a memória fora do heap (pilhas, binário). Se o limite do container mudar, este valor precisa acompanhar |
 | `startupProbe` | `GET /v1/health/live`, a cada 2s, até 15 falhas | Dá até 30s para o processo subir antes das outras probes começarem a contar |
 | `livenessProbe` | `GET /v1/health/live`, a cada 10s, 3 falhas | Só confirma que o processo responde. Não consulta o banco: se consultasse, uma queda do MySQL reiniciaria todas as réplicas em loop sem resolver nada |
 | `readinessProbe` | `GET /v1/health/ready`, a cada 5s, 2 falhas | Faz ping no MySQL. Se falhar, o pod sai do Service (para de receber requisições) mas não é reiniciado, e volta sozinho quando o banco responder |
 | Encerramento | `preStop: sleep 5`, shutdown da API com 15s, `terminationGracePeriodSeconds: 30` | Quando o HPA reduz réplicas ou um rollout troca pods, o Service leva alguns segundos para tirar o pod da lista. O `sleep` cobre esse intervalo; depois a API para de aceitar conexões e termina as requisições em andamento (`cmd/api/serve.go`) |
 | Rollout | `maxSurge: 1`, `maxUnavailable: 0` | Um pod novo precisa estar pronto antes de um antigo sair |
 | Segurança do container | usuário 1000, sem root, filesystem somente leitura, sem capabilities | A API não escreve em disco; o usuário 1000 é o mesmo criado no `Dockerfile` |
-| HPA | `autoscaling/v2`, 2 a 6 réplicas, CPU 70%, memória 80% | O enunciado pede escala por CPU e memória. O mínimo de 2 mantém a API no ar durante rollouts |
+| HPA | `autoscaling/v2`, 2 a 6 réplicas, CPU 70%, memória 90% | O enunciado pede escala por CPU e memória. O mínimo de 2 mantém a API no ar durante rollouts. A meta de memória é alta de propósito: o Go demora a devolver memória ao sistema depois de um pico, e uma meta baixa deixaria a métrica de memória acima do alvo por muito tempo, impedindo o HPA de reduzir réplicas. Na prática a CPU é quem dispara a escala, e a memória funciona como proteção contra um consumo anormal |
 | Redução de réplicas | `scaleDown.stabilizationWindowSeconds: 60` | O padrão é 300s. Um minuto evita oscilação e deixa a redução visível na demonstração |
 | Sem `replicas` no Deployment | o HPA controla a quantidade | Se o campo estivesse no YAML, cada `kubectl apply` voltaria a contagem ao valor fixo, desfazendo a escala |
 | Pool de conexões | `DB_MAX_OPEN_CONNS=10` | 6 réplicas x 10 = 60 conexões, abaixo do `max_connections` padrão do MySQL (151) |
