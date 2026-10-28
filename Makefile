@@ -1,4 +1,4 @@
-.PHONY: help run build test test-integration coverage lint up down db-up db-down tidy vendor setup dev debug mocks swagger hooks-install hooks-uninstall create-user sonar-up sonar-down sonar-scan sec-sca sec-sast sec-dast k8s-check k8s-build k8s-apply k8s-migrate k8s-deploy k8s-status k8s-url k8s-delete load-test
+.PHONY: help run build test test-integration coverage lint up down db-up db-down tidy vendor setup dev debug mocks swagger hooks-install hooks-uninstall create-user sonar-up sonar-down sonar-scan sec-sca sec-sast sec-dast k8s-check k8s-render k8s-build k8s-apply k8s-migrate k8s-deploy k8s-status k8s-url k8s-delete load-test
 
 GREEN := $(shell tput setaf 2)
 RESET := $(shell tput sgr0)
@@ -46,7 +46,7 @@ help:
 	@echo "  $(GREEN)k8s-build$(RESET):     Build the API image inside Minikube (oficina-api:local)"
 	@echo "  $(GREEN)k8s-apply$(RESET):     Apply the Kubernetes overlay (K8S_OVERLAY=minikube, KUBE_CONTEXT=minikube)"
 	@echo "  $(GREEN)k8s-migrate$(RESET):   Run database migrations as a Kubernetes Job"
-	@echo "  $(GREEN)k8s-deploy$(RESET):    k8s-apply + k8s-migrate + restart and wait for the API rollout"
+	@echo "  $(GREEN)k8s-deploy$(RESET):    Apply config, run migrations, then roll out the API"
 	@echo "  $(GREEN)k8s-status$(RESET):    Show pods, services, HPA and jobs in the oficina namespace"
 	@echo "  $(GREEN)k8s-url$(RESET):       Print the API URL exposed by Minikube"
 	@echo "  $(GREEN)k8s-delete$(RESET):    Remove everything created by k8s-deploy, including the namespace and MySQL data"
@@ -211,7 +211,15 @@ k8s-check:
 k8s-build:
 	minikube image build -t oficina-api:local .
 
-k8s-apply: k8s-check
+# Diretório que o kubectl aplica: o próprio overlay no Minikube; fora dele,
+# a kustomization gerada em k8s-render, que fixa a tag da imagem.
+ifeq ($(K8S_OVERLAY),minikube)
+K8S_APPLY_DIR := k8s/overlays/minikube
+else
+K8S_APPLY_DIR := $(K8S_BUILD_DIR)
+endif
+
+k8s-render: k8s-check
 	@if [ ! -f k8s/overlays/$(K8S_OVERLAY)/secrets.env ]; then \
 		echo "k8s/overlays/$(K8S_OVERLAY)/secrets.env não existe. Copie de secrets.env.example e preencha."; \
 		exit 1; \
@@ -221,7 +229,6 @@ k8s-apply: k8s-check
 			echo "Imagem oficina-api:local não existe no Minikube. Rode make k8s-build."; \
 			exit 1; \
 		fi; \
-		$(KUBECTL) apply -k k8s/overlays/minikube; \
 	else \
 		mkdir -p $(K8S_BUILD_DIR); \
 		printf '%s\n' \
@@ -235,8 +242,10 @@ k8s-apply: k8s-check
 			'    newTag: "$(IMAGE_TAG)"' \
 			> $(K8S_BUILD_DIR)/kustomization.yaml; \
 		echo "imagem: $(IMAGE_NAME):$(IMAGE_TAG)"; \
-		$(KUBECTL) apply -k $(K8S_BUILD_DIR); \
 	fi
+
+k8s-apply: k8s-render
+	$(KUBECTL) apply -k $(K8S_APPLY_DIR)
 
 k8s-migrate: k8s-check
 	@if [ "$(K8S_OVERLAY)" = "minikube" ]; then \
@@ -260,8 +269,30 @@ k8s-migrate: k8s-check
 	done; \
 	echo "timeout esperando job/oficina-migrate"; exit 1
 
-k8s-deploy: k8s-apply k8s-migrate
-	$(KUBECTL) -n $(K8S_NAMESPACE) rollout restart deployment/oficina-api
+# Ordem do deploy:
+#   1. Primeiro deploy (namespace ainda não existe): aplica tudo, porque o Job
+#      de migration depende do namespace, do ConfigMap, do Secret e, no
+#      Minikube, do MySQL. Deploys seguintes: aplica só ConfigMap e Secret
+#      (label app.kubernetes.io/component=config), para o Job usar a
+#      configuração nova.
+#   2. Roda as migrations, enquanto a versão anterior da API segue atendendo.
+#   3. Aplica o restante. Se o template do pod mudou (tag nova no EKS), o próprio
+#      apply dispara o rollout. Se não mudou (Minikube, com a tag local fixa, ou
+#      só configuração alterada), um rollout restart sobe os pods com a imagem e
+#      a configuração novas.
+k8s-deploy: k8s-render
+	@if $(KUBECTL) get namespace $(K8S_NAMESPACE) >/dev/null 2>&1; then \
+		$(KUBECTL) apply -k $(K8S_APPLY_DIR) -l app.kubernetes.io/component=config; \
+	else \
+		$(KUBECTL) apply -k $(K8S_APPLY_DIR); \
+	fi
+	@$(MAKE) --no-print-directory k8s-migrate
+	@before=$$($(KUBECTL) -n $(K8S_NAMESPACE) get deployment oficina-api -o jsonpath='{.spec.template}' 2>/dev/null | shasum); \
+	$(KUBECTL) apply -k $(K8S_APPLY_DIR) || exit 1; \
+	after=$$($(KUBECTL) -n $(K8S_NAMESPACE) get deployment oficina-api -o jsonpath='{.spec.template}' | shasum); \
+	if [ "$$before" = "$$after" ]; then \
+		$(KUBECTL) -n $(K8S_NAMESPACE) rollout restart deployment/oficina-api; \
+	fi
 	$(KUBECTL) -n $(K8S_NAMESPACE) rollout status deployment/oficina-api --timeout=180s
 
 k8s-status:

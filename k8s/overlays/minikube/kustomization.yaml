@@ -19,6 +19,8 @@ images:
     newTag: local
 generatorOptions:
   disableNameSuffixHash: true
+  labels:
+    app.kubernetes.io/component: config
 
 configMapGenerator:
   - name: oficina-api-config

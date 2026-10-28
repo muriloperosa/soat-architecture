@@ -35,6 +35,9 @@ spec:
                 name: oficina-api-config
             - secretRef:
                 name: oficina-api-secrets
+          env:
+            - name: GOMEMLIMIT
+              value: 230MiB
           resources:
             requests:
               cpu: 100m

@@ -91,6 +91,7 @@ kubectl kustomize k8s/migrate
 | Ponto | Configuração | Motivo |
 |---|---|---|
 | Requests e limits | API: requests `100m` CPU / `64Mi`, limits `500m` / `256Mi` | O HPA calcula a utilização em relação aos requests. Sem eles as metas ficam `<unknown>` e nada escala. Os limits impedem que um pod sozinho consuma o nó |
+| `GOMEMLIMIT` | `230MiB`, cerca de 90% do limite de memória | O Go ajusta o `GOMAXPROCS` ao limite de CPU do container, mas não enxerga o limite de memória. Sem `GOMEMLIMIT` o coletor de lixo só roda quando o heap dobra de tamanho, e sob carga o processo pode passar dos 256Mi antes de uma coleta e ser morto pelo kernel (OOMKilled). Com o limite, o GC fica mais agressivo perto dele. Os 10% restantes cobrem a memória fora do heap (pilhas, binário). Se o limite do container mudar, este valor precisa acompanhar |
 | `startupProbe` | `GET /v1/health/live`, a cada 2s, até 15 falhas | Dá até 30s para o processo subir antes das outras probes começarem a contar |
 | `livenessProbe` | `GET /v1/health/live`, a cada 10s, 3 falhas | Só confirma que o processo responde. Não consulta o banco: se consultasse, uma queda do MySQL reiniciaria todas as réplicas em loop sem resolver nada |
 | `readinessProbe` | `GET /v1/health/ready`, a cada 5s, 2 falhas | Faz ping no MySQL. Se falhar, o pod sai do Service (para de receber requisições) mas não é reiniciado, e volta sozinho quando o banco responder |
@@ -102,7 +103,7 @@ kubectl kustomize k8s/migrate
 | Sem `replicas` no Deployment | o HPA controla a quantidade | Se o campo estivesse no YAML, cada `kubectl apply` voltaria a contagem ao valor fixo, desfazendo a escala |
 | Pool de conexões | `DB_MAX_OPEN_CONNS=10` | 6 réplicas x 10 = 60 conexões, abaixo do `max_connections` padrão do MySQL (151) |
 | Segredos | `secretGenerator` lendo `secrets.env` (no `.gitignore`) | Nenhum valor sensível fica escrito nos YAML do repositório. Só o `secrets.env.example`, com placeholders, é versionado |
-| Nomes fixos | `generatorOptions.disableNameSuffixHash: true` | O Job de migration referencia o ConfigMap e o Secret pelo nome a partir de outra kustomization. Por isso mudanças de configuração exigem `rollout restart`, que o `make k8s-deploy` já faz |
+| Nomes fixos | `generatorOptions.disableNameSuffixHash: true` | O Job de migration referencia o ConfigMap e o Secret pelo nome a partir de outra kustomization. Por isso mudar só a configuração não altera o template do pod nem dispara rollout; o `make k8s-deploy` detecta esse caso e faz o `rollout restart` |
 | Migrations | Job com `migrate/migrate:v4.19.1` | Roda uma vez por deploy, não em cada pod criado pelo HPA, e mantém a imagem da API com um único binário. Detalhes na [ADR 0006](adr/0006-migrations-em-job-kubernetes.md) |
 | Senha do MySQL | o root usa a mesma `DB_PASSWORD` do Secret | A API conecta como root no ambiente local, então uma chave só evita que as duas senhas fiquem diferentes |
 
@@ -203,38 +204,41 @@ Repita este passo sempre que mudar o código Go.
 make k8s-deploy
 ```
 
-O alvo executa, em ordem:
+O alvo faz o deploy em três etapas, nesta ordem:
+
+1. **Configuração.** Se o namespace `oficina` ainda não existe (primeiro deploy), aplica o overlay inteiro, porque o Job de migration precisa do namespace, do ConfigMap, do Secret e do MySQL. Nos deploys seguintes aplica só o ConfigMap e o Secret, selecionados pelo label `app.kubernetes.io/component=config`, para que o Job já use a configuração nova.
+2. **Migrations.** Roda o Job (`make k8s-migrate`) enquanto os pods da versão anterior continuam atendendo.
+3. **API.** Aplica o restante do overlay. Se o template do pod mudou (no EKS, a tag da imagem muda a cada commit), o próprio `apply` dispara o rollout. Se não mudou (no Minikube a tag é sempre `local`, ou quando só a configuração foi alterada), o alvo faz um `rollout restart` para os pods subirem com a imagem e a configuração novas. Em seguida espera o rollout terminar.
+
+Os mesmos passos em comandos `kubectl`, para um deploy em que o namespace já existe:
 
 ```bash
-# 1. aplica namespace, ConfigMap, Secret, MySQL, Deployment, Service e HPA
-kubectl --context minikube apply -k k8s/overlays/minikube
+# 1. só ConfigMap e Secret
+kubectl --context minikube apply -k k8s/overlays/minikube -l app.kubernetes.io/component=config
 
-# 2. espera o MySQL ficar pronto
+# 2. espera o MySQL, gera o ConfigMap dos .sql e recria o Job
 kubectl --context minikube -n oficina rollout status statefulset/oficina-mysql --timeout=180s
-
-# 3. gera o ConfigMap com os .sql a partir de migrations/mysql
 kubectl --context minikube -n oficina create configmap oficina-migrations \
   --from-file=migrations/mysql --dry-run=client -o yaml \
   | kubectl --context minikube apply -f -
-
-# 4. recria o Job de migration e espera terminar
 kubectl --context minikube -n oficina delete job oficina-migrate --ignore-not-found
 kubectl --context minikube apply -k k8s/migrate
 kubectl --context minikube -n oficina get job oficina-migrate -w   # até COMPLETIONS 1/1 (ou falha)
 kubectl --context minikube -n oficina logs job/oficina-migrate
 
-# 5. reinicia a API para pegar configuração nova e espera o rollout
+# 3. aplica o restante; no Minikube o template não muda, então reinicia os pods
+kubectl --context minikube apply -k k8s/overlays/minikube
 kubectl --context minikube -n oficina rollout restart deployment/oficina-api
 kubectl --context minikube -n oficina rollout status deployment/oficina-api --timeout=180s
 ```
 
-No passo 4 o alvo do Makefile consulta o estado do Job a cada 2 segundos e para assim que ele termina, com sucesso (`Complete`) ou depois de esgotar as tentativas (`Failed`). Uma migration com erro faz o alvo imprimir o log do Job e sair com erro em cerca de 30 segundos, sem reiniciar a API. O `kubectl wait` não serve aqui porque só espera uma condição: esperando apenas `Complete`, uma falha seguraria o deploy até o timeout.
+Na etapa de migrations o alvo do Makefile consulta o estado do Job a cada 2 segundos e para assim que ele termina, com sucesso (`Complete`) ou depois de esgotar as tentativas (`Failed`). Uma migration com erro faz o alvo imprimir o log do Job e sair com erro em cerca de 30 segundos, sem reiniciar a API. O `kubectl wait` não serve aqui porque só espera uma condição: esperando apenas `Complete`, uma falha seguraria o deploy até o timeout.
 
 O `make k8s-deploy` pode ser repetido quantas vezes for preciso. Na segunda execução o `apply` reporta `unchanged` para quase tudo e o migrate responde `no change`.
 
 O `statefulset.apps/oficina-mysql configured` aparece em todo `apply`, mesmo sem nada ter mudado. É uma limitação do `kubectl apply` com `volumeClaimTemplates`: o servidor completa o template com campos padrão (`volumeMode`, `status`) e, como essa lista não tem chave de merge, o kubectl sempre reenvia a lista inteira. Nada é alterado no cluster; `kubectl diff -k k8s/overlays/minikube` sai vazio.
 
-Sobre a ordem: no primeiro deploy a API sobe junto com o MySQL, alguns segundos antes das tabelas existirem, e o restart do passo 5 resolve isso. Nos deploys seguintes a API antiga continua atendendo enquanto o Job roda, então toda migration precisa funcionar com a versão anterior da API. Uma coluna ou tabela nova entra num deploy, e a antiga só é removida num deploy seguinte.
+Como as migrations rodam antes da versão nova da API, cada migration precisa funcionar também com a versão anterior, que continua atendendo enquanto o Job roda. Uma coluna ou tabela nova entra num deploy, e a antiga só é removida num deploy seguinte, quando nenhuma versão no ar depende mais dela. A exceção é o primeiro deploy: a API sobe junto com o MySQL, alguns segundos antes das tabelas existirem, e o restart da etapa 3 resolve.
 
 ### 4. Acessar a API
 
