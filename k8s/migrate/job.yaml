@@ -1,0 +1,63 @@
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: oficina-migrate
+  labels:
+    app.kubernetes.io/name: oficina-migrate
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: oficina-migrate
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+      containers:
+        - name: migrate
+          image: migrate/migrate:v4.19.1
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef: {name: oficina-api-config, key: DB_HOST}
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef: {name: oficina-api-config, key: DB_PORT}
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef: {name: oficina-api-config, key: DB_NAME}
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef: {name: oficina-api-config, key: DB_USER}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: oficina-api-secrets, key: DB_PASSWORD}
+          args:
+            - -path=/migrations
+            - -database=mysql://$(DB_USER):$(DB_PASSWORD)@tcp($(DB_HOST):$(DB_PORT))/$(DB_NAME)?charset=utf8mb4&parseTime=true
+            - up
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: migrations
+              mountPath: /migrations
+              readOnly: true
+      volumes:
+        - name: migrations
+          configMap:
+            name: oficina-migrations
