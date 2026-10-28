@@ -127,7 +127,9 @@ brew install minikube kubectl k6
 
 No Linux, use os instaladores oficiais: [Minikube](https://minikube.sigs.k8s.io/docs/start/), [kubectl](https://kubernetes.io/docs/tasks/tools/), [k6](https://grafana.com/docs/k6/latest/set-up/install-k6/).
 
-Versões com que este guia foi testado: kubectl 1.28.2 (Kustomize 5.0.4), k6 1.4.2, Docker 29.8.2, Go 1.26.6, GNU Make 3.81.
+Versões com que este guia foi testado: Minikube 1.39.0 (Kubernetes 1.37.0), kubectl 1.37.1, k6 1.4.2, Docker 29.8.2, Go 1.26.6, GNU Make 3.81.
+
+No macOS o `brew install minikube` instala ou atualiza o `kubectl` junto (o pacote `kubernetes-cli` é dependência). O Kubernetes suporta diferença de no máximo uma versão menor entre `kubectl` e cluster, então se o seu `kubectl` for bem mais antigo que o Kubernetes do Minikube, atualize-o.
 
 ### Recursos de hardware
 
@@ -181,6 +183,10 @@ minikube start --cpus=4 --memory=6g --disk-size=20g
 minikube addons enable metrics-server
 ```
 
+O `minikube start` troca o contexto atual do `kubectl` para `minikube`. Se você usa outros clusters, lembre de voltar depois com `kubectl config use-context <outro>`.
+
+O primeiro deploy completo, do `make k8s-deploy` até a API pronta, leva por volta de um minuto, a maior parte esperando o MySQL inicializar.
+
 ### 2. Construir a imagem dentro do Minikube
 
 ```bash
@@ -214,7 +220,7 @@ kubectl --context minikube -n oficina create configmap oficina-migrations \
 # 4. recria o Job de migration e espera terminar
 kubectl --context minikube -n oficina delete job oficina-migrate --ignore-not-found
 kubectl --context minikube apply -k k8s/migrate
-kubectl --context minikube -n oficina wait --for=condition=complete job/oficina-migrate --timeout=120s
+kubectl --context minikube -n oficina get job oficina-migrate -w   # até COMPLETIONS 1/1 (ou falha)
 kubectl --context minikube -n oficina logs job/oficina-migrate
 
 # 5. reinicia a API para pegar configuração nova e espera o rollout
@@ -222,7 +228,7 @@ kubectl --context minikube -n oficina rollout restart deployment/oficina-api
 kubectl --context minikube -n oficina rollout status deployment/oficina-api --timeout=180s
 ```
 
-Se a migration falhar no passo 4, o alvo imprime o log do Job e para. A API não é reiniciada.
+No passo 4 o alvo do Makefile consulta o estado do Job a cada 2 segundos e para assim que ele termina, com sucesso (`Complete`) ou depois de esgotar as tentativas (`Failed`). Uma migration com erro faz o alvo imprimir o log do Job e sair com erro em cerca de 30 segundos, sem reiniciar a API. O `kubectl wait` não serve aqui porque só espera uma condição: esperando apenas `Complete`, uma falha seguraria o deploy até o timeout.
 
 O `make k8s-deploy` pode ser repetido quantas vezes for preciso. Na segunda execução o `apply` reporta `unchanged` para quase tudo e o migrate responde `no change`.
 
