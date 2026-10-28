@@ -16,7 +16,7 @@ func TestRejeitarOrcamentoUseCase_RegistraMotivoNoHistorico(t *testing.T) {
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(o, nil)
 	repo.EXPECT().Atualizar(mock.Anything, o).Return(nil)
 
-	uc := app.NewRejeitarOrcamentoUseCase(repo)
+	uc := app.NewRejeitarOrcamentoUseCase(repo, notificadorOrcamento(t, true))
 	out, err := uc.Executar(context.Background(), app.RejeitarOrcamentoInput{
 		OrdemServicoID: 42,
 		ClienteID:      10,

@@ -1,12 +1,15 @@
 package wiring
 
 import (
+	"context"
+	"fmt"
 	"time"
 
 	"gorm.io/gorm"
 
 	appauth "github.com/muriloperosa/soat-architecture/internal/application/auth"
 	appcliente "github.com/muriloperosa/soat-architecture/internal/application/cliente"
+	appnotificacao "github.com/muriloperosa/soat-architecture/internal/application/notificacao"
 	apporcamento "github.com/muriloperosa/soat-architecture/internal/application/orcamento"
 	appordemservico "github.com/muriloperosa/soat-architecture/internal/application/ordemservico"
 	apppeca "github.com/muriloperosa/soat-architecture/internal/application/peca"
@@ -129,7 +132,7 @@ type Container struct {
 	ConsultarTransicaoStatusUC *apprelatorio.ConsultarTransicaoStatusUseCase
 }
 
-func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
+func NewContainer(cfg *config.Config, db *gorm.DB) (*Container, error) {
 	c := &Container{Config: cfg, DB: db}
 	c.RefreshTokensRepo = mysqlauth.NewRefreshTokenRepository(db)
 	c.UsuarioRepo = mysqlusuario.NewUsuarioRepository(db)
@@ -137,14 +140,25 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.PecaRepo = mysqlpeca.NewRepository(db)
 	c.ReservaPecaRepo = mysqlreservapeca.NewRepository(db)
 	c.TransactionRunner = mysql.NewTransactionRunner(db)
-	c.EmailSender = email.NewLogSender()
 	c.VeiculoRepo = mysqlveiculo.NewRepository(db)
 	c.ServicoRepo = mysqlservico.NewServicoRepository(db)
 	c.OrdemServicoRepo = mysqlordemservico.NewOrdemServicoRepository(db)
 	c.OrcamentoRepo = mysqlorcamento.NewOrcamentoRepository(db)
 	c.RelatorioRepo = mysqlrelatorio.NewRelatorioRepository(db)
+
+	provider, region, from := "log", "us-east-1", ""
+	if cfg != nil {
+		provider, region, from = cfg.EmailProvider, cfg.AWSRegion, cfg.SESFromAddress
+	}
+	sender, err := email.NewSender(context.Background(), provider, region, from)
+	if err != nil {
+		return nil, fmt.Errorf("configurar envio de e-mail: %w", err)
+	}
+	c.EmailSender = sender
+	notificador := appnotificacao.NewStatus(c.ClienteRepository, c.EmailSender)
+
 	if cfg == nil {
-		return c
+		return c, nil
 	}
 
 	accessTTL := time.Duration(cfg.JWTAccessTokenTTLMinutes) * time.Minute
@@ -204,17 +218,19 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 		c.OrdemServicoRepo,
 		c.ClienteRepository,
 		c.VeiculoRepo,
+		notificador,
 	)
-	c.IniciarDiagnosticoUC = appordemservico.NewIniciarDiagnosticoUseCase(c.OrdemServicoRepo)
+	c.IniciarDiagnosticoUC = appordemservico.NewIniciarDiagnosticoUseCase(c.OrdemServicoRepo, notificador)
 	c.InformarDiagnosticoUC = appordemservico.NewInformarDiagnosticoUseCase(c.OrdemServicoRepo)
-	c.IniciarExecucaoUC = appordemservico.NewIniciarExecucaoUseCase(c.OrdemServicoRepo)
+	c.IniciarExecucaoUC = appordemservico.NewIniciarExecucaoUseCase(c.OrdemServicoRepo, notificador)
 	c.FinalizarOrdemServicoUC = appordemservico.NewFinalizarOrdemServicoUseCase(
 		c.OrdemServicoRepo,
 		c.PecaRepo,
 		c.ReservaPecaRepo,
 		c.TransactionRunner,
+		notificador,
 	)
-	c.EntregarOrdemServicoUC = appordemservico.NewEntregarOrdemServicoUseCase(c.OrdemServicoRepo)
+	c.EntregarOrdemServicoUC = appordemservico.NewEntregarOrdemServicoUseCase(c.OrdemServicoRepo, notificador)
 	c.ConsultarOrdemServicoPorIDUC = appordemservico.NewConsultarOrdemServicoPorIDUseCase(c.OrdemServicoRepo)
 	c.ConsultarOrdemServicoPorNumeroUC = appordemservico.NewConsultarOrdemServicoPorNumeroUseCase(c.OrdemServicoRepo)
 	c.ListarOrdensServicoUC = appordemservico.NewListarOrdensServicoUseCase(c.OrdemServicoRepo, c.OrcamentoRepo)
@@ -224,12 +240,12 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	c.AdicionarPecaOrcamentoUC = apporcamento.NewAdicionarPecaOrcamentoUseCase(c.OrcamentoRepo, c.PecaRepo, c.OrdemServicoRepo)
 	c.RemoverServicoOrcamentoUC = apporcamento.NewRemoverServicoOrcamentoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo)
 	c.RemoverPecaOrcamentoUC = apporcamento.NewRemoverPecaOrcamentoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo)
-	c.AlterarQuantidadePecaOrcamentoUC = apporcamento.NewAlterarQuantidadePecaOrcamentoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo, c.ReservaPecaRepo, c.PecaRepo, c.ClienteRepository, c.TransactionRunner, c.EmailSender)
-	c.EnviarOrcamentoParaAprovacaoUC = apporcamento.NewEnviarOrcamentoParaAprovacaoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo, c.ClienteRepository, c.EmailSender)
-	c.AprovarOrcamentoUC = apporcamento.NewAprovarOrcamentoUseCase(c.OrdemServicoRepo, c.OrcamentoRepo, c.PecaRepo, c.ReservaPecaRepo, c.TransactionRunner)
-	c.RejeitarOrcamentoUC = apporcamento.NewRejeitarOrcamentoUseCase(c.OrdemServicoRepo)
+	c.AlterarQuantidadePecaOrcamentoUC = apporcamento.NewAlterarQuantidadePecaOrcamentoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo, c.ReservaPecaRepo, c.PecaRepo, c.TransactionRunner, notificador)
+	c.EnviarOrcamentoParaAprovacaoUC = apporcamento.NewEnviarOrcamentoParaAprovacaoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo, notificador)
+	c.AprovarOrcamentoUC = apporcamento.NewAprovarOrcamentoUseCase(c.OrdemServicoRepo, c.OrcamentoRepo, c.PecaRepo, c.ReservaPecaRepo, c.TransactionRunner, notificador)
+	c.RejeitarOrcamentoUC = apporcamento.NewRejeitarOrcamentoUseCase(c.OrdemServicoRepo, notificador)
 
 	c.ConsultarTransicaoStatusUC = apprelatorio.NewConsultarTransicaoStatusUseCase(c.RelatorioRepo)
 
-	return c
+	return c, nil
 }

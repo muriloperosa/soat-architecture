@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sort"
 
+	"github.com/muriloperosa/soat-architecture/internal/application/notificacao"
 	domain "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
 	domainpeca "github.com/muriloperosa/soat-architecture/internal/domain/peca"
 	domainreservapeca "github.com/muriloperosa/soat-architecture/internal/domain/reservapeca"
@@ -19,6 +20,7 @@ type FinalizarOrdemServicoUseCase struct {
 	pecaRepository    domainpeca.Repository
 	reservaRepository domainreservapeca.Repository
 	transactionRunner shared.TransactionRunner
+	notificador       *notificacao.NotificadorStatus
 }
 
 func NewFinalizarOrdemServicoUseCase(
@@ -26,12 +28,14 @@ func NewFinalizarOrdemServicoUseCase(
 	pecaRepository domainpeca.Repository,
 	reservaRepository domainreservapeca.Repository,
 	transactionRunner shared.TransactionRunner,
+	notificador *notificacao.NotificadorStatus,
 ) *FinalizarOrdemServicoUseCase {
 	return &FinalizarOrdemServicoUseCase{
 		repository:        repository,
 		pecaRepository:    pecaRepository,
 		reservaRepository: reservaRepository,
 		transactionRunner: transactionRunner,
+		notificador:       notificador,
 	}
 }
 
@@ -40,6 +44,7 @@ func (uc *FinalizarOrdemServicoUseCase) Executar(
 	input FinalizarOrdemServicoInput,
 ) (OrdemServicoOutput, error) {
 	var output OrdemServicoOutput
+	var osFinalizada *domain.OrdemServico
 
 	err := uc.transactionRunner.Executar(ctx, func(ctx context.Context) error {
 		os, err := uc.repository.BuscarPorIDComBloqueio(ctx, input.OrdemServicoID)
@@ -69,10 +74,15 @@ func (uc *FinalizarOrdemServicoUseCase) Executar(
 			return shared.NewInternalError("erro ao finalizar ordem de serviço", err)
 		}
 
+		osFinalizada = os
 		output = toOutput(os)
 		return nil
 	})
 	if err != nil {
+		return OrdemServicoOutput{}, err
+	}
+
+	if err := uc.notificador.Notificar(ctx, osFinalizada, domain.StatusEmExecucao); err != nil {
 		return OrdemServicoOutput{}, err
 	}
 

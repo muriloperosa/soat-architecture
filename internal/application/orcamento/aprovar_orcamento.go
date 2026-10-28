@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sort"
 
+	"github.com/muriloperosa/soat-architecture/internal/application/notificacao"
 	domainorcamento "github.com/muriloperosa/soat-architecture/internal/domain/orcamento"
 	domainordemservico "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
 	domainpeca "github.com/muriloperosa/soat-architecture/internal/domain/peca"
@@ -18,6 +19,7 @@ type AprovarOrcamentoUseCase struct {
 	pecaRepository         domainpeca.Repository
 	reservaRepository      domainreservapeca.Repository
 	transactionRunner      shared.TransactionRunner
+	notificador            *notificacao.NotificadorStatus
 }
 
 func NewAprovarOrcamentoUseCase(
@@ -26,6 +28,7 @@ func NewAprovarOrcamentoUseCase(
 	pecaRepository domainpeca.Repository,
 	reservaRepository domainreservapeca.Repository,
 	transactionRunner shared.TransactionRunner,
+	notificador *notificacao.NotificadorStatus,
 ) *AprovarOrcamentoUseCase {
 	return &AprovarOrcamentoUseCase{
 		ordemServicoRepository: ordemServicoRepository,
@@ -33,6 +36,7 @@ func NewAprovarOrcamentoUseCase(
 		pecaRepository:         pecaRepository,
 		reservaRepository:      reservaRepository,
 		transactionRunner:      transactionRunner,
+		notificador:            notificador,
 	}
 }
 
@@ -152,6 +156,10 @@ func (uc *AprovarOrcamentoUseCase) Executar(ctx context.Context, input AprovarOr
 			return FluxoOrcamentoOutput{}, err
 		}
 		return FluxoOrcamentoOutput{}, shared.NewInternalError("erro ao aprovar orçamento e reservar peças", err)
+	}
+
+	if err := uc.notificador.Notificar(ctx, os, domainordemservico.StatusAguardandoAprovacao); err != nil {
+		return FluxoOrcamentoOutput{}, err
 	}
 
 	return toFluxoOutput(os), nil

@@ -4,14 +4,17 @@ import (
 	"context"
 	"errors"
 	"regexp"
+	"strings"
 	"testing"
 
+	"github.com/muriloperosa/soat-architecture/internal/application/notificacao"
 	app "github.com/muriloperosa/soat-architecture/internal/application/ordemservico"
 	domaincliente "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
 	clientemocks "github.com/muriloperosa/soat-architecture/internal/domain/cliente/mocks"
 	domainordemservico "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
 	ordemservicomocks "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico/mocks"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
+	sharedmocks "github.com/muriloperosa/soat-architecture/internal/domain/shared/mocks"
 	domainveiculo "github.com/muriloperosa/soat-architecture/internal/domain/veiculo"
 	veiculomocks "github.com/muriloperosa/soat-architecture/internal/domain/veiculo/mocks"
 	"github.com/stretchr/testify/mock"
@@ -23,7 +26,7 @@ func TestAbrirOrdemServicoUseCase_ComSucesso(t *testing.T) {
 	clienteRepo := clientemocks.NewClienteRepository(t)
 	veiculoRepo := veiculomocks.NewRepository(t)
 
-	clienteRepo.EXPECT().BuscarPorID(mock.Anything, uint64(10)).Return(clienteValido(t), nil)
+	clienteRepo.EXPECT().BuscarPorID(mock.Anything, uint64(10)).Return(clienteValido(t), nil).Times(2)
 	veiculoRepo.EXPECT().BuscarPorID(mock.Anything, uint64(20)).Return(veiculoValido(t), nil)
 	ordemRepo.EXPECT().Salvar(mock.Anything, mock.AnythingOfType("*ordemservico.OrdemServico")).
 		Run(func(_ context.Context, os *domainordemservico.OrdemServico) {
@@ -33,8 +36,12 @@ func TestAbrirOrdemServicoUseCase_ComSucesso(t *testing.T) {
 			os.AtribuirID(99)
 		}).
 		Return(nil)
+	emailSender := sharedmocks.NewEmailSender(t)
+	emailSender.EXPECT().Enviar(mock.Anything, "maria@email.com", mock.AnythingOfType("string"), mock.MatchedBy(func(corpo string) bool {
+		return strings.Contains(corpo, "Status anterior: —") && strings.Contains(corpo, "Status atual: RECEBIDA")
+	})).Return(nil)
 
-	uc := app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo)
+	uc := app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo, notificacao.NewStatus(clienteRepo, emailSender))
 	out, err := uc.Executar(context.Background(), app.AbrirOrdemServicoInput{
 		ClienteID:            10,
 		VeiculoID:            20,
@@ -60,7 +67,7 @@ func TestAbrirOrdemServicoUseCase_ClienteInexistente(t *testing.T) {
 	veiculoRepo := veiculomocks.NewRepository(t)
 	clienteRepo.EXPECT().BuscarPorID(mock.Anything, uint64(999)).Return(nil, domaincliente.ErrClienteNaoEncontrado)
 
-	uc := app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo)
+	uc := app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo, nil)
 	out, err := uc.Executar(context.Background(), app.AbrirOrdemServicoInput{ClienteID: 999, VeiculoID: 20, UsuarioID: 30})
 
 	require.Empty(t, out)
@@ -74,7 +81,7 @@ func TestAbrirOrdemServicoUseCase_VeiculoInexistente(t *testing.T) {
 	clienteRepo.EXPECT().BuscarPorID(mock.Anything, uint64(10)).Return(clienteValido(t), nil)
 	veiculoRepo.EXPECT().BuscarPorID(mock.Anything, uint64(999)).Return(nil, domainveiculo.ErrVeiculoNaoEncontrado)
 
-	uc := app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo)
+	uc := app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo, nil)
 	out, err := uc.Executar(context.Background(), app.AbrirOrdemServicoInput{ClienteID: 10, VeiculoID: 999, UsuarioID: 30})
 
 	require.Empty(t, out)
@@ -87,7 +94,7 @@ func TestAbrirOrdemServicoUseCase_ClienteRetornadoNulo(t *testing.T) {
 	veiculoRepo := veiculomocks.NewRepository(t)
 	clienteRepo.EXPECT().BuscarPorID(mock.Anything, uint64(10)).Return(nil, nil)
 
-	uc := app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo)
+	uc := app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo, nil)
 	out, err := uc.Executar(context.Background(), app.AbrirOrdemServicoInput{ClienteID: 10, VeiculoID: 20, UsuarioID: 30})
 
 	require.Empty(t, out)
@@ -101,7 +108,7 @@ func TestAbrirOrdemServicoUseCase_VeiculoRetornadoNulo(t *testing.T) {
 	clienteRepo.EXPECT().BuscarPorID(mock.Anything, uint64(10)).Return(clienteValido(t), nil)
 	veiculoRepo.EXPECT().BuscarPorID(mock.Anything, uint64(20)).Return(nil, nil)
 
-	uc := app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo)
+	uc := app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo, nil)
 	out, err := uc.Executar(context.Background(), app.AbrirOrdemServicoInput{ClienteID: 10, VeiculoID: 20, UsuarioID: 30})
 
 	require.Empty(t, out)
@@ -115,7 +122,7 @@ func TestAbrirOrdemServicoUseCase_DadosInvalidos(t *testing.T) {
 	clienteRepo.EXPECT().BuscarPorID(mock.Anything, uint64(10)).Return(clienteValido(t), nil)
 	veiculoRepo.EXPECT().BuscarPorID(mock.Anything, uint64(20)).Return(veiculoValido(t), nil)
 
-	uc := app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo)
+	uc := app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo, nil)
 	out, err := uc.Executar(context.Background(), app.AbrirOrdemServicoInput{ClienteID: 10, VeiculoID: 20, UsuarioID: 0})
 
 	require.Empty(t, out)
@@ -132,7 +139,7 @@ func TestAbrirOrdemServicoUseCase_ErroAoPersistir(t *testing.T) {
 	veiculoRepo.EXPECT().BuscarPorID(mock.Anything, uint64(20)).Return(veiculoValido(t), nil)
 	ordemRepo.EXPECT().Salvar(mock.Anything, mock.AnythingOfType("*ordemservico.OrdemServico")).Return(erroBanco)
 
-	uc := app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo)
+	uc := app.NewAbrirOrdemServicoUseCase(ordemRepo, clienteRepo, veiculoRepo, nil)
 	_, err := uc.Executar(context.Background(), app.AbrirOrdemServicoInput{ClienteID: 10, VeiculoID: 20, UsuarioID: 30})
 
 	var appErr *shared.AppError

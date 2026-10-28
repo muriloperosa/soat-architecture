@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/muriloperosa/soat-architecture/internal/application/notificacao"
 	app "github.com/muriloperosa/soat-architecture/internal/application/orcamento"
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 	domaincliente "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
@@ -472,7 +473,7 @@ func TestHandlerEnviarParaAprovacaoRetorna200EEnviaEmail(t *testing.T) {
 
 	emailSender.EXPECT().Enviar(mock.Anything, "maria@email.com", mock.Anything, mock.Anything).Return(nil)
 
-	handler := httporcamento.NewHandler(nil, nil, nil, nil, nil, nil, app.NewEnviarOrcamentoParaAprovacaoUseCase(orcamentoRepo, osRepo, clienteRepo, emailSender))
+	handler := httporcamento.NewHandler(nil, nil, nil, nil, nil, nil, app.NewEnviarOrcamentoParaAprovacaoUseCase(orcamentoRepo, osRepo, notificacao.NewStatus(clienteRepo, emailSender)))
 	router := gin.New()
 	router.Use(comClaims)
 	router.PATCH("/v1/ordens-servico/:id/orcamento/enviar-aprovacao", handler.EnviarParaAprovacao)
@@ -495,7 +496,7 @@ func TestHandlerEnviarParaAprovacaoOrcamentoInexistenteRetorna404(t *testing.T) 
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).
 		Return(nil, domainorcamento.ErrOrcamentoNaoEncontrado)
 
-	handler := httporcamento.NewHandler(nil, nil, nil, nil, nil, nil, app.NewEnviarOrcamentoParaAprovacaoUseCase(orcamentoRepo, osRepo, clienteRepo, emailSender))
+	handler := httporcamento.NewHandler(nil, nil, nil, nil, nil, nil, app.NewEnviarOrcamentoParaAprovacaoUseCase(orcamentoRepo, osRepo, notificacao.NewStatus(clienteRepo, emailSender)))
 	router := gin.New()
 	router.Use(comClaims)
 	router.PATCH("/v1/ordens-servico/:id/orcamento/enviar-aprovacao", handler.EnviarParaAprovacao)

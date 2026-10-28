@@ -4,7 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/muriloperosa/soat-architecture/internal/application/notificacao"
 	app "github.com/muriloperosa/soat-architecture/internal/application/orcamento"
+	domaincliente "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
+	clientemocks "github.com/muriloperosa/soat-architecture/internal/domain/cliente/mocks"
 	domainorcamento "github.com/muriloperosa/soat-architecture/internal/domain/orcamento"
 	orcamentomocks "github.com/muriloperosa/soat-architecture/internal/domain/orcamento/mocks"
 	domainordemservico "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
@@ -14,6 +17,7 @@ import (
 	domainreservapeca "github.com/muriloperosa/soat-architecture/internal/domain/reservapeca"
 	reservamocks "github.com/muriloperosa/soat-architecture/internal/domain/reservapeca/mocks"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
+	sharedmocks "github.com/muriloperosa/soat-architecture/internal/domain/shared/mocks"
 	"github.com/muriloperosa/soat-architecture/test/helpers"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -53,7 +57,7 @@ func TestAprovarOrcamentoUseCase_ClienteProprietarioAprova(t *testing.T) {
 	reservaRepo.EXPECT().BuscarPorOrdemServico(mock.Anything, uint64(42)).Return([]*domainreservapeca.ReservaPeca{}, nil)
 	osRepo.EXPECT().Atualizar(mock.Anything, o).Return(nil)
 
-	uc := app.NewAprovarOrcamentoUseCase(osRepo, orcamentoRepo, pecaRepo, reservaRepo, runner)
+	uc := app.NewAprovarOrcamentoUseCase(osRepo, orcamentoRepo, pecaRepo, reservaRepo, runner, notificadorOrcamento(t, true))
 	out, err := uc.Executar(context.Background(), app.AprovarOrcamentoInput{OrdemServicoID: 42, ClienteID: 10})
 
 	require.NoError(t, err)
@@ -91,7 +95,7 @@ func TestAprovarOrcamentoUseCase_CriaReservaAPartirDoOrcamento(t *testing.T) {
 	})).Return(nil)
 	osRepo.EXPECT().Atualizar(mock.Anything, o).Return(nil)
 
-	uc := app.NewAprovarOrcamentoUseCase(osRepo, orcamentoRepo, pecaRepo, reservaRepo, runner)
+	uc := app.NewAprovarOrcamentoUseCase(osRepo, orcamentoRepo, pecaRepo, reservaRepo, runner, notificadorOrcamento(t, true))
 	out, err := uc.Executar(context.Background(), app.AprovarOrcamentoInput{OrdemServicoID: 42, ClienteID: 10})
 
 	require.NoError(t, err)
@@ -121,7 +125,7 @@ func TestAprovarOrcamentoUseCase_EstoqueInsuficienteNaoAprova(t *testing.T) {
 	pecaRepo.EXPECT().BuscarPorIDComBloqueio(mock.Anything, uint64(7)).Return(peca, nil)
 	reservaRepo.EXPECT().SomarQuantidadeReservada(mock.Anything, uint64(7)).Return(0, nil)
 
-	uc := app.NewAprovarOrcamentoUseCase(osRepo, orcamentoRepo, pecaRepo, reservaRepo, runner)
+	uc := app.NewAprovarOrcamentoUseCase(osRepo, orcamentoRepo, pecaRepo, reservaRepo, runner, notificadorOrcamento(t, false))
 	_, err = uc.Executar(context.Background(), app.AprovarOrcamentoInput{OrdemServicoID: 42, ClienteID: 10})
 
 	require.ErrorIs(t, err, domainpeca.ErrQuantidadeIndisponivelParaReserva)
@@ -136,11 +140,35 @@ func TestAprovarOrcamentoUseCase_ClienteDeOutraOSRetornaForbidden(t *testing.T) 
 	o := osAguardandoAprovacao(t, 10)
 	osRepo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(o, nil)
 
-	uc := app.NewAprovarOrcamentoUseCase(osRepo, orcamentoRepo, pecaRepo, reservaRepo, &helpers.TransactionRunnerMock{})
+	uc := app.NewAprovarOrcamentoUseCase(osRepo, orcamentoRepo, pecaRepo, reservaRepo, &helpers.TransactionRunnerMock{}, notificadorOrcamento(t, false))
 	_, err := uc.Executar(context.Background(), app.AprovarOrcamentoInput{OrdemServicoID: 42, ClienteID: 99})
 
 	var appErr *shared.AppError
 	require.ErrorAs(t, err, &appErr)
 	require.Equal(t, shared.KindForbidden, appErr.Kind)
 	require.Equal(t, domainordemservico.StatusAguardandoAprovacao, o.Status())
+}
+
+func notificadorOrcamento(t *testing.T, esperaEnvio bool) *notificacao.NotificadorStatus {
+	t.Helper()
+	clientes := clientemocks.NewClienteRepository(t)
+	emails := sharedmocks.NewEmailSender(t)
+	if !esperaEnvio {
+		return notificacao.NewStatus(clientes, emails)
+	}
+
+	cliente, err := domaincliente.NewCliente(
+		"52998224725",
+		domaincliente.TipoPessoaFisica,
+		"Maria Silva",
+		"maria@email.com",
+		"11999998888",
+		"senha123",
+		1,
+	)
+	require.NoError(t, err)
+	cliente.DefinirID(10)
+	clientes.EXPECT().BuscarPorID(mock.Anything, uint64(10)).Return(&cliente, nil)
+	emails.EXPECT().Enviar(mock.Anything, "maria@email.com", mock.Anything, mock.Anything).Return(nil)
+	return notificacao.NewStatus(clientes, emails)
 }

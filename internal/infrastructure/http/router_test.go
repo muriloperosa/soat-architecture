@@ -32,7 +32,9 @@ func TestHealthHandler_RetornaOKQuandoBancoResponde(t *testing.T) {
 	db, mock := newMockedGormDB(t)
 	mock.ExpectPing()
 
-	router := handler.NewRouter(wiring.NewContainer(nil, db))
+	container, err := wiring.NewContainer(nil, db)
+	require.NoError(t, err)
+	router := handler.NewRouter(container)
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/health", nil)
 	rec := httptest.NewRecorder()
@@ -46,7 +48,9 @@ func TestHealthHandler_Retorna503QuandoBancoFalha(t *testing.T) {
 	db, mock := newMockedGormDB(t)
 	mock.ExpectPing().WillReturnError(sqlmock.ErrCancelled)
 
-	router := handler.NewRouter(wiring.NewContainer(nil, db))
+	container, err := wiring.NewContainer(nil, db)
+	require.NoError(t, err)
+	router := handler.NewRouter(container)
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/health", nil)
 	rec := httptest.NewRecorder()

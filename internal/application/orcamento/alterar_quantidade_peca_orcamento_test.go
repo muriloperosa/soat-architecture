@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/muriloperosa/soat-architecture/internal/application/notificacao"
 	app "github.com/muriloperosa/soat-architecture/internal/application/orcamento"
 	domaincliente "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
 	clientemocks "github.com/muriloperosa/soat-architecture/internal/domain/cliente/mocks"
@@ -87,9 +88,8 @@ func TestAlterarQuantidadePecaOrcamentoUseCase_AprovadoRemoveReservaEReenvia(t *
 		osRepo,
 		reservaRepo,
 		pecaRepo,
-		clienteRepo,
 		runner,
-		emailSender,
+		notificacao.NewStatus(clienteRepo, emailSender),
 	)
 
 	out, err := uc.Executar(context.Background(), app.AlterarQuantidadePecaOrcamentoInput{
@@ -121,14 +121,14 @@ func TestAlterarQuantidadePecaOrcamentoUseCase_EmDiagnosticoApenasEdita(t *testi
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(orcamento, nil)
 	orcamentoRepo.EXPECT().Atualizar(mock.Anything, orcamento).Return(nil)
 
+	emailSender := sharedmocks.NewEmailSender(t)
 	uc := app.NewAlterarQuantidadePecaOrcamentoUseCase(
 		orcamentoRepo,
 		osRepo,
 		nil,
 		nil,
-		nil,
 		runner,
-		nil,
+		notificacao.NewStatus(clientemocks.NewClienteRepository(t), emailSender),
 	)
 
 	out, err := uc.Executar(context.Background(), app.AlterarQuantidadePecaOrcamentoInput{

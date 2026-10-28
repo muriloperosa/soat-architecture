@@ -46,3 +46,5 @@ chmod +x .dev/scripts/setup.sh
 - popula o banco com usuários de login e dados fictícios
 - sobe a API
 - ao final, imprime as credenciais dos usuários seedados (admin, atendente, mecânico, cliente) para testar a API
+
+Cada mudança de status da ordem de serviço dispara um e-mail ao cliente depois que a transição já foi persistida. Falha de envio fica no log e não desfaz o status. O provedor padrão é `log` (`EMAIL_PROVIDER`), que não exige AWS. Com `ses`, a aplicação usa Amazon SES e recusa subir sem `SES_FROM_ADDRESS`. No AWS Academy o SES opera em sandbox: só entrega para identidades verificadas. Um exemplo de Secret para injetar essas variáveis no cluster está em [`k8s/email-secret.example.yaml`](k8s/email-secret.example.yaml).
