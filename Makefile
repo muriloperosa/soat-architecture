@@ -1,4 +1,4 @@
-.PHONY: help run build test test-integration coverage lint up down db-up db-down tidy vendor setup dev debug mocks swagger hooks-install hooks-uninstall create-user sonar-up sonar-down sonar-scan sec-sca sec-sast sec-dast
+.PHONY: help run build test test-integration coverage lint up down db-up db-down tidy vendor setup dev debug mocks swagger hooks-install hooks-uninstall create-user sonar-up sonar-down sonar-scan sec-sca sec-sast sec-dast k8s-build k8s-apply k8s-migrate k8s-deploy k8s-status k8s-url k8s-delete load-test
 
 GREEN := $(shell tput setaf 2)
 RESET := $(shell tput sgr0)
@@ -43,6 +43,14 @@ help:
 	@echo "  $(GREEN)sec-sca$(RESET):       Run govulncheck (SCA) into security/reports/govulncheck.json"
 	@echo "  $(GREEN)sec-sast$(RESET):      Run gosec (SAST) into security/reports/gosec.json"
 	@echo "  $(GREEN)sec-dast$(RESET):      Run authenticated OWASP ZAP API scan (isolated app-dast+mysql-dast stack) into security/reports/zap-report-{admin,atendente,mecanico,cliente}.*"
+	@echo "  $(GREEN)k8s-build$(RESET):     Build the API image inside Minikube (oficina-api:local)"
+	@echo "  $(GREEN)k8s-apply$(RESET):     Apply the Kubernetes overlay (K8S_OVERLAY=minikube, KUBE_CONTEXT=minikube)"
+	@echo "  $(GREEN)k8s-migrate$(RESET):   Run database migrations as a Kubernetes Job"
+	@echo "  $(GREEN)k8s-deploy$(RESET):    k8s-apply + k8s-migrate + restart and wait for the API rollout"
+	@echo "  $(GREEN)k8s-status$(RESET):    Show pods, services, HPA and jobs in the oficina namespace"
+	@echo "  $(GREEN)k8s-url$(RESET):       Print the API URL exposed by Minikube"
+	@echo "  $(GREEN)k8s-delete$(RESET):    Remove everything created by k8s-deploy, including the namespace and MySQL data"
+	@echo "  $(GREEN)load-test$(RESET):     Run the k6 load test (BASE_URL, K6_EMAIL, K6_SENHA)"
 
 run:
 	go run ./cmd/api
@@ -165,3 +173,66 @@ sec-sast:
 
 sec-dast:
 	@bash security/zap-scan.sh
+
+# --- Kubernetes ---------------------------------------------------------------
+# O contexto é sempre explícito para não aplicar no cluster errado: o
+# kubeconfig pode ter outros contextos (inclusive de produção) como atual.
+KUBE_CONTEXT ?= minikube
+K8S_OVERLAY ?= minikube
+K8S_NAMESPACE := oficina
+KUBECTL := kubectl --context $(KUBE_CONTEXT)
+
+k8s-build:
+	minikube image build -t oficina-api:local .
+
+k8s-apply:
+	@if [ ! -f k8s/overlays/$(K8S_OVERLAY)/secrets.env ]; then \
+		echo "k8s/overlays/$(K8S_OVERLAY)/secrets.env não existe. Copie de secrets.env.example e preencha."; \
+		exit 1; \
+	fi
+	$(KUBECTL) apply -k k8s/overlays/$(K8S_OVERLAY)
+
+k8s-migrate:
+	@if [ "$(K8S_OVERLAY)" = "minikube" ]; then \
+		$(KUBECTL) -n $(K8S_NAMESPACE) rollout status statefulset/oficina-mysql --timeout=180s; \
+	fi
+	$(KUBECTL) -n $(K8S_NAMESPACE) create configmap oficina-migrations \
+		--from-file=migrations/mysql --dry-run=client -o yaml | $(KUBECTL) apply -f -
+	$(KUBECTL) -n $(K8S_NAMESPACE) delete job oficina-migrate --ignore-not-found
+	$(KUBECTL) apply -k k8s/migrate
+	@# Espera o Job terminar com sucesso (Complete) ou esgotar as tentativas
+	@# (Failed). `kubectl wait` só aceita uma condição, e esperar apenas
+	@# Complete faria uma migration quebrada segurar o deploy até o timeout.
+	@for i in $$(seq 1 90); do \
+		state=$$($(KUBECTL) -n $(K8S_NAMESPACE) get job oficina-migrate \
+			-o jsonpath='{.status.conditions[?(@.status=="True")].type}'); \
+		case "$$state" in \
+			*Complete*) $(KUBECTL) -n $(K8S_NAMESPACE) logs job/oficina-migrate; exit 0 ;; \
+			*Failed*) echo "migration falhou:"; $(KUBECTL) -n $(K8S_NAMESPACE) logs job/oficina-migrate; exit 1 ;; \
+		esac; \
+		sleep 2; \
+	done; \
+	echo "timeout esperando job/oficina-migrate"; exit 1
+
+k8s-deploy: k8s-apply k8s-migrate
+	$(KUBECTL) -n $(K8S_NAMESPACE) rollout restart deployment/oficina-api
+	$(KUBECTL) -n $(K8S_NAMESPACE) rollout status deployment/oficina-api --timeout=180s
+
+k8s-status:
+	$(KUBECTL) -n $(K8S_NAMESPACE) get pods,svc,hpa,jobs
+
+k8s-url:
+	@minikube service oficina-api -n $(K8S_NAMESPACE) --url
+
+k8s-delete:
+	$(KUBECTL) delete -k k8s/migrate --ignore-not-found
+	$(KUBECTL) -n $(K8S_NAMESPACE) delete configmap oficina-migrations --ignore-not-found
+	$(KUBECTL) delete -k k8s/overlays/$(K8S_OVERLAY) --ignore-not-found
+
+# --- Teste de carga -----------------------------------------------------------
+load-test:
+	@if [ -z "$(BASE_URL)" ] || [ -z "$(K6_EMAIL)" ] || [ -z "$(K6_SENHA)" ]; then \
+		echo "Uso: make load-test BASE_URL=http://<host> K6_EMAIL=<email> K6_SENHA=<senha>"; \
+		exit 1; \
+	fi
+	k6 run -e BASE_URL=$(BASE_URL) -e K6_EMAIL=$(K6_EMAIL) -e K6_SENHA=$(K6_SENHA) test/load/ordens-servico.js
