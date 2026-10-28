@@ -1,19 +1,19 @@
 package auth
 
 import (
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 )
 
-// AppClaims são os claims do access token JWT.
-// Subject e RegisteredClaims.Subject carregam o mesmo valor (ID do usuário);
-// Tipo não tem claim registrado equivalente e viaja como campo custom.
-// Jti identifica esse access token especificamente (não confundir com o
-// refresh token bruto)
+// AppClaims é a identidade carregada por um access token já validado: quem é
+// (Subject, o ID do usuário), de que fonte de identidade (Tipo) e com qual
+// papel. Jti identifica esse access token especificamente (não confundir com
+// o refresh token bruto) e é usado na revogação.
+//
+// O formato do token (JWT, claims registrados, expiração) é detalhe do
+// adaptador em internal/infrastructure/auth, que converte para este tipo.
 type AppClaims struct {
-	Subject string              `json:"sub"`
-	Tipo    TipoUsuario         `json:"tipo"`
-	Papel   shared.PapelUsuario `json:"papel"`
-	Jti     string              `json:"jti"`
-	jwt.RegisteredClaims
+	Subject string
+	Tipo    TipoUsuario
+	Papel   shared.PapelUsuario
+	Jti     string
 }
