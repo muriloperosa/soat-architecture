@@ -388,13 +388,22 @@ kubectl --context minikube -n oficina get pods -l app.kubernetes.io/name=oficina
 make load-test BASE_URL="$BASE_URL" K6_EMAIL=admin@oficina.com K6_SENHA=Senha@123
 ```
 
-O que esperar:
+O que esperar (valores de uma execução real num Minikube com 4 vCPUs):
 
-1. Antes da carga o HPA mostra algo como `cpu: 2%/70%, memory: 20%/80%` e 2 réplicas.
-2. Durante a rampa a CPU passa de 70% e a coluna `REPLICAS` sobe. Cada pod novo aparece como `0/1` até a readiness passar.
-3. Depois que o k6 termina, a CPU cai. Após a janela de estabilização de 60s o HPA começa a remover réplicas, até voltar a 2.
+1. Antes da carga o HPA mostra `cpu: 2%/70%, memory: 25%/80%` e 2 réplicas.
+2. Cerca de um minuto depois do início a CPU passa da meta (chegou a 125% e 147% nessa execução) e o HPA sobe para 4 ou 5 réplicas. Cada pod novo aparece como `0/1` até a readiness passar, o que leva poucos segundos.
+3. Depois que o k6 termina, a CPU cai. Passada a janela de estabilização de 60s, o HPA remove réplicas aos poucos até voltar a 2.
 
-O ciclo completo leva uns 6 a 7 minutos. `kubectl describe hpa oficina-api` mostra, na seção *Events*, cada decisão de escala com o motivo.
+As métricas do `metrics-server` no Minikube são atualizadas a cada 60 segundos, então a coluna `TARGETS` muda em saltos e a reação do HPA tem esse atraso. Não é sinal de problema.
+
+Resultado do k6 nessa mesma execução: cerca de 26 mil requisições em 4 minutos (108 por segundo no pico), nenhuma falha, latência mediana de 30 ms e p95 de 313 ms.
+
+O ciclo completo, da subida até a volta para 2 réplicas, leva uns 7 minutos. `kubectl describe hpa oficina-api` mostra, na seção *Events*, cada decisão de escala com o motivo:
+
+```
+Normal  SuccessfulRescale  horizontal-pod-autoscaler  New size: 4; reason: cpu resource utilization (percentage of request) above target
+Normal  SuccessfulRescale  horizontal-pod-autoscaler  New size: 3; reason: All metrics below target
+```
 
 ## Problemas comuns
 
