@@ -1,4 +1,4 @@
-.PHONY: help run build test test-integration coverage lint up down db-up db-down tidy vendor setup dev debug mocks swagger hooks-install hooks-uninstall create-user sonar-up sonar-down sonar-scan sec-sca sec-sast sec-dast k8s-build k8s-apply k8s-migrate k8s-deploy k8s-status k8s-url k8s-delete load-test
+.PHONY: help run build test test-integration coverage lint up down db-up db-down tidy vendor setup dev debug mocks swagger hooks-install hooks-uninstall create-user sonar-up sonar-down sonar-scan sec-sca sec-sast sec-dast k8s-check k8s-build k8s-apply k8s-migrate k8s-deploy k8s-status k8s-url k8s-delete load-test
 
 GREEN := $(shell tput setaf 2)
 RESET := $(shell tput sgr0)
@@ -182,17 +182,30 @@ K8S_OVERLAY ?= minikube
 K8S_NAMESPACE := oficina
 KUBECTL := kubectl --context $(KUBE_CONTEXT)
 
+# O overlay minikube só pode ir para o contexto minikube e vice-versa.
+# Aplicar o overlay local em outro cluster criaria um MySQL avulso e um
+# Service NodePort, com uma imagem que não existe fora do Minikube.
+k8s-check:
+	@if [ "$(K8S_OVERLAY)" = "minikube" ] && [ "$(KUBE_CONTEXT)" != "minikube" ]; then \
+		echo "K8S_OVERLAY=minikube só pode ser aplicado com KUBE_CONTEXT=minikube (recebido: $(KUBE_CONTEXT))."; \
+		exit 1; \
+	fi
+	@if [ "$(K8S_OVERLAY)" != "minikube" ] && [ "$(KUBE_CONTEXT)" = "minikube" ]; then \
+		echo "K8S_OVERLAY=$(K8S_OVERLAY) precisa de KUBE_CONTEXT apontando para o cluster desse ambiente."; \
+		exit 1; \
+	fi
+
 k8s-build:
 	minikube image build -t oficina-api:local .
 
-k8s-apply:
+k8s-apply: k8s-check
 	@if [ ! -f k8s/overlays/$(K8S_OVERLAY)/secrets.env ]; then \
 		echo "k8s/overlays/$(K8S_OVERLAY)/secrets.env não existe. Copie de secrets.env.example e preencha."; \
 		exit 1; \
 	fi
 	$(KUBECTL) apply -k k8s/overlays/$(K8S_OVERLAY)
 
-k8s-migrate:
+k8s-migrate: k8s-check
 	@if [ "$(K8S_OVERLAY)" = "minikube" ]; then \
 		$(KUBECTL) -n $(K8S_NAMESPACE) rollout status statefulset/oficina-mysql --timeout=180s; \
 	fi
@@ -224,7 +237,11 @@ k8s-status:
 k8s-url:
 	@minikube service oficina-api -n $(K8S_NAMESPACE) --url
 
-k8s-delete:
+k8s-delete: k8s-check
+	@if [ "$(KUBE_CONTEXT)" != "minikube" ] && [ "$(CONFIRM)" != "yes" ]; then \
+		echo "Isto apaga o namespace $(K8S_NAMESPACE) no contexto $(KUBE_CONTEXT). Para confirmar, rode de novo com CONFIRM=yes."; \
+		exit 1; \
+	fi
 	$(KUBECTL) delete -k k8s/migrate --ignore-not-found
 	$(KUBECTL) -n $(K8S_NAMESPACE) delete configmap oficina-migrations --ignore-not-found
 	$(KUBECTL) delete -k k8s/overlays/$(K8S_OVERLAY) --ignore-not-found
@@ -235,4 +252,4 @@ load-test:
 		echo "Uso: make load-test BASE_URL=http://<host> K6_EMAIL=<email> K6_SENHA=<senha>"; \
 		exit 1; \
 	fi
-	k6 run -e BASE_URL=$(BASE_URL) -e K6_EMAIL=$(K6_EMAIL) -e K6_SENHA=$(K6_SENHA) test/load/ordens-servico.js
+	k6 run -e "BASE_URL=$(BASE_URL)" -e "K6_EMAIL=$(K6_EMAIL)" -e 'K6_SENHA=$(K6_SENHA)' test/load/ordens-servico.js
