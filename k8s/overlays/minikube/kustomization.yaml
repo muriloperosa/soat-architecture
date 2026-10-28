@@ -12,11 +12,11 @@ resources:
 
 patches:
   - path: api-service-patch.yaml
+
 images:
   - name: oficina-api
     newName: oficina-api
     newTag: local
-
 generatorOptions:
   disableNameSuffixHash: true
 

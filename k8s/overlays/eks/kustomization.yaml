@@ -1,0 +1,27 @@
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: oficina
+
+resources:
+  - namespace.yaml
+  - ../../base
+
+patches:
+  - path: api-service-patch.yaml
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  - name: oficina-api-config
+    behavior: merge
+    literals:
+      - DB_HOST=REPLACE_WITH_RDS_ENDPOINT
+      - DB_USER=REPLACE_WITH_RDS_USERNAME
+
+secretGenerator:
+  - name: oficina-api-secrets
+    envs:
+      - secrets.env
