@@ -559,8 +559,14 @@ definitions:
       preco:
         example: 89.9
         type: number
+      quantidade_disponivel:
+        example: 16
+        type: integer
       quantidade_em_estoque:
         example: 20
+        type: integer
+      quantidade_reservada:
+        example: 4
         type: integer
     type: object
   peca.ReporEstoqueRequest:
@@ -1429,6 +1435,38 @@ paths:
           schema:
             $ref: '#/definitions/httperror.ErrorResponse'
       summary: Verifica saúde da API
+      tags:
+      - Health
+  /v1/health/live:
+    get:
+      description: Retorna 200 enquanto o processo da API está de pé; não verifica
+        dependências externas
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/health.HealthCheckResponse'
+      summary: Liveness probe
+      tags:
+      - Health
+  /v1/health/ready:
+    get:
+      description: Retorna 200 quando a API consegue falar com o MySQL; 503 tira o
+        pod do balanceamento sem reiniciá-lo
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/health.HealthCheckResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      summary: Readiness probe
       tags:
       - Health
   /v1/ordens-servico:
