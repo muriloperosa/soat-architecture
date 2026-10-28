@@ -39,7 +39,7 @@ spec:
                 secretKeyRef: {name: oficina-api-secrets, key: DB_PASSWORD}
           args:
             - -path=/migrations
-            - -database=mysql://$(DB_USER):$(DB_PASSWORD)@tcp($(DB_HOST):$(DB_PORT))/$(DB_NAME)?charset=utf8mb4&parseTime=true
+            - -database=mysql://$(DB_USER):$(DB_PASSWORD)@tcp($(DB_HOST):$(DB_PORT))/$(DB_NAME)?charset=utf8mb4&parseTime=true&timeout=10s&readTimeout=30s&writeTimeout=30s
             - up
           resources:
             requests:
