@@ -17,6 +17,7 @@ O versionamento do schema do banco é feito com `golang-migrate`, migrations em 
 - [ADRs](docs/adr/): decisões estruturais registradas e justificadas
 - [Modelo de domínio](docs/DOMAIN_MODEL.md): agregados, entidades e Value Objects
 - [Segurança](docs/SECURITY.md): ferramentas de SCA, SAST e DAST usadas e a justificativa de cada uma
+- [Kubernetes](docs/KUBERNETES.md): manifestos em `k8s/`, requisitos da máquina, deploy no Minikube, comandos `kubectl` e demonstração do autoscaling
 - [Swagger](docs/swagger/): documentação da API gerada a partir dos handlers (UI disponível em `/swagger/index.html` com a aplicação no ar)
 - [Coleção Postman](.dev/postman/): coleção pronta para testar os endpoints da API
 
@@ -46,3 +47,19 @@ chmod +x .dev/scripts/setup.sh
 - popula o banco com usuários de login e dados fictícios
 - sobe a API
 - ao final, imprime as credenciais dos usuários seedados (admin, atendente, mecânico, cliente) para testar a API
+
+## Deploy em Kubernetes
+
+Os manifestos ficam em [`k8s/`](k8s/), organizados com Kustomize: uma base comum (Deployment, Service, ConfigMap e HPA da API) e overlays para Minikube e EKS. As migrations rodam num Job separado ([ADR 0006](docs/adr/0006-migrations-em-job-kubernetes.md)).
+
+Com Docker, Minikube, `kubectl` e `make` instalados:
+
+```bash
+minikube start --cpus=4 --memory=6g --disk-size=20g
+minikube addons enable metrics-server
+cp k8s/overlays/minikube/secrets.env.example k8s/overlays/minikube/secrets.env   # edite os valores
+make k8s-build
+make k8s-deploy
+```
+
+Requisitos completos, explicação de cada recurso, comandos `kubectl` e o roteiro de teste de carga com k6 estão em [`docs/KUBERNETES.md`](docs/KUBERNETES.md).
