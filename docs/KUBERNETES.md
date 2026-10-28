@@ -474,21 +474,46 @@ Mensagens como `invalid port` ou `parse "mysql://..."` indicam caractere especia
 O overlay [`k8s/overlays/eks`](../k8s/overlays/eks/) reaproveita a base inteira e muda só o que é da AWS:
 
 - não cria MySQL: `DB_HOST` e `DB_USER` apontam para o RDS;
-- a imagem vem do ECR em vez de `oficina-api:local`;
-- o Service vira `LoadBalancer`, e a AWS cria um Load Balancer público para ele.
-- o Deployment usa `imagePullPolicy: Always`, porque a tag `latest` é reaproveitada a cada build e, com `IfNotPresent`, um nó que já tivesse a imagem em cache continuaria rodando a versão antiga. Quando o pipeline publicar uma tag por commit, essa troca deixa de ser necessária.
+- o Service vira `LoadBalancer`, e a AWS cria um Load Balancer público para ele;
+- a imagem vem de um registry (ECR) e é versionada.
 
-Os valores marcados com `REPLACE_WITH_...` no `kustomization.yaml` vêm das saídas do Terraform (endpoint do RDS, usuário e URL do repositório ECR), que será escrito em `/infra`. Enquanto isso, o overlay serve para validar que a base funciona sem o MySQL local:
+### Versão da imagem
+
+No Minikube a imagem é sempre `oficina-api:local`. Ela é construída dentro do próprio cluster pelo `make k8s-build`, que sobrescreve a mesma tag a cada build, e o `rollout restart` do `make k8s-deploy` faz os pods subirem com a versão nova.
+
+No EKS cada versão tem uma tag própria: o SHA curto do commit (`git rev-parse --short HEAD`), com o sufixo `-dirty` quando há mudanças não commitadas. A tag não fica escrita no `kustomization.yaml`. O `make k8s-apply` gera uma kustomization temporária em `k8s/.build/eks/` (ignorada pelo git) que inclui o overlay e define só a imagem:
+
+```yaml
+resources:
+  - ../../overlays/eks
+images:
+  - name: oficina-api
+    newName: <IMAGE_NAME>
+    newTag: "<IMAGE_TAG>"
+```
+
+Como cada deploy aponta para uma tag diferente, o `imagePullPolicy: IfNotPresent` da base é seguro: o nó baixa a imagem nova porque ainda não tem aquela tag, e um rollback (`kubectl rollout undo`) volta para a tag anterior, que continua no cache ou no registry. `IMAGE_TAG` pode ser sobrescrito, por exemplo para reimplantar uma versão já publicada.
+
+### Aplicar
+
+Os valores marcados com `REPLACE_WITH_...` no `kustomization.yaml` vêm das saídas do Terraform (endpoint do RDS e usuário do banco), que será escrito em `/infra`. Enquanto isso, o overlay serve para validar que a base funciona sem o MySQL local:
 
 ```bash
 cp k8s/overlays/eks/secrets.env.example k8s/overlays/eks/secrets.env
 kubectl kustomize k8s/overlays/eks
 ```
 
-Quando o cluster existir, o fluxo é o mesmo do Minikube, trocando o overlay e o contexto:
+Quando o cluster existir, a imagem precisa ser construída e publicada no ECR com a tag do commit antes do deploy (passo do pipeline de CI/CD):
 
 ```bash
-make k8s-deploy K8S_OVERLAY=eks KUBE_CONTEXT=<contexto do EKS>
+IMAGE_NAME=<conta>.dkr.ecr.<região>.amazonaws.com/oficina-api
+IMAGE_TAG=$(git rev-parse --short HEAD)
+docker build -t "$IMAGE_NAME:$IMAGE_TAG" .
+docker push "$IMAGE_NAME:$IMAGE_TAG"
+
+make k8s-deploy K8S_OVERLAY=eks KUBE_CONTEXT=<contexto do EKS> IMAGE_NAME="$IMAGE_NAME" IMAGE_TAG="$IMAGE_TAG"
 ```
+
+O `make` recusa `K8S_OVERLAY=eks` sem `IMAGE_NAME` e sem um `KUBE_CONTEXT` diferente de `minikube`.
 
 No EKS o `metrics-server` não vem instalado por padrão. Ele precisa ser incluído no Terraform do cluster (ou instalado como addon do EKS), senão o HPA fica em `<unknown>` como descrito acima.
