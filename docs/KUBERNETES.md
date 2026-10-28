@@ -43,7 +43,7 @@ Todos os recursos ficam no namespace `oficina`.
 | HorizontalPodAutoscaler | `oficina-api` | Escala a API de 2 a 6 réplicas por CPU (70%) e memória (80%) |
 | ConfigMap | `oficina-api-config` | Variáveis de ambiente não sensíveis (porta, host e nome do banco, pool de conexões, TTL do JWT) |
 | Secret | `oficina-api-secrets` | `DB_PASSWORD` e `JWT_SECRET`, gerados a partir de um arquivo local que não vai para o git |
-| Job | `oficina-migrate` | Aplica as migrations de `migrations/mysql/` antes da API receber tráfego |
+| Job | `oficina-migrate` | Aplica as migrations de `migrations/mysql/` uma vez a cada deploy |
 | ConfigMap | `oficina-migrations` | Os arquivos `.sql`, montados no Job. Criado pelo `make k8s-migrate` |
 | StatefulSet + Service headless | `oficina-mysql` | MySQL 8 com volume persistente. Só no Minikube |
 | Namespace | `oficina` | Isola tudo acima |
@@ -133,7 +133,7 @@ No macOS o `brew install minikube` instala ou atualiza o `kubectl` junto (o paco
 
 ### Recursos de hardware
 
-O Minikube precisa de pelo menos **4 vCPUs, 6 GB de RAM e 20 GB de disco livre** reservados para ele. Esse tamanho vem da conta do pior caso: 6 réplicas da API com limite de 500m de CPU cada, mais o MySQL (até 1 CPU e 1 GiB) e os componentes do próprio Kubernetes. Com menos CPU o cluster não tem onde agendar as réplicas novas e o HPA fica parado com pods em `Pending`.
+Reserve para o Minikube pelo menos 4 vCPUs, 6 GB de RAM e 20 GB de disco livre. Para agendar os pods, o Kubernetes olha só os requests (6 réplicas x 100m mais 250m do MySQL cabem em 2 CPUs), mas durante o teste de carga cada réplica pode usar até o limite de 500m. Com 4 vCPUs sobra espaço para esses picos; com menos, os pods disputam CPU, a latência sobe e a demonstração do HPA fica difícil de ler.
 
 No Docker Desktop, confira em *Settings > Resources* se a VM tem pelo menos esses valores disponíveis, senão o `minikube start` falha.
 
@@ -174,7 +174,7 @@ test -f k8s/overlays/minikube/secrets.env && echo "secrets.env ok"
 
 ## Deploy no Minikube
 
-Todos os alvos `make k8s-*` passam `--context minikube` explicitamente para o `kubectl`. Isso é proposital: se o seu kubeconfig tiver outro contexto ativo (de trabalho, de produção), nenhum comando deste guia vai parar nele. Para usar outro contexto, passe `KUBE_CONTEXT=<nome>`.
+Os alvos `make k8s-*` passam `--context minikube` para o `kubectl` em todo comando, então um contexto de outro cluster ativo no seu kubeconfig nunca é usado sem você pedir. O overlay e o contexto andam juntos: `K8S_OVERLAY=minikube` só é aceito com `KUBE_CONTEXT=minikube`, e qualquer outro overlay exige um `KUBE_CONTEXT` diferente de `minikube`. Fora do Minikube, o `make k8s-delete` também pede `CONFIRM=yes`.
 
 ### 1. Subir o cluster
 
@@ -234,7 +234,7 @@ O `make k8s-deploy` pode ser repetido quantas vezes for preciso. Na segunda exec
 
 O `statefulset.apps/oficina-mysql configured` aparece em todo `apply`, mesmo sem nada ter mudado. É uma limitação do `kubectl apply` com `volumeClaimTemplates`: o servidor completa o template com campos padrão (`volumeMode`, `status`) e, como essa lista não tem chave de merge, o kubectl sempre reenvia a lista inteira. Nada é alterado no cluster; `kubectl diff -k k8s/overlays/minikube` sai vazio.
 
-Sobre a ordem: no primeiro deploy a API sobe junto com o MySQL, alguns segundos antes das tabelas existirem, e o restart do passo 5 resolve isso. Nos deploys seguintes a API antiga continua atendendo enquanto o Job roda, então **toda migration precisa funcionar com a versão anterior da API**. Na prática: adicionar coluna ou tabela num deploy e remover a antiga só num deploy posterior.
+Sobre a ordem: no primeiro deploy a API sobe junto com o MySQL, alguns segundos antes das tabelas existirem, e o restart do passo 5 resolve isso. Nos deploys seguintes a API antiga continua atendendo enquanto o Job roda, então toda migration precisa funcionar com a versão anterior da API. Uma coluna ou tabela nova entra num deploy, e a antiga só é removida num deploy seguinte.
 
 ### 4. Acessar a API
 
@@ -245,7 +245,7 @@ make k8s-url
 Equivale a `minikube service oficina-api -n oficina --url`. O comportamento depende do sistema:
 
 - **Linux**: imprime algo como `http://192.168.49.2:30080` e termina. O IP do Minikube é acessível direto do host.
-- **macOS e Windows com o driver Docker**: o IP do Minikube não é acessível do host, então o comando abre um túnel, imprime uma URL do tipo `http://127.0.0.1:54321` e **fica rodando**. Deixe esse terminal aberto enquanto usar a API; fechar o terminal fecha o túnel.
+- **macOS e Windows com o driver Docker**: o IP do Minikube não é acessível do host, então o comando abre um túnel, imprime uma URL do tipo `http://127.0.0.1:54321` e fica rodando. Deixe esse terminal aberto enquanto usar a API; fechar o terminal fecha o túnel.
 
 Guarde a URL numa variável para os próximos comandos:
 
@@ -282,7 +282,7 @@ A porta local 3307 evita conflito com um MySQL do `docker compose` que esteja na
 make k8s-delete
 ```
 
-Apaga o Job, o ConfigMap das migrations e todo o overlay, **inclusive o namespace e o volume do MySQL**. Os dados do banco são perdidos. Para desligar o cluster sem apagar nada, use `minikube stop`.
+Apaga o Job, o ConfigMap das migrations e todo o overlay, inclusive o namespace e o volume do MySQL. Os dados do banco não voltam. Para desligar o cluster sem apagar nada, use `minikube stop`.
 
 ## Comandos kubectl do dia a dia
 
@@ -394,7 +394,7 @@ O que esperar (valores de uma execução real num Minikube com 4 vCPUs):
 2. Cerca de um minuto depois do início a CPU passa da meta (chegou a 125% e 147% nessa execução) e o HPA sobe para 4 ou 5 réplicas. Cada pod novo aparece como `0/1` até a readiness passar, o que leva poucos segundos.
 3. Depois que o k6 termina, a CPU cai. Passada a janela de estabilização de 60s, o HPA remove réplicas aos poucos até voltar a 2.
 
-As métricas do `metrics-server` no Minikube são atualizadas a cada 60 segundos, então a coluna `TARGETS` muda em saltos e a reação do HPA tem esse atraso. Não é sinal de problema.
+As métricas do `metrics-server` no Minikube são atualizadas a cada 60 segundos, então a coluna `TARGETS` muda em saltos e o HPA reage com até um minuto de atraso.
 
 Resultado do k6 nessa mesma execução: cerca de 26 mil requisições em 4 minutos (108 por segundo no pico), nenhuma falha, latência mediana de 30 ms e p95 de 313 ms.
 
@@ -420,7 +420,7 @@ Causas, da mais provável para a menos:
 2. Pods recém-criados. As primeiras métricas levam de 30 a 60 segundos.
 3. Container sem `resources.requests`. Confira com `kubectl get deployment oficina-api -o jsonpath='{.spec.template.spec.containers[0].resources}'`.
 
-### `ErrImageNeverPull` ou `ImagePullBackOff` na API
+### `ErrImagePull` ou `ImagePullBackOff` na API
 
 A imagem `oficina-api:local` não existe dentro do Minikube. Rode `make k8s-build` e depois `kubectl rollout restart deployment/oficina-api`. Lembre que `minikube delete` apaga as imagens construídas.
 
@@ -476,6 +476,7 @@ O overlay [`k8s/overlays/eks`](../k8s/overlays/eks/) reaproveita a base inteira 
 - não cria MySQL: `DB_HOST` e `DB_USER` apontam para o RDS;
 - a imagem vem do ECR em vez de `oficina-api:local`;
 - o Service vira `LoadBalancer`, e a AWS cria um Load Balancer público para ele.
+- o Deployment usa `imagePullPolicy: Always`, porque a tag `latest` é reaproveitada a cada build e, com `IfNotPresent`, um nó que já tivesse a imagem em cache continuaria rodando a versão antiga. Quando o pipeline publicar uma tag por commit, essa troca deixa de ser necessária.
 
 Os valores marcados com `REPLACE_WITH_...` no `kustomization.yaml` vêm das saídas do Terraform (endpoint do RDS, usuário e URL do repositório ECR), que será escrito em `/infra`. Enquanto isso, o overlay serve para validar que a base funciona sem o MySQL local:
 

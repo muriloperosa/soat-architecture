@@ -182,6 +182,15 @@ K8S_OVERLAY ?= minikube
 K8S_NAMESPACE := oficina
 KUBECTL := kubectl --context $(KUBE_CONTEXT)
 
+# Fora do Minikube cada versão tem sua própria tag: o SHA curto do commit,
+# com sufixo -dirty quando há mudanças não commitadas. Como a tag muda a cada
+# versão, o imagePullPolicy IfNotPresent nunca reaproveita uma imagem antiga
+# do cache do nó. IMAGE_NAME é o repositório da imagem (no EKS, a URL do ECR).
+# No Minikube a imagem é sempre oficina-api:local, definida no overlay.
+IMAGE_NAME ?= oficina-api
+IMAGE_TAG ?= $(shell git rev-parse --short HEAD)$(shell [ -n "$$(git status --porcelain)" ] && echo -dirty)
+K8S_BUILD_DIR := k8s/.build/$(K8S_OVERLAY)
+
 # O overlay minikube só pode ir para o contexto minikube e vice-versa.
 # Aplicar o overlay local em outro cluster criaria um MySQL avulso e um
 # Service NodePort, com uma imagem que não existe fora do Minikube.
@@ -194,6 +203,10 @@ k8s-check:
 		echo "K8S_OVERLAY=$(K8S_OVERLAY) precisa de KUBE_CONTEXT apontando para o cluster desse ambiente."; \
 		exit 1; \
 	fi
+	@if [ "$(K8S_OVERLAY)" != "minikube" ] && [ "$(IMAGE_NAME)" = "oficina-api" ]; then \
+		echo "K8S_OVERLAY=$(K8S_OVERLAY) precisa de IMAGE_NAME com o repositório da imagem (ex.: URL do ECR)."; \
+		exit 1; \
+	fi
 
 k8s-build:
 	minikube image build -t oficina-api:local .
@@ -203,7 +216,27 @@ k8s-apply: k8s-check
 		echo "k8s/overlays/$(K8S_OVERLAY)/secrets.env não existe. Copie de secrets.env.example e preencha."; \
 		exit 1; \
 	fi
-	$(KUBECTL) apply -k k8s/overlays/$(K8S_OVERLAY)
+	@if [ "$(K8S_OVERLAY)" = "minikube" ]; then \
+		if ! minikube image ls | grep -q "oficina-api:local$$"; then \
+			echo "Imagem oficina-api:local não existe no Minikube. Rode make k8s-build."; \
+			exit 1; \
+		fi; \
+		$(KUBECTL) apply -k k8s/overlays/minikube; \
+	else \
+		mkdir -p $(K8S_BUILD_DIR); \
+		printf '%s\n' \
+			'apiVersion: kustomize.config.k8s.io/v1beta1' \
+			'kind: Kustomization' \
+			'resources:' \
+			'  - ../../overlays/$(K8S_OVERLAY)' \
+			'images:' \
+			'  - name: oficina-api' \
+			'    newName: $(IMAGE_NAME)' \
+			'    newTag: "$(IMAGE_TAG)"' \
+			> $(K8S_BUILD_DIR)/kustomization.yaml; \
+		echo "imagem: $(IMAGE_NAME):$(IMAGE_TAG)"; \
+		$(KUBECTL) apply -k $(K8S_BUILD_DIR); \
+	fi
 
 k8s-migrate: k8s-check
 	@if [ "$(K8S_OVERLAY)" = "minikube" ]; then \
