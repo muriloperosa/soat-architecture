@@ -879,7 +879,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Lista Ordens de Serviço com paginação, ordenação e filtros diretos por campo. Sem o parâmetro order, prioriza RECEBIDA, EM_DIAGNOSTICO, AGUARDANDO_APROVACAO, APROVADA/REJEITADA e EM_EXECUCAO, nessa ordem; dentro de cada prioridade, mostra primeiro as OS mais antigas (data_cadastro ASC). FINALIZADA e ENTREGUE são excluídas da listagem. Ao informar order, a ordenação padrão por status é substituída. Usuários do tipo cliente visualizam somente as próprias Ordens de Serviço.",
+                "description": "Lista Ordens de Serviço com paginação, ordenação e filtros diretos por campo. Sem o parâmetro order, prioriza EM_EXECUCAO, APROVADA, AGUARDANDO_APROVACAO/REJEITADA, EM_DIAGNOSTICO e RECEBIDA, nessa ordem; dentro de cada prioridade, mostra primeiro as OS mais antigas (data_cadastro ASC). order=status usa a mesma prioridade; outros campos em order substituem essa ordenação. direction=DESC inverte a ordem e os critérios de desempate. Sem filtro de status, FINALIZADA e ENTREGUE são excluídas da listagem; quando um status é informado, a consulta respeita o filtro, inclusive para esses status. Usuários do tipo cliente visualizam somente as próprias Ordens de Serviço.",
                 "produces": [
                     "application/json"
                 ],
@@ -909,7 +909,7 @@ const docTemplate = `{
                             "data_atualizacao"
                         ],
                         "type": "string",
-                        "description": "Campo de ordenação; omitido, usa prioridade do status e data de cadastro crescente",
+                        "description": "Campo de ordenação; omitido ou status, usa prioridade do status e data de cadastro crescente",
                         "name": "order",
                         "in": "query"
                     },
@@ -4818,17 +4818,9 @@ const docTemplate = `{
                     "type": "number",
                     "example": 89.9
                 },
-                "quantidade_disponivel": {
-                    "type": "integer",
-                    "example": 16
-                },
                 "quantidade_em_estoque": {
                     "type": "integer",
                     "example": 20
-                },
-                "quantidade_reservada": {
-                    "type": "integer",
-                    "example": 4
                 }
             }
         },

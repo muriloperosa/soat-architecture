@@ -1,12 +1,19 @@
 package ordemservico
 
-import mysqlquery "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/query"
+import (
+	"fmt"
+	"strings"
+
+	domain "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
+	domainquery "github.com/muriloperosa/soat-architecture/internal/domain/query"
+	mysqlquery "github.com/muriloperosa/soat-architecture/internal/infrastructure/persistence/mysql/query"
+)
 
 // NewQueryBuilder define os campos, tipos e operadores públicos da consulta de
 // Ordens de Serviço. Campos não declarados aqui não podem virar filtro ou ordenação SQL.
 func NewQueryBuilder() *mysqlquery.Builder {
-	return mysqlquery.NewDefaultBuilder(
-		map[string]mysqlquery.Field{
+	return mysqlquery.NewBuilder(mysqlquery.Config{
+		Fields: map[string]mysqlquery.Field{
 			"id": {
 				Column:    "id",
 				Type:      mysqlquery.ValueTypeUint64,
@@ -62,6 +69,32 @@ func NewQueryBuilder() *mysqlquery.Builder {
 				Operators: mysqlquery.DateOperators,
 			},
 		},
-		"status",
-	)
+		DefaultOrder:     "status",
+		DefaultDirection: domainquery.DirectionASC,
+		OrderExpressions: map[string][]mysqlquery.OrderExpression{
+			"status": {
+				prioridadeStatusExpression(),
+				{SQL: "data_cadastro"},
+				{SQL: "id"},
+			},
+		},
+		PageSize: mysqlquery.DefaultPageSize,
+	})
+}
+
+func prioridadeStatusExpression() mysqlquery.OrderExpression {
+	prioridades := domain.PrioridadeListagem()
+	casos := make([]string, 0)
+	valores := make([]any, 0)
+	for prioridade, grupo := range prioridades {
+		for _, status := range grupo {
+			casos = append(casos, fmt.Sprintf("WHEN ? THEN %d", prioridade+1))
+			valores = append(valores, string(status))
+		}
+	}
+
+	return mysqlquery.OrderExpression{
+		SQL:  "CASE status " + strings.Join(casos, " ") + fmt.Sprintf(" ELSE %d END", len(prioridades)+1),
+		Vars: valores,
+	}
 }

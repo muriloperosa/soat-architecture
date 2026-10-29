@@ -143,7 +143,7 @@ func TestRepositoryListarComPaginacaoOrdenacaoEFiltros(t *testing.T) {
 			{
 				Field:    "status",
 				Operator: query.OperatorEqual,
-				Value:    "RECEBIDA",
+				Value:    "FINALIZADA",
 			},
 			{
 				Field:    "cliente_id",
@@ -155,13 +155,11 @@ func TestRepositoryListarComPaginacaoOrdenacaoEFiltros(t *testing.T) {
 
 	mockDB.
 		ExpectQuery(
-			"SELECT count\\(\\*\\) FROM .*ordens_servico.*WHERE.*status.*=.*\\?.*AND.*cliente_id.*=.*\\?.*AND.*status NOT IN \\(\\?, \\?\\)",
+			"SELECT count\\(\\*\\) FROM .*ordens_servico.*WHERE.*status.*=.*\\?.*AND.*cliente_id.*=.*\\?",
 		).
 		WithArgs(
-			"RECEBIDA",
+			"FINALIZADA",
 			uint64(10),
-			domain.StatusFinalizada,
-			domain.StatusEntregue,
 		).
 		WillReturnRows(
 			sqlmock.NewRows([]string{"count"}).
@@ -170,17 +168,15 @@ func TestRepositoryListarComPaginacaoOrdenacaoEFiltros(t *testing.T) {
 
 	mockDB.
 		ExpectQuery(
-			"SELECT \\* FROM .*ordens_servico.*WHERE.*status.*=.*\\?.*AND.*cliente_id.*=.*\\?.*AND.*status NOT IN \\(\\?, \\?\\).*ORDER BY.*data_cadastro.*DESC.*LIMIT.*OFFSET.*",
+			"SELECT \\* FROM .*ordens_servico.*WHERE.*status.*=.*\\?.*AND.*cliente_id.*=.*\\?.*ORDER BY.*data_cadastro.*DESC.*LIMIT.*OFFSET.*",
 		).
 		WithArgs(
-			"RECEBIDA",
+			"FINALIZADA",
 			uint64(10),
-			domain.StatusFinalizada,
-			domain.StatusEntregue,
 			20,
 			20,
 		).
-		WillReturnRows(ordemServicoRows())
+		WillReturnRows(ordemServicoRowsComStatus("FINALIZADA"))
 
 	page, err := repository.Listar(context.Background(), params)
 
@@ -205,8 +201,18 @@ func TestRepositoryListarUsaPadroes(t *testing.T) {
 	mockDB.ExpectQuery("SELECT count\\(\\*\\) FROM .*ordens_servico.*WHERE status NOT IN \\(\\?, \\?\\)").
 		WithArgs(domain.StatusFinalizada, domain.StatusEntregue).
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
-	mockDB.ExpectQuery("SELECT \\* FROM .*ordens_servico.*WHERE status NOT IN \\(\\?, \\?\\) ORDER BY CASE status WHEN 'RECEBIDA' THEN 1 WHEN 'EM_DIAGNOSTICO' THEN 2 WHEN 'AGUARDANDO_APROVACAO' THEN 3 WHEN 'APROVADA' THEN 4 WHEN 'REJEITADA' THEN 4 WHEN 'EM_EXECUCAO' THEN 5 ELSE 6 END ASC,data_cadastro ASC,id ASC LIMIT .*").
-		WithArgs(domain.StatusFinalizada, domain.StatusEntregue, 20).
+	mockDB.ExpectQuery("SELECT \\* FROM .*ordens_servico.*WHERE status NOT IN \\(\\?, \\?\\) ORDER BY CASE status WHEN \\? THEN 1 WHEN \\? THEN 2 WHEN \\? THEN 3 WHEN \\? THEN 3 WHEN \\? THEN 4 WHEN \\? THEN 5 ELSE 6 END ASC,data_cadastro ASC,id ASC LIMIT .*").
+		WithArgs(
+			domain.StatusFinalizada,
+			domain.StatusEntregue,
+			string(domain.StatusEmExecucao),
+			string(domain.StatusAprovada),
+			string(domain.StatusAguardandoAprovacao),
+			string(domain.StatusRejeitada),
+			string(domain.StatusEmDiagnostico),
+			string(domain.StatusRecebida),
+			20,
+		).
 		WillReturnRows(sqlmock.NewRows(ordemServicoColumns()))
 
 	page, err := repository.Listar(context.Background(), query.Params{})
@@ -258,6 +264,10 @@ func ordemServicoColumns() []string {
 }
 
 func ordemServicoRows() *sqlmock.Rows {
+	return ordemServicoRowsComStatus("RECEBIDA")
+}
+
+func ordemServicoRowsComStatus(status string) *sqlmock.Rows {
 	agora := time.Date(2026, time.August, 30, 12, 0, 0, 0, time.UTC)
 	return sqlmock.NewRows(ordemServicoColumns()).AddRow(
 		42,
@@ -265,7 +275,7 @@ func ordemServicoRows() *sqlmock.Rows {
 		10,
 		20,
 		52300,
-		"RECEBIDA",
+		status,
 		"",
 		"Ruído no motor",
 		30,

@@ -51,12 +51,12 @@ func NewHandler(
 }
 
 // @Summary Lista Ordens de Serviço
-// @Description Lista Ordens de Serviço com paginação, ordenação e filtros diretos por campo. Sem o parâmetro order, prioriza RECEBIDA, EM_DIAGNOSTICO, AGUARDANDO_APROVACAO, APROVADA/REJEITADA e EM_EXECUCAO, nessa ordem; dentro de cada prioridade, mostra primeiro as OS mais antigas (data_cadastro ASC). FINALIZADA e ENTREGUE são excluídas da listagem. Ao informar order, a ordenação padrão por status é substituída. Usuários do tipo cliente visualizam somente as próprias Ordens de Serviço.
+// @Description Lista Ordens de Serviço com paginação, ordenação e filtros diretos por campo. Sem o parâmetro order, prioriza EM_EXECUCAO, APROVADA, AGUARDANDO_APROVACAO/REJEITADA, EM_DIAGNOSTICO e RECEBIDA, nessa ordem; dentro de cada prioridade, mostra primeiro as OS mais antigas (data_cadastro ASC). order=status usa a mesma prioridade; outros campos em order substituem essa ordenação. direction=DESC inverte a ordem e os critérios de desempate. Sem filtro de status, FINALIZADA e ENTREGUE são excluídas da listagem; quando um status é informado, a consulta respeita o filtro, inclusive para esses status. Usuários do tipo cliente visualizam somente as próprias Ordens de Serviço.
 // @Tags Ordens de Serviço
 // @Produce json
 // @Security BearerAuth
 // @Param page query int false "Número da página" default(1) minimum(1)
-// @Param order query string false "Campo de ordenação; omitido, usa prioridade do status e data de cadastro crescente" Enums(id,numero,cliente_id,veiculo_id,quilometragem_entrada,status,criado_por,data_cadastro,data_atualizacao)
+// @Param order query string false "Campo de ordenação; omitido ou status, usa prioridade do status e data de cadastro crescente" Enums(id,numero,cliente_id,veiculo_id,quilometragem_entrada,status,criado_por,data_cadastro,data_atualizacao)
 // @Param direction query string false "Direção da ordenação" Enums(ASC,DESC) default(ASC)
 // @Param status query string false "Status ou lista de status separados por vírgula"
 // @Param cliente_id query string false "ID ou lista de IDs de clientes separados por vírgula"
