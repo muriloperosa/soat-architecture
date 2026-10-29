@@ -16,6 +16,9 @@ test/
 # Env / secrets
 .env.example
 
+# Kubernetes
+k8s/
+
 # Test/coverage artifacts
 *.out
 coverage.html

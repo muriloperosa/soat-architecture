@@ -54,3 +54,44 @@ func TestHealthHandler_Retorna503QuandoBancoFalha(t *testing.T) {
 
 	require.Equal(t, http.StatusServiceUnavailable, rec.Code)
 }
+
+func TestHealthLive_RetornaOKSemTocarNoBanco(t *testing.T) {
+	db, mock := newMockedGormDB(t)
+
+	router := handler.NewRouter(wiring.NewContainer(nil, db))
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/health/live", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.JSONEq(t, `{"status":"ok"}`, rec.Body.String())
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestHealthReady_RetornaOKQuandoBancoResponde(t *testing.T) {
+	db, mock := newMockedGormDB(t)
+	mock.ExpectPing()
+
+	router := handler.NewRouter(wiring.NewContainer(nil, db))
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/health/ready", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestHealthReady_Retorna503QuandoBancoFalha(t *testing.T) {
+	db, mock := newMockedGormDB(t)
+	mock.ExpectPing().WillReturnError(sqlmock.ErrCancelled)
+
+	router := handler.NewRouter(wiring.NewContainer(nil, db))
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/health/ready", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusServiceUnavailable, rec.Code)
+}
