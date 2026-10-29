@@ -52,14 +52,73 @@ chmod +x .dev/scripts/setup.sh
 
 Os manifestos ficam em [`k8s/`](k8s/), organizados com Kustomize: uma base comum (Deployment, Service, ConfigMap e HPA da API) e overlays para Minikube e EKS. As migrations rodam num Job separado ([ADR 0006](docs/adr/0006-migrations-em-job-kubernetes.md)).
 
-Com Docker, Minikube, `kubectl` e `make` instalados:
+Pré-requisitos: Docker rodando, Minikube, `kubectl`, k6, Go 1.26 e `make`. Versões mínimas e recursos de máquina estão em [`docs/KUBERNETES.md`](docs/KUBERNETES.md#requisitos-da-máquina).
+
+### Roteiro: subir no Minikube e demonstrar o autoscaling
+
+**1. Criar o cluster.** Só na primeira vez ou depois de um `minikube delete`. Se ele só estava parado, basta `minikube start`.
 
 ```bash
 minikube start --cpus=4 --memory=6g --disk-size=20g
 minikube addons enable metrics-server
-cp k8s/overlays/minikube/secrets.env.example k8s/overlays/minikube/secrets.env   # edite os valores
-make k8s-build
-make k8s-deploy
 ```
 
-Requisitos completos, explicação de cada recurso, comandos `kubectl` e o roteiro de teste de carga com k6 estão em [`docs/KUBERNETES.md`](docs/KUBERNETES.md).
+**2. Criar o arquivo de segredos.** Ele não vai para o git. Troque os dois `changeme`; a `DB_PASSWORD` deve ter só letras e números.
+
+```bash
+cp k8s/overlays/minikube/secrets.env.example k8s/overlays/minikube/secrets.env
+```
+
+**3. Construir a imagem e fazer o deploy.** O `k8s-deploy` aplica a configuração, roda as migrations num Job e sobe a API.
+
+```bash
+make k8s-build
+make k8s-deploy
+make k8s-status    # 2 pods da API em Running e o HPA com cpu: X%/70%
+```
+
+**4. Popular o banco.** Só quando o banco está vazio. Num terminal, abra o túnel até o MySQL e deixe rodando:
+
+```bash
+kubectl --context minikube -n oficina port-forward pod/oficina-mysql-0 3307:3306
+```
+
+Em outro terminal, rode o seed com os valores do `secrets.env`. Ele cria o usuário `admin@oficina.com` com a senha `Senha@123`:
+
+```bash
+DB_HOST=127.0.0.1 DB_PORT=3307 DB_USER=root DB_NAME=mecanica \
+DB_PASSWORD=<valor do secrets.env> JWT_SECRET=<valor do secrets.env> \
+go run ./cmd/seed
+```
+
+Depois feche o túnel.
+
+**5. Obter a URL da API.** No macOS (driver Docker) o comando abre um túnel e precisa ficar rodando num terminal próprio. Anote a URL impressa.
+
+```bash
+make k8s-url
+```
+
+**6. Abrir o monitoramento**, um comando por terminal:
+
+```bash
+kubectl --context minikube -n oficina get hpa oficina-api -w
+kubectl --context minikube -n oficina get pods -l app.kubernetes.io/name=oficina-api -w
+watch -n 5 kubectl --context minikube -n oficina top pods    # no macOS: brew install watch
+```
+
+**7. Rodar o teste de carga.** São 4 minutos, em rampa até 100 usuários virtuais.
+
+```bash
+make load-test BASE_URL=<url do passo 5> K6_EMAIL=admin@oficina.com K6_SENHA=Senha@123
+```
+
+**8. Acompanhar a escala.** Cerca de um minuto depois do início a CPU passa da meta de 70% e o HPA sobe as réplicas de uma em uma, até 4 ou 5. Depois que o k6 termina, o número volta para 2 em mais ou menos um minuto e meio. As métricas do Minikube atualizam a cada 60 segundos, então a coluna `TARGETS` muda aos saltos. O motivo de cada decisão aparece em:
+
+```bash
+kubectl --context minikube -n oficina describe hpa oficina-api | grep SuccessfulRescale
+```
+
+**9. Encerrar.** `minikube stop` desliga o cluster e mantém tudo. `make k8s-delete` apaga o namespace, inclusive os dados do MySQL.
+
+A explicação de cada recurso, a referência de comandos `kubectl` e a solução dos problemas mais comuns (HPA em `<unknown>`, pod que não fica pronto, migration com erro) estão em [`docs/KUBERNETES.md`](docs/KUBERNETES.md).
