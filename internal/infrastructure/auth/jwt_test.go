@@ -79,15 +79,12 @@ func TestValidarAccessToken_MetodoDeAssinaturaNaoHMAC_Rejeitado(t *testing.T) {
 
 	// Forja um token com alg "none" (sem assinatura) — se o middleware não
 	// checasse o tipo do método, um atacante poderia forjar claims livremente.
-	claims := domainauth.AppClaims{
-		Subject: "user-123",
-		Tipo:    domainauth.TipoInterno,
-		Papel:   shared.PapelAdmin,
-		Jti:     "jti-forjado",
-		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   "user-123",
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
-		},
+	claims := jwt.MapClaims{
+		"sub":   "user-123",
+		"tipo":  domainauth.TipoInterno,
+		"papel": shared.PapelAdmin,
+		"jti":   "jti-forjado",
+		"exp":   jwt.NewNumericDate(time.Now().Add(time.Hour)),
 	}
 	tokenForjado := jwt.NewWithClaims(jwt.SigningMethodNone, claims)
 	tokenBruto, err := tokenForjado.SignedString(jwt.UnsafeAllowNoneSignatureType)
@@ -107,4 +104,22 @@ func TestGerarRefreshToken_GeraValorNaoVazioEUnico(t *testing.T) {
 	b, err := autenticador.GerarRefreshToken()
 	require.NoError(t, err)
 	require.NotEqual(t, a, b)
+}
+
+func TestGerarAccessToken_PayloadTemOsClaimsEsperados(t *testing.T) {
+	autenticador := infraauth.NewAuthenticatorJWT("segredo-de-teste", 15*time.Minute)
+
+	token, jti, err := autenticador.GerarAccessToken("user-123", domainauth.TipoInterno, shared.PapelMecanico)
+	require.NoError(t, err)
+
+	claims := jwt.MapClaims{}
+	_, _, err = jwt.NewParser().ParseUnverified(token, claims)
+	require.NoError(t, err)
+
+	require.Equal(t, "user-123", claims["sub"])
+	require.Equal(t, string(domainauth.TipoInterno), claims["tipo"])
+	require.Equal(t, string(shared.PapelMecanico), claims["papel"])
+	require.Equal(t, jti, claims["jti"])
+	require.Contains(t, claims, "iat")
+	require.Contains(t, claims, "exp")
 }

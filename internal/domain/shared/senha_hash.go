@@ -27,8 +27,8 @@ func NewSenhaHash(senhaPlana string) (SenhaHash, error) {
 }
 
 // RestaurarSenhaHash reidrata o VO a partir de um hash já persistido. Não
-// revalida força de senha nem gera novo hash. Usado só por mappers de
-// persistência.
+// revalida força de senha nem gera novo hash. Usado por mappers de
+// persistência e pelo login, que recebe o hash do CredenciaisRepository.
 func RestaurarSenhaHash(hash string) SenhaHash {
 	return SenhaHash{hash: hash}
 }
