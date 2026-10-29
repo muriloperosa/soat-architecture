@@ -559,8 +559,14 @@ definitions:
       preco:
         example: 89.9
         type: number
+      quantidade_disponivel:
+        example: 16
+        type: integer
       quantidade_em_estoque:
         example: 20
+        type: integer
+      quantidade_reservada:
+        example: 4
         type: integer
     type: object
   peca.ReporEstoqueRequest:

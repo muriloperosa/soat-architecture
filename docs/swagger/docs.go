@@ -4818,9 +4818,17 @@ const docTemplate = `{
                     "type": "number",
                     "example": 89.9
                 },
+                "quantidade_disponivel": {
+                    "type": "integer",
+                    "example": 16
+                },
                 "quantidade_em_estoque": {
                     "type": "integer",
                     "example": 20
+                },
+                "quantidade_reservada": {
+                    "type": "integer",
+                    "example": 4
                 }
             }
         },
