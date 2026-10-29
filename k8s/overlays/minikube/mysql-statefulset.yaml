@@ -1,0 +1,66 @@
+# MySQL só existe no overlay local. Em nuvem o banco é gerenciado (RDS),
+# provisionado pelo Terraform em /infra.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: oficina-mysql
+  labels:
+    app.kubernetes.io/name: oficina-mysql
+spec:
+  serviceName: oficina-mysql
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: oficina-mysql
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: oficina-mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8
+          ports:
+            - name: mysql
+              containerPort: 3306
+          env:
+            # A API conecta como root (DB_USER no ConfigMap), então a senha
+            # de root é a mesma DB_PASSWORD do Secret. Uma chave só evita
+            # as duas saírem de sincronia.
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: oficina-api-secrets
+                  key: DB_PASSWORD
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: oficina-api-config
+                  key: DB_NAME
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - mysqladmin ping -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" --silent
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 6
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

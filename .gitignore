@@ -6,6 +6,10 @@
 # Ambiente
 .env
 
+# Segredos dos overlays Kubernetes (versionar só o secrets.env.example)
+k8s/overlays/*/secrets.env
+k8s/.build/
+
 # IDE
 .idea/
 .vscode/*

@@ -872,6 +872,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/health/live": {
+            "get": {
+                "description": "Retorna 200 enquanto o processo da API está de pé; não verifica dependências externas",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Health"
+                ],
+                "summary": "Liveness probe",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/health.HealthCheckResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/health/ready": {
+            "get": {
+                "description": "Retorna 200 quando a API consegue falar com o MySQL; 503 tira o pod do balanceamento sem reiniciá-lo",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Health"
+                ],
+                "summary": "Readiness probe",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/health.HealthCheckResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/ordens-servico": {
             "get": {
                 "security": [

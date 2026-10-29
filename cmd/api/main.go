@@ -1,7 +1,12 @@
 package main
 
 import (
+	"context"
 	"log"
+	"net/http"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/config"
 	httpinfra "github.com/muriloperosa/soat-architecture/internal/infrastructure/http"
@@ -32,8 +37,17 @@ func main() {
 	container := wiring.NewContainer(cfg, db)
 	router := httpinfra.NewRouter(container)
 
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	srv := &http.Server{
+		Addr:              ":" + cfg.AppPort,
+		Handler:           router,
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+
 	log.Printf("starting server on port %s\n", cfg.AppPort)
-	if err := router.Run(":" + cfg.AppPort); err != nil {
-		log.Fatalf("error starting server: %v", err)
+	if err := serve(ctx, srv, 15*time.Second); err != nil {
+		log.Fatalf("error running server: %v", err)
 	}
 }

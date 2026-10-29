@@ -13,6 +13,16 @@ import (
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 )
 
+// tokenClaims é o payload JWT do access token. Fica no adaptador para que o
+// domínio não dependa da biblioteca de JWT; ValidarAccessToken converte para
+// domainauth.AppClaims.
+type tokenClaims struct {
+	Tipo  domainauth.TipoUsuario `json:"tipo"`
+	Papel shared.PapelUsuario    `json:"papel"`
+	Jti   string                 `json:"jti"`
+	jwt.RegisteredClaims
+}
+
 // AuthenticatorJWT gera e valida access tokens HS256, e gera o valor bruto
 // do refresh token.
 type AuthenticatorJWT struct {
@@ -38,11 +48,10 @@ func (a *AuthenticatorJWT) GerarAccessToken(subject string, tipo domainauth.Tipo
 	}
 
 	now := time.Now()
-	claims := domainauth.AppClaims{
-		Subject: subject,
-		Tipo:    tipo,
-		Papel:   papel,
-		Jti:     jti,
+	claims := tokenClaims{
+		Tipo:  tipo,
+		Papel: papel,
+		Jti:   jti,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   subject,
 			IssuedAt:  jwt.NewNumericDate(now),
@@ -71,7 +80,7 @@ func (a *AuthenticatorJWT) GerarRefreshToken() (string, error) {
 // se válido, devolve os claims tipados. Rejeita qualquer método de assinatura
 // diferente de HMAC.
 func (a *AuthenticatorJWT) ValidarAccessToken(tokenBruto string) (*domainauth.AppClaims, error) {
-	claims := &domainauth.AppClaims{}
+	claims := &tokenClaims{}
 	token, err := jwt.ParseWithClaims(tokenBruto, claims, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("metodo de assinatura inesperado")
@@ -84,5 +93,10 @@ func (a *AuthenticatorJWT) ValidarAccessToken(tokenBruto string) (*domainauth.Ap
 	if !token.Valid {
 		return nil, errors.New("token invalido")
 	}
-	return claims, nil
+	return &domainauth.AppClaims{
+		Subject: claims.Subject,
+		Tipo:    claims.Tipo,
+		Papel:   claims.Papel,
+		Jti:     claims.Jti,
+	}, nil
 }

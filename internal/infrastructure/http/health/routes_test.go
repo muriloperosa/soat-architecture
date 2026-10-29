@@ -14,7 +14,15 @@ func TestRegisterHealthRoutes(t *testing.T) {
 	RegisterHealthRoutes(engine.Group("/v1"), &wiring.Container{})
 
 	routes := engine.Routes()
-	require.Len(t, routes, 1)
-	require.Equal(t, "GET", routes[0].Method)
-	require.Equal(t, "/v1/health", routes[0].Path)
+	require.Len(t, routes, 3)
+	paths := make([]string, 0, len(routes))
+	for _, route := range routes {
+		require.Equal(t, "GET", route.Method)
+		paths = append(paths, route.Path)
+	}
+	require.ElementsMatch(t, []string{
+		"/v1/health",
+		"/v1/health/live",
+		"/v1/health/ready",
+	}, paths)
 }
