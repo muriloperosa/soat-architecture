@@ -54,6 +54,13 @@ func TestNewSender_PadraoLogNaoExigeAWS(t *testing.T) {
 	require.NoError(t, sender.Enviar(context.Background(), "a@b.com", "s", "c"))
 }
 
+func TestNewSESSender_RegiaoVaziaUsaPadrao(t *testing.T) {
+	sender, err := email.NewSESSender(context.Background(), "  ", "oficina@exemplo.com")
+
+	require.NoError(t, err)
+	require.NotNil(t, sender)
+}
+
 func TestNewSender_SESSemRemetenteFalha(t *testing.T) {
 	sender, err := email.NewSender(context.Background(), "ses", "us-east-1", "  ")
 
