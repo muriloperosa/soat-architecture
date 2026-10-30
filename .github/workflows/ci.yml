@@ -248,7 +248,7 @@ jobs:
         run: go install github.com/securego/gosec/v2/cmd/gosec@v2.22.8
 
       - name: Scan source
-        run: "$(go env GOPATH)/bin/gosec -fmt=json -out=gosec.json ./..."
+        run: "$(go env GOPATH)/bin/gosec -no-fail -fmt=json -out=gosec.json ./..."
 
       - name: Enforce SAST severity policy
         if: always() && hashFiles('gosec.json') != ''

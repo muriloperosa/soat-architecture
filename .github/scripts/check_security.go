@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -30,29 +31,23 @@ func main() {
 }
 
 type govulnEvent struct {
+	Finding *struct {
+		OSV   string `json:"osv"`
+		Trace []struct {
+			Function string `json:"function"`
+		} `json:"trace"`
+	} `json:"finding,omitempty"`
+	// Keep parsing the pre-v1 fields for compatibility with older reports.
 	Vulnerability *struct {
 		OSV string `json:"osv"`
 	} `json:"vulnerability,omitempty"`
-	OSV *struct {
-		ID               string `json:"id"`
-		DatabaseSpecific struct {
-			Severity string `json:"severity"`
-		} `json:"database_specific"`
-		Severity []struct {
-			Type  string `json:"type"`
-			Score string `json:"score"`
-		} `json:"severity"`
-	} `json:"osv,omitempty"`
 	CallStacks []json.RawMessage `json:"call_stacks,omitempty"`
-	Scanning   *struct {
-		Message string `json:"message"`
-	} `json:"scanning,omitempty"`
 }
 
 func checkGovulncheck(reader io.Reader) {
 	decoder := json.NewDecoder(reader)
-	severityByID := make(map[string]string)
 	reachable := make(map[string]bool)
+	events := 0
 	for {
 		var event govulnEvent
 		if err := decoder.Decode(&event); err != nil {
@@ -61,50 +56,31 @@ func checkGovulncheck(reader io.Reader) {
 			}
 			fail("invalid govulncheck JSON stream: %v", err)
 		}
-		if event.OSV != nil {
-			severity := strings.ToUpper(event.OSV.DatabaseSpecific.Severity)
-			if severity == "" {
-				for _, item := range event.OSV.Severity {
-					if strings.EqualFold(item.Type, "CVSS_V3") {
-						severity = severityFromCVSS(item.Score)
-						break
-					}
-				}
-			}
-			severityByID[event.OSV.ID] = severity
+		events++
+		if event.Finding != nil && len(event.Finding.Trace) > 0 && event.Finding.Trace[0].Function != "" {
+			reachable[event.Finding.OSV] = true
 		}
 		if event.Vulnerability != nil && len(event.CallStacks) > 0 {
 			reachable[event.Vulnerability.OSV] = true
 		}
 	}
-
-	findings := 0
-	for id := range reachable {
-		severity := severityByID[id]
-		if severity == "HIGH" || severity == "CRITICAL" {
-			findings++
-			fmt.Fprintf(os.Stderr, "blocking reachable %s vulnerability: %s\n", severity, id)
-		}
+	if events == 0 {
+		fail("empty govulncheck JSON stream")
 	}
-	if findings > 0 {
+
+	if len(reachable) > 0 {
+		ids := make([]string, 0, len(reachable))
+		for id := range reachable {
+			ids = append(ids, id)
+		}
+		// Stable output makes CI logs easier to compare.
+		sort.Strings(ids)
+		for _, id := range ids {
+			fmt.Fprintf(os.Stderr, "blocking reachable govulncheck finding: %s\n", id)
+		}
 		os.Exit(1)
 	}
-	fmt.Println("No high or critical govulncheck findings.")
-}
-
-func severityFromCVSS(score string) string {
-	var value float64
-	if _, err := fmt.Sscanf(score, "%f", &value); err != nil {
-		return ""
-	}
-	switch {
-	case value >= 9.0:
-		return "CRITICAL"
-	case value >= 7.0:
-		return "HIGH"
-	default:
-		return ""
-	}
+	fmt.Println("No reachable govulncheck findings.")
 }
 
 type gosecReport struct {

@@ -103,10 +103,11 @@ Depois de passarem qualidade, testes unitários/cobertura e integração, o job 
 Execute `govulncheck` em job separado, com uma versão explícita e controlada da ferramenta. O comando local documentado é:
 
 ```bash
-govulncheck ./...
+govulncheck -json ./... > govulncheck.json
+go run ./.github/scripts/check_security.go govulncheck govulncheck.json
 ```
 
-O resultado aparece no log do job e falha para vulnerabilidades **críticas ou altas confirmadas e alcançáveis** no código executado. `.github/scripts/check_security.go` interpreta os eventos JSON, relaciona os call stacks com a severidade OSV e aplica a política. O relatório é publicado como artefato de sete dias. Resultados médios/baixos continuam visíveis, mesmo quando não bloqueiam o merge.
+O gate bloqueia **qualquer vulnerabilidade alcançável**: no stream JSON do `govulncheck`, um evento `finding` com `trace[0].function` preenchida indica que uma função vulnerável foi chamada. Achados apenas no nível de módulo ou pacote, sem função na trace, permanecem no relatório sem bloquear. A política não depende da severidade OSV, que não é preenchida de forma confiável para todos os registros. `.github/scripts/check_security.go` interpreta o formato JSON emitido pela versão fixada da ferramenta. O relatório é publicado como artefato de sete dias.
 
 ### SAST: análise estática de segurança
 
@@ -128,7 +129,7 @@ Um achado bloqueante impede o merge até que seja corrigido ou aceite formalment
 - ser armazenada em configuração versionada, revisada junto com o código;
 - ser removida quando a correção ou atualização da dependência for concluída.
 
-Não criar supressões sem prazo ou justificativa. A política inicial bloqueia SCA crítico/alto alcançável e SAST crítico/alto com alta confiança; demais severidades continuam visíveis para priorização. Mudanças na política ou em exclusões devem passar por revisão de código.
+Não criar supressões sem prazo ou justificativa. A política bloqueia qualquer SCA alcançável e SAST crítico/alto com alta confiança. Achados SCA sem função alcançável e demais severidades SAST continuam visíveis para priorização. Mudanças na política ou em exclusões devem passar por revisão de código.
 
 ### DAST: OWASP ZAP
 
@@ -174,7 +175,7 @@ Cache é para dependências baixadas e aceleração. Artefatos são para resulta
 | Mocks e Swagger | `mockery` + `swag init` | Regenera em checkout limpo e falha se houver diff |
 | Imagem Docker | `docker build` | Executado após qualidade e testes; ainda sem push |
 | Cobertura | `go test ./... -coverprofile=coverage.out` + `go-test-coverage` | 80% por pacote elegível; falha direta abaixo da meta |
-| SCA | `govulncheck -json ./...` + `check_security.go` | Bloqueia alta/crítica alcançável; publica JSON |
+| SCA | `govulncheck -json ./...` + `check_security.go` | Bloqueia vulnerabilidade com função alcançável; publica JSON |
 | SAST | `gosec -fmt=json ...` + `check_security.go` | Bloqueia alta/crítica com alta confiança; publica JSON |
 | DAST | `make sec-dast` | Inicialmente agendado/manual; revisar tolerância a falhas |
 
@@ -225,7 +226,7 @@ Definido:
 
 - branch principal: `main`; a CI executa em PR destinado à `main`, em push na `main` (incluindo merges) e manualmente via `workflow_dispatch`; branches de trabalho e release não disparam a CI automaticamente em push;
 - cobertura: pelo menos 80% por pacote elegível de `application`, `domain` e `infrastructure`, aplicada por `go-test-coverage`, excluindo mocks/código gerado e os pacotes sem lógica testável listados em `.testcoverage.yml`;
-- SCA: bloquear achados críticos/altos confirmados e alcançáveis;
+- SCA: bloquear todos os achados com função alcançável;
 - SAST: bloquear achados críticos/altos com alta confiança;
 - exceções: justificadas, versionadas, revisadas e com responsável e prazo de revisão;
 - DAST: semanal e manual inicialmente, bloqueando alertas críticos/altos confirmados; avaliar execução por merge na `main` após calibrar;
