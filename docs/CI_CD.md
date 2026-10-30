@@ -16,22 +16,28 @@ O escopo inicial cobre **CI**: compilação, testes, validações estáticas e s
 
 ```mermaid
 flowchart TD
-    PR[Pull request ou push] --> STATIC[Formatação, vet e build]
-    PR --> UNIT[Testes unitários e cobertura]
-    PR --> INTEGRATION[Testes de integração com MySQL]
-    PR --> SECURITY[Análises SCA e SAST]
-    STATIC --> IMAGE[Build da imagem Docker]
-    UNIT --> IMAGE
-    INTEGRATION --> IMAGE
+    PR[Pull request ou push] --> PREP[Prepare: gerar mocks e Swagger]
+    PREP --> STATIC[Formatação, vet e build]
+    PREP --> UNIT[Testes unitários e cobertura]
+    PREP --> INTEGRATION[Testes de integração com MySQL]
+    STATIC --> SCA[SCA: govulncheck]
+    UNIT --> SCA
+    INTEGRATION --> SCA
+    STATIC --> SAST[SAST: gosec]
+    UNIT --> SAST
+    INTEGRATION --> SAST
+    SCA --> IMAGE[Build da imagem Docker]
+    SAST --> IMAGE
     STATIC --> GATE[Checks de CI]
     UNIT --> GATE
     INTEGRATION --> GATE
+    SCA --> GATE
+    SAST --> GATE
     IMAGE --> GATE
-    SECURITY --> GATE
     MAIN[Execução agendada ou manual] --> DAST[DAST autenticado em stack isolada]
 ```
 
-Os jobs de qualidade (formatação, vet e build), testes unitários/cobertura, integração, SCA e SAST são independentes e executam em paralelo. Apenas etapas com dependência de dados ou resultados devem compartilhar job ou declarar `needs`; por exemplo, gerar o profile precede a checagem de cobertura, e gerar o JSON do scanner precede a política correspondente.
+Os jobs são divididos em quatro grupos sequenciais: **Prepare** gera mocks e Swagger; **Test & Validate** executa qualidade, testes unitários/cobertura e integração em paralelo; **Security** executa SCA e SAST em paralelo; **Docker Build** cria a imagem. Cada grupo depende do sucesso de todos os jobs do grupo anterior, por meio de `needs`, então uma falha interrompe os grupos seguintes.
 
 Paralelismo reduz o tempo de espera, mas não reduz necessariamente o consumo de minutos: os minutos de todos os jobs continuam sendo somados. Para controlar uso/custo, limite execuções redundantes com `concurrency` (já configurado), mantenha jobs focados e curtos e use filtros de paths nos pushes. O workflow ignora `**/*.md` somente em pushes na `main`; PRs direcionados à `main` sempre executam para publicar os checks, inclusive quando alteram apenas Markdown. Isso evita que checks obrigatórios fiquem em estado pendente por o workflow não ter sido iniciado. Não execute testes simultaneamente duplicados: cobertura já roda os testes unitários e deve ser a mesma execução que alimenta o verificador de cobertura.
 
@@ -173,7 +179,7 @@ Cache é para dependências baixadas e aceleração. Artefatos são para resulta
 | Lint estático | `make lint` (`go vet ./...`) | Considere adicionar formatação como check explícito |
 | Build | `go build ./...` | Checa todos os pacotes compiláveis |
 | Mocks e Swagger | `mockery` + `swag init` | Regenera em checkout limpo e falha se houver diff |
-| Imagem Docker | `docker build` | Executado após qualidade e testes; ainda sem push |
+| Imagem Docker | `docker build` | Etapa final, após validações e segurança; ainda sem push |
 | Cobertura | `go test ./... -coverprofile=coverage.out` + `go-test-coverage` | 80% por pacote elegível; falha direta abaixo da meta |
 | SCA | `govulncheck -json ./...` + `check_security.go` | Bloqueia vulnerabilidade com função alcançável; publica JSON |
 | SAST | `gosec -fmt=json ...` + `check_security.go` | Bloqueia alta/crítica com alta confiança; publica JSON |
