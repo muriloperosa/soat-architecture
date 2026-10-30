@@ -156,6 +156,33 @@ func TestBuilderApplyFiltersEApplyPagination(t *testing.T) {
 	require.Contains(t, statement.Vars, "%Maria%")
 }
 
+func TestBuilderApplyPaginationUsaOrdenacaoCompostaConfiguradaEDirection(t *testing.T) {
+	builder := NewBuilder(Config{
+		Fields: map[string]Field{
+			"status": {Column: "status", Type: ValueTypeString, Sortable: true},
+		},
+		DefaultOrder:     "status",
+		DefaultDirection: domainquery.DirectionASC,
+		OrderExpressions: map[string][]OrderExpression{
+			"status": {
+				{SQL: "CASE status WHEN ? THEN 1 ELSE 2 END", Vars: []any{"ABERTA"}},
+				{SQL: "created_at"},
+				{SQL: "id"},
+			},
+		},
+		PageSize: 20,
+	})
+	params, err := builder.Normalize(domainquery.Params{Direction: domainquery.DirectionDESC})
+	require.NoError(t, err)
+
+	statement := builder.ApplyPagination(dryRunDB(t).Model(&testModel{}), params).Find(&[]testModel{}).Statement
+	require.Contains(t, statement.SQL.String(), "ORDER BY CASE status WHEN ? THEN 1 ELSE 2 END DESC,created_at DESC,id DESC")
+	require.Contains(t, statement.SQL.String(), "LIMIT ?")
+	require.Equal(t, []any{"ABERTA"}, statement.Vars[:1])
+	require.Equal(t, "status", params.Order)
+	require.Equal(t, domainquery.DirectionDESC, params.Direction)
+}
+
 func TestBuilderApplyFiltersRejeitaTipoInvalido(t *testing.T) {
 	_, err := testBuilder().ApplyFilters(dryRunDB(t).Model(&testModel{}), []domainquery.Filter{{
 		Field: "active", Operator: domainquery.OperatorEqual, Value: "talvez",

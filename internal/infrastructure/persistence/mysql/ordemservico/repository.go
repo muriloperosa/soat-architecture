@@ -103,6 +103,9 @@ func (r *Repository) Listar(
 	if err != nil {
 		return domainquery.Page[*domain.OrdemServico]{}, err
 	}
+	if !possuiFiltroStatus(normalized.Filters) {
+		filtered = filtered.Where("status NOT IN (?, ?)", domain.StatusFinalizada, domain.StatusEntregue)
+	}
 
 	var total int64
 	if err = filtered.Count(&total).Error; err != nil {
@@ -132,6 +135,15 @@ func (r *Repository) Listar(
 		Order:      normalized.Order,
 		Direction:  normalized.Direction,
 	}, nil
+}
+
+func possuiFiltroStatus(filters []domainquery.Filter) bool {
+	for _, filter := range filters {
+		if filter.Field == "status" {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *Repository) Atualizar(ctx context.Context, os *domain.OrdemServico) error {

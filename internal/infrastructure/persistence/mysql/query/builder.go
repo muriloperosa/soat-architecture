@@ -11,6 +11,7 @@ import (
 	domainquery "github.com/muriloperosa/soat-architecture/internal/domain/query"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type ValueType string
@@ -32,10 +33,20 @@ type Field struct {
 	Operators []domainquery.Operator
 }
 
+// OrderExpression define uma expressão SQL estática de ordenação e os valores
+// que serão vinculados como parâmetros.
+type OrderExpression struct {
+	SQL  string
+	Vars []any
+}
+
 type Config struct {
 	Fields           map[string]Field
 	DefaultOrder     string
 	DefaultDirection domainquery.Direction
+	// OrderExpressions contém expressões SQL internas para ordenações compostas,
+	// indexadas pelo nome público do campo. SQL é estático e valores vão em Vars.
+	OrderExpressions map[string][]OrderExpression
 	PageSize         int
 }
 
@@ -279,7 +290,22 @@ func parseTimeValue(raw string) (time.Time, bool, error) {
 func (b *Builder) ApplyPagination(db *gorm.DB, params domainquery.Params) *gorm.DB {
 	field := b.config.Fields[params.Order]
 	offset := (params.Page - 1) * b.config.PageSize
-	return db.Order(field.Column + " " + string(params.Direction)).Offset(offset).Limit(b.config.PageSize)
+	orderExpressions := b.config.OrderExpressions[params.Order]
+	if len(orderExpressions) == 0 {
+		db = db.Order(field.Column + " " + string(params.Direction))
+	} else {
+		sqlExpressions := make([]string, 0, len(orderExpressions))
+		vars := make([]any, 0)
+		for _, expression := range orderExpressions {
+			sqlExpressions = append(sqlExpressions, expression.SQL+" "+string(params.Direction))
+			vars = append(vars, expression.Vars...)
+		}
+		db = db.Clauses(clause.OrderBy{Expression: clause.Expr{
+			SQL:  strings.Join(sqlExpressions, ","),
+			Vars: vars,
+		}})
+	}
+	return db.Offset(offset).Limit(b.config.PageSize)
 }
 
 // PageSize retorna o tamanho fixo da página configurado para a consulta.

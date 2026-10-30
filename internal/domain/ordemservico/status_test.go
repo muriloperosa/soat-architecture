@@ -32,3 +32,13 @@ func TestStatusOrdemServicoExisteCaminhoValido(t *testing.T) {
 		})
 	}
 }
+
+func TestPrioridadeListagemOrdemServico(t *testing.T) {
+	require.Equal(t, [][]ordemservico.StatusOrdemServico{
+		{ordemservico.StatusEmExecucao},
+		{ordemservico.StatusAprovada},
+		{ordemservico.StatusAguardandoAprovacao, ordemservico.StatusRejeitada},
+		{ordemservico.StatusEmDiagnostico},
+		{ordemservico.StatusRecebida},
+	}, ordemservico.PrioridadeListagem())
+}
