@@ -1,10 +1,10 @@
 # Arquitetura: Sistema de Oficina Mecânica (Tech Challenge Fase 1)
 
-Back-end monolítico em arquitetura em camadas com DDD tático. Stack: Go, Gin, GORM, MySQL 8.
+Back-end em Clean Architecture com DDD tático, num único deployável. Stack: Go, Gin, GORM, MySQL 8.
 
-Versão MVP: o enunciado permite "monolito em camadas". O esqueleto de camadas e o núcleo tático de DDD foram mantidos.
+A adoção da Clean Architecture, o mapeamento das pastas para as camadas e as simplificações em relação ao modelo de referência estão na [ADR 0007](adr/0007-adocao-clean-architecture.md).
 
-As decisões estruturais (monólito em camadas, MySQL, GORM sem vazamento, Gin, convenção de nomes) estão registradas em `docs/adr/`. Este documento cobre as convenções internas que dão suporte a essas decisões.
+As decisões estruturais (Clean Architecture, MySQL, GORM sem vazamento, Gin, convenção de nomes) estão registradas em `docs/adr/`. Este documento cobre as convenções internas que dão suporte a essas decisões.
 
 ---
 
@@ -30,9 +30,18 @@ Cada uma dona de uma camada:
 
 ## Regra de dependência
 
+| Camada da Clean Architecture | Pasta |
+|---|---|
+| Entities | `internal/domain` |
+| Use Cases | `internal/application` |
+| Interface Adapters | `internal/infrastructure/http`, `internal/infrastructure/persistence` |
+| Frameworks e Drivers | demais pacotes de `internal/infrastructure`, `cmd/` |
+
 - `infrastructure` importa `application` e `domain`.
-- `application` importa só `domain`.
-- `domain` não importa nada de dentro do projeto.
+- `application` importa só `domain` e a biblioteca padrão.
+- `domain` não importa nada de dentro do projeto e, de fora, só a biblioteca padrão e `golang.org/x/crypto/bcrypt` (usado pelo `SenhaHash`; justificativa na ADR 0007).
+
+`test/architecture/dependency_rule_test.go` lê os imports de `internal/domain` e `internal/application` e falha se alguma dessas regras for quebrada. Se um caso de uso precisar de algo externo (enviar e-mail, gerar token, falar com outro serviço), declare uma interface no domínio e implemente na infraestrutura, como `EmailSender` e `JWTProvider`.
 
 ## Value Objects auto validáveis
 

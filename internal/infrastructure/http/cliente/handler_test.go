@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -348,4 +349,80 @@ func TestHandlerRetorna404QuandoClienteNaoExiste(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/v1/clientes/99", nil))
 	require.Equal(t, http.StatusNotFound, recorder.Code)
+}
+
+func TestHandlerListarErroDeRepositorioRetorna500(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := mocks.NewClienteRepository(t)
+	repo.EXPECT().Listar(mock.Anything, mock.Anything).Return(query.Page[*domaincliente.Cliente]{}, errors.New("banco indisponível"))
+	handler := NewHandler(nil, nil, nil, nil, nil, nil, nil, appcliente.NewListarClientesUseCase(repo), httpquery.NewParser())
+	router := gin.New()
+	router.GET("/clientes", handler.Listar)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/clientes", nil))
+	require.Equal(t, http.StatusInternalServerError, recorder.Code)
+}
+
+func TestHandlerAtualizarBodyInvalidoRetorna400(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := NewHandler(nil, appcliente.NewAtualizarClienteUseCase(mocks.NewClienteRepository(t)), nil, nil, nil, nil, nil, nil, nil)
+	router := gin.New()
+	router.PUT("/clientes/:id", handler.Atualizar)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodPut, "/clientes/1", bytes.NewBufferString("{")))
+	require.Equal(t, http.StatusBadRequest, recorder.Code)
+}
+
+func TestHandlerAtualizarErroDoRepositorioRetorna500(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := mocks.NewClienteRepository(t)
+	repo.EXPECT().BuscarPorID(mock.Anything, uint64(1)).Return(nil, errors.New("banco indisponível"))
+	handler := NewHandler(nil, appcliente.NewAtualizarClienteUseCase(repo), nil, nil, nil, nil, nil, nil, nil)
+	router := gin.New()
+	router.PUT("/clientes/:id", handler.Atualizar)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, requestJSON(t, http.MethodPut, "/clientes/1", AtualizarClienteRequest{Nome: "Nome", Email: "nome@email.com", Telefone: "11999999999"}))
+	require.Equal(t, http.StatusInternalServerError, recorder.Code)
+}
+
+func TestHandlerBuscarPorDocumentoErroRetorna500(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := mocks.NewClienteRepository(t)
+	repo.EXPECT().BuscarPorDocumento(mock.Anything, "000").Return(nil, errors.New("banco indisponível"))
+	handler := NewHandler(nil, nil, nil, appcliente.NewConsultarClientePorDocumentoUseCase(repo), nil, nil, nil, nil, nil)
+	router := gin.New()
+	router.GET("/clientes/documento/:documento", handler.BuscarPorDocumento)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/clientes/documento/000", nil))
+	require.Equal(t, http.StatusInternalServerError, recorder.Code)
+}
+
+func TestHandlerCriarSemSubjectRetorna401(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := NewHandler(nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	router := gin.New()
+	router.POST("/clientes", handler.Criar)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/clientes", nil))
+	require.Equal(t, http.StatusUnauthorized, recorder.Code)
+}
+
+func TestHandlerAlterarSenhaSemSubjectRetorna401(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := NewHandler(nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	router := gin.New()
+	router.PUT("/clientes/me/senha", handler.AlterarSenha)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodPut, "/clientes/me/senha", nil))
+	require.Equal(t, http.StatusUnauthorized, recorder.Code)
+}
+
+func TestHandlerAlterarSenhaBodyInvalidoRetorna400(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := NewHandler(nil, nil, nil, nil, nil, nil, appcliente.NewAlterarSenhaClienteUseCase(mocks.NewClienteRepository(t)), nil, nil)
+	router := gin.New()
+	router.PUT("/clientes/me/senha", withSubject("7"), handler.AlterarSenha)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodPut, "/clientes/me/senha", bytes.NewBufferString("{")))
+	require.Equal(t, http.StatusBadRequest, recorder.Code)
 }

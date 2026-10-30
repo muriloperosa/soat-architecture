@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: oficina-mysql
+  labels:
+    app.kubernetes.io/name: oficina-mysql
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: oficina-mysql
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: mysql

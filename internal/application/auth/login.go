@@ -7,7 +7,6 @@ import (
 
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
-	"golang.org/x/crypto/bcrypt"
 )
 
 const msgCredenciaisInvalidas = "credenciais inválidas" // #nosec G101 -- mensagem de erro, não segredo
@@ -57,7 +56,7 @@ func (uc *LoginUseCase) Executar(ctx context.Context, input LoginInput) (LoginOu
 		return LoginOutput{}, shared.NewUnauthorizedError(msgCredenciaisInvalidas)
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(cred.SenhaHash), []byte(input.Senha)); err != nil {
+	if !shared.RestaurarSenhaHash(cred.SenhaHash).Confere(input.Senha) {
 		return LoginOutput{}, shared.NewUnauthorizedError(msgCredenciaisInvalidas)
 	}
 

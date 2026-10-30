@@ -18,7 +18,11 @@ func NewConnection(cfg *config.Config) (*gorm.DB, error) {
 		cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName,
 	)
 
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	return openConnection(mysql.Open(dsn), cfg)
+}
+
+func openConnection(dialector gorm.Dialector, cfg *config.Config) (*gorm.DB, error) {
+	db, err := gorm.Open(dialector, &gorm.Config{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to MySQL: %w", err)
 	}

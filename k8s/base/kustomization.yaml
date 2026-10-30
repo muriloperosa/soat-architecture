@@ -1,0 +1,28 @@
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - api-deployment.yaml
+  - api-service.yaml
+  - api-hpa.yaml
+
+generatorOptions:
+  disableNameSuffixHash: true
+  labels:
+    app.kubernetes.io/component: config
+
+configMapGenerator:
+  - name: oficina-api-config
+    literals:
+      - APP_PORT=8080
+      - GIN_MODE=release
+      - DB_DRIVER=mysql
+      - DB_PORT=3306
+      - DB_NAME=mecanica
+      - DB_USER=root
+      - DB_MAX_OPEN_CONNS=10
+      - DB_MAX_IDLE_CONNS=5
+      - DB_CONN_MAX_LIFETIME_MINUTES=5
+      - JWT_ACCESS_TOKEN_TTL_MINUTES=60
+      - JWT_REFRESH_TOKEN_TTL_HOURS=168

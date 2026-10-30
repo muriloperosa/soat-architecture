@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"io"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -12,18 +13,29 @@ import (
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 )
 
+// tokenClaims é o payload JWT do access token. Fica no adaptador para que o
+// domínio não dependa da biblioteca de JWT; ValidarAccessToken converte para
+// domainauth.AppClaims.
+type tokenClaims struct {
+	Tipo  domainauth.TipoUsuario `json:"tipo"`
+	Papel shared.PapelUsuario    `json:"papel"`
+	Jti   string                 `json:"jti"`
+	jwt.RegisteredClaims
+}
+
 // AuthenticatorJWT gera e valida access tokens HS256, e gera o valor bruto
 // do refresh token.
 type AuthenticatorJWT struct {
 	secret    []byte
 	accessTTL time.Duration
+	random    io.Reader
 }
 
 // NewAuthenticatorJWT monta o autenticador com o secret HS256 e o TTL do
 // access token. secret é lido de Config.JWTSecret; accessTTL de
 // Config.JWTAccessTokenTTLMinutes.
 func NewAuthenticatorJWT(secret string, accessTTL time.Duration) *AuthenticatorJWT {
-	return &AuthenticatorJWT{secret: []byte(secret), accessTTL: accessTTL}
+	return &AuthenticatorJWT{secret: []byte(secret), accessTTL: accessTTL, random: rand.Reader}
 }
 
 // GerarAccessToken assina um novo access token JWT (HS256) pro par
@@ -36,11 +48,10 @@ func (a *AuthenticatorJWT) GerarAccessToken(subject string, tipo domainauth.Tipo
 	}
 
 	now := time.Now()
-	claims := domainauth.AppClaims{
-		Subject: subject,
-		Tipo:    tipo,
-		Papel:   papel,
-		Jti:     jti,
+	claims := tokenClaims{
+		Tipo:  tipo,
+		Papel: papel,
+		Jti:   jti,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   subject,
 			IssuedAt:  jwt.NewNumericDate(now),
@@ -59,7 +70,11 @@ func (a *AuthenticatorJWT) GerarAccessToken(subject string, tipo domainauth.Tipo
 // codificado em base64, pra ser entregue ao cliente.
 func (a *AuthenticatorJWT) GerarRefreshToken() (string, error) {
 	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
+	random := a.random
+	if random == nil {
+		random = rand.Reader
+	}
+	if _, err := io.ReadFull(random, b); err != nil {
 		return "", err
 	}
 	return base64.RawURLEncoding.EncodeToString(b), nil
@@ -69,7 +84,7 @@ func (a *AuthenticatorJWT) GerarRefreshToken() (string, error) {
 // se válido, devolve os claims tipados. Rejeita qualquer método de assinatura
 // diferente de HMAC.
 func (a *AuthenticatorJWT) ValidarAccessToken(tokenBruto string) (*domainauth.AppClaims, error) {
-	claims := &domainauth.AppClaims{}
+	claims := &tokenClaims{}
 	token, err := jwt.ParseWithClaims(tokenBruto, claims, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("metodo de assinatura inesperado")
@@ -82,5 +97,10 @@ func (a *AuthenticatorJWT) ValidarAccessToken(tokenBruto string) (*domainauth.Ap
 	if !token.Valid {
 		return nil, errors.New("token invalido")
 	}
-	return claims, nil
+	return &domainauth.AppClaims{
+		Subject: claims.Subject,
+		Tipo:    claims.Tipo,
+		Papel:   claims.Papel,
+		Jti:     claims.Jti,
+	}, nil
 }

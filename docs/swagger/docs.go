@@ -872,6 +872,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/health/live": {
+            "get": {
+                "description": "Retorna 200 enquanto o processo da API está de pé; não verifica dependências externas",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Health"
+                ],
+                "summary": "Liveness probe",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/health.HealthCheckResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/health/ready": {
+            "get": {
+                "description": "Retorna 200 quando a API consegue falar com o MySQL; 503 tira o pod do balanceamento sem reiniciá-lo",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Health"
+                ],
+                "summary": "Readiness probe",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/health.HealthCheckResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/ordens-servico": {
             "get": {
                 "security": [
@@ -879,7 +925,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Lista Ordens de Serviço com paginação, ordenação e filtros diretos por campo. Usuários do tipo cliente visualizam somente as próprias Ordens de Serviço.",
+                "description": "Lista Ordens de Serviço com paginação, ordenação e filtros diretos por campo. Sem o parâmetro order, prioriza EM_EXECUCAO, APROVADA, AGUARDANDO_APROVACAO/REJEITADA, EM_DIAGNOSTICO e RECEBIDA, nessa ordem; dentro de cada prioridade, mostra primeiro as OS mais antigas (data_cadastro ASC). order=status usa a mesma prioridade; outros campos em order substituem essa ordenação. direction=DESC inverte a ordem e os critérios de desempate. Sem filtro de status, FINALIZADA e ENTREGUE são excluídas da listagem; quando um status é informado, a consulta respeita o filtro, inclusive para esses status. Usuários do tipo cliente visualizam somente as próprias Ordens de Serviço.",
                 "produces": [
                     "application/json"
                 ],
@@ -909,8 +955,7 @@ const docTemplate = `{
                             "data_atualizacao"
                         ],
                         "type": "string",
-                        "default": "id",
-                        "description": "Campo de ordenação",
+                        "description": "Campo de ordenação; omitido ou status, usa prioridade do status e data de cadastro crescente",
                         "name": "order",
                         "in": "query"
                     },
@@ -4819,9 +4864,17 @@ const docTemplate = `{
                     "type": "number",
                     "example": 89.9
                 },
+                "quantidade_disponivel": {
+                    "type": "integer",
+                    "example": 16
+                },
                 "quantidade_em_estoque": {
                     "type": "integer",
                     "example": 20
+                },
+                "quantidade_reservada": {
+                    "type": "integer",
+                    "example": 4
                 }
             }
         },

@@ -2,6 +2,7 @@ package orcamento_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/muriloperosa/soat-architecture/internal/application/notificacao"
@@ -171,4 +172,63 @@ func notificadorOrcamento(t *testing.T, esperaEnvio bool) *notificacao.Notificad
 	clientes.EXPECT().BuscarPorID(mock.Anything, uint64(10)).Return(&cliente, nil)
 	emails.EXPECT().Enviar(mock.Anything, "maria@email.com", mock.Anything, mock.Anything).Return(nil)
 	return notificacao.NewStatus(clientes, emails)
+}
+
+func TestAprovarOrcamentoUseCase_ClienteIDZeroRetornaForbidden(t *testing.T) {
+	osRepo := ordemservicomocks.NewOrdemServicoRepository(t)
+	o := osAguardandoAprovacao(t, 10)
+	osRepo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(o, nil)
+
+	uc := app.NewAprovarOrcamentoUseCase(
+		osRepo,
+		orcamentomocks.NewOrcamentoRepository(t),
+		pecamocks.NewRepository(t),
+		reservamocks.NewRepository(t),
+		&helpers.TransactionRunnerMock{},
+		nil,
+	)
+	_, err := uc.Executar(context.Background(), app.AprovarOrcamentoInput{OrdemServicoID: 42})
+
+	var appErr *shared.AppError
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindForbidden, appErr.Kind)
+}
+
+func TestAprovarOrcamentoUseCase_StatusNaoPermiteAprovacao(t *testing.T) {
+	o, err := domainordemservico.NewOrdemServico("OS-20260830-a1b2c3d4e5f6", 10, 20, 1000, "", "", 1)
+	require.NoError(t, err)
+	o.AtribuirID(42)
+	osRepo := ordemservicomocks.NewOrdemServicoRepository(t)
+	osRepo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(o, nil)
+
+	uc := app.NewAprovarOrcamentoUseCase(
+		osRepo,
+		orcamentomocks.NewOrcamentoRepository(t),
+		pecamocks.NewRepository(t),
+		reservamocks.NewRepository(t),
+		&helpers.TransactionRunnerMock{},
+		nil,
+	)
+	_, err = uc.Executar(context.Background(), app.AprovarOrcamentoInput{OrdemServicoID: 42, ClienteID: 10})
+
+	require.ErrorIs(t, err, domainordemservico.ErrTransicaoStatusInvalida)
+}
+
+func TestAprovarOrcamentoUseCase_ErroAoBuscarOrdemRetornaErroInterno(t *testing.T) {
+	osRepo := ordemservicomocks.NewOrdemServicoRepository(t)
+	osRepo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(nil, errors.New("falha de banco"))
+
+	uc := app.NewAprovarOrcamentoUseCase(
+		osRepo,
+		orcamentomocks.NewOrcamentoRepository(t),
+		pecamocks.NewRepository(t),
+		reservamocks.NewRepository(t),
+		&helpers.TransactionRunnerMock{},
+		nil,
+	)
+	_, err := uc.Executar(context.Background(), app.AprovarOrcamentoInput{OrdemServicoID: 42, ClienteID: 10})
+
+	var appErr *shared.AppError
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindInternal, appErr.Kind)
 }

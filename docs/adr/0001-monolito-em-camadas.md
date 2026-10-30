@@ -1,7 +1,7 @@
 # 0001. Monólito em camadas com DDD tático
 
 ## Status
-Aceita
+Substituída pela [0007](0007-adocao-clean-architecture.md). A estrutura de camadas e o DDD tático descritos aqui continuam valendo; o que mudou foi o estilo arquitetural, agora Clean Architecture, exigido no enunciado da Fase 2.
 
 ## Contexto
 O enunciado do Tech Challenge Fase 1 permite explicitamente "monolito em camadas". O sistema tem poucos bounded contexts (ordem de serviço, cliente, veículo, serviço, peça) e prazo de MVP. Uma arquitetura de microsserviços ou hexagonal completa seria overengineering nesse estágio.
