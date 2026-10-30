@@ -70,7 +70,11 @@ func (a *AuthenticatorJWT) GerarAccessToken(subject string, tipo domainauth.Tipo
 // codificado em base64, pra ser entregue ao cliente.
 func (a *AuthenticatorJWT) GerarRefreshToken() (string, error) {
 	b := make([]byte, 32)
-	if _, err := io.ReadFull(a.random, b); err != nil {
+	random := a.random
+	if random == nil {
+		random = rand.Reader
+	}
+	if _, err := io.ReadFull(random, b); err != nil {
 		return "", err
 	}
 	return base64.RawURLEncoding.EncodeToString(b), nil

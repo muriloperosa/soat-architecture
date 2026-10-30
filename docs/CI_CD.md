@@ -33,7 +33,7 @@ flowchart TD
 
 Os jobs de qualidade (formatação, vet e build), testes unitários/cobertura, integração, SCA e SAST são independentes e executam em paralelo. Apenas etapas com dependência de dados ou resultados devem compartilhar job ou declarar `needs`; por exemplo, gerar o profile precede a checagem de cobertura, e gerar o JSON do scanner precede a política correspondente.
 
-Paralelismo reduz o tempo de espera, mas não reduz necessariamente o consumo de minutos: os minutos de todos os jobs continuam sendo somados. Para controlar uso/custo, limite execuções redundantes com `concurrency` (já configurado), mantenha jobs focados e curtos e use filtros de paths para não rodar a suíte quando apenas Markdown mudar. O workflow ignora `**/*.md` em pushes e PRs; mudanças de código, configuração e workflow na `main` continuam disparando a CI. Não execute testes simultaneamente duplicados: cobertura já roda os testes unitários e deve ser a mesma execução que alimenta o verificador de cobertura.
+Paralelismo reduz o tempo de espera, mas não reduz necessariamente o consumo de minutos: os minutos de todos os jobs continuam sendo somados. Para controlar uso/custo, limite execuções redundantes com `concurrency` (já configurado), mantenha jobs focados e curtos e use filtros de paths nos pushes. O workflow ignora `**/*.md` somente em pushes na `main`; PRs direcionados à `main` sempre executam para publicar os checks, inclusive quando alteram apenas Markdown. Isso evita que checks obrigatórios fiquem em estado pendente por o workflow não ter sido iniciado. Não execute testes simultaneamente duplicados: cobertura já roda os testes unitários e deve ser a mesma execução que alimenta o verificador de cobertura.
 
 ## Gatilhos
 
@@ -42,7 +42,7 @@ Automaticamente, o workflow principal executa em eventos relacionados à branch 
 - `pull_request` cujo destino seja a `main`;
 - `push` na `main`, incluindo o commit criado pelo merge de um PR ou um push direto.
 
-O evento `workflow_dispatch` também permite iniciar a CI manualmente pela aba **Actions**, útil para testes. Nesse caso, selecione a branch que deseja validar; o filtro de Markdown não se aplica à execução manual. Pushes em branches de trabalho e release não executam esta CI automaticamente; elas são validadas ao abrir ou atualizar um PR direcionado à `main`. O PR recebe os checks antes do merge, e o push resultante do merge dispara uma nova execução na `main`. Pushes apenas com arquivos Markdown continuam ignorados pelo filtro de paths.
+O evento `workflow_dispatch` também permite iniciar a CI manualmente pela aba **Actions**, útil para testes. Nesse caso, selecione a branch que deseja validar; o filtro de Markdown não se aplica à execução manual. Pushes em branches de trabalho e release não executam esta CI automaticamente; elas são validadas ao abrir ou atualizar um PR direcionado à `main`. O PR recebe os checks antes do merge, inclusive quando altera apenas Markdown, e o push resultante do merge dispara uma nova execução na `main`. Pushes na `main` que alterem apenas arquivos Markdown continuam ignorados pelo filtro de paths.
 
 Use `concurrency` com grupo baseado no workflow e na branch ou número do PR, com cancelamento de execuções anteriores. Isso evita consumir runners em commits superados.
 
@@ -52,7 +52,7 @@ Não use `pull_request_target` para executar código do pull request. Esse event
 
 O workflow implementado separa as verificações em jobs paralelos: `quality`, `generated`, `unit`, `integration`, `sca` e `sast`. Isso permite que falhas rápidas de formatação/build apareçam sem aguardar os testes mais longos. O job `generated` executa as mesmas gerações de mocks e Swagger do hook local e falha se os arquivos gerados não estiverem commitados. Após qualidade e testes passarem, `image` constrói a imagem Docker sem publicar. O perfil de cobertura e os relatórios de segurança são processados no mesmo job que os gera, evitando upload/download entre jobs.
 
-Cada job possui `timeout-minutes` para limitar consumo em execução travada. Os checkouts usam `actions/checkout@v4` com `persist-credentials: false`, pois nenhum job precisa enviar alterações de volta ao repositório. `setup-go` está fixado por SHA; `upload-artifact` usa a versão `v7.0.2`.
+Cada job possui `timeout-minutes` para limitar consumo em execução travada. Todas as actions são fixadas por SHA completo, com a versão legível registrada em comentário: `checkout` v4.4.0, `setup-go` v5.0.2 e `upload-artifact` v7.0.2. Os checkouts usam `persist-credentials: false`, pois nenhum job precisa enviar alterações de volta ao repositório.
 
 ### Validação estática
 
@@ -152,7 +152,7 @@ Nunca aponte esse scan para produção ou para o banco de desenvolvimento. A sta
 - Defina `permissions` explicitamente no workflow e, se possível, por job. Para CI de leitura, normalmente basta `contents: read`.
 - Não exponha secrets nos jobs de `pull_request`, em especial para PRs de forks.
 - Não execute código de PR com `pull_request_target` e contexto privilegiado.
-- Fixe actions de terceiros por SHA completo revisado, em vez de tags mutáveis. O workflow mantém `actions/checkout@v4` como exceção explícita; para imutabilidade estrita, fixe também essa action por SHA. Registre uma política para atualizar referências regularmente.
+- Fixe actions de terceiros por SHA completo revisado, em vez de tags mutáveis, e mantenha a versão correspondente em comentário para facilitar atualizações periódicas.
 - Use versões explícitas de Go e ferramentas; evite instalar ferramentas com `@latest` em cada execução.
 - Não faça upload de `.env`, tokens, dumps do banco ou relatórios que contenham dados sensíveis.
 - Separe permissões e segredos de deploy da CI. O workflow de deploy deve usar GitHub Environments, aprovação quando apropriado e credenciais de curta duração sempre que possível.

@@ -106,6 +106,12 @@ func TestGerarRefreshToken_GeraValorNaoVazioEUnico(t *testing.T) {
 	require.NotEqual(t, a, b)
 }
 
+func TestGerarRefreshToken_UsaFontePadraoQuandoAuthenticatorFoiCriadoSemConstrutor(t *testing.T) {
+	token, err := (&AuthenticatorJWT{}).GerarRefreshToken()
+	require.NoError(t, err)
+	require.NotEmpty(t, token)
+}
+
 func TestGerarAccessToken_PayloadTemOsClaimsEsperados(t *testing.T) {
 	autenticador := NewAuthenticatorJWT("segredo-de-teste", 15*time.Minute)
 
