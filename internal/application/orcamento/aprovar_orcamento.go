@@ -158,9 +158,7 @@ func (uc *AprovarOrcamentoUseCase) Executar(ctx context.Context, input AprovarOr
 		return FluxoOrcamentoOutput{}, shared.NewInternalError("erro ao aprovar orçamento e reservar peças", err)
 	}
 
-	if err := uc.notificador.Notificar(ctx, os, domainordemservico.StatusAguardandoAprovacao); err != nil {
-		return FluxoOrcamentoOutput{}, err
-	}
+	uc.notificador.Notificar(ctx, os, domainordemservico.StatusAguardandoAprovacao)
 
 	return toFluxoOutput(os), nil
 }

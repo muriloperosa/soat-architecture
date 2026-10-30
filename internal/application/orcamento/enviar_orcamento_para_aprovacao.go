@@ -16,18 +16,21 @@ import (
 type EnviarOrcamentoParaAprovacaoUseCase struct {
 	orcamentoRepository    domainorcamento.OrcamentoRepository
 	ordemServicoRepository domainordemservico.OrdemServicoRepository
-	notificador            *notificacao.NotificadorStatus
+	notificadorStatus      *notificacao.NotificadorStatus
+	notificadorOrcamento   *notificacao.NotificadorOrcamento
 }
 
 func NewEnviarOrcamentoParaAprovacaoUseCase(
 	orcamentoRepository domainorcamento.OrcamentoRepository,
 	ordemServicoRepository domainordemservico.OrdemServicoRepository,
-	notificador *notificacao.NotificadorStatus,
+	notificadorStatus *notificacao.NotificadorStatus,
+	notificadorOrcamento *notificacao.NotificadorOrcamento,
 ) *EnviarOrcamentoParaAprovacaoUseCase {
 	return &EnviarOrcamentoParaAprovacaoUseCase{
 		orcamentoRepository:    orcamentoRepository,
 		ordemServicoRepository: ordemServicoRepository,
-		notificador:            notificador,
+		notificadorStatus:      notificadorStatus,
+		notificadorOrcamento:   notificadorOrcamento,
 	}
 }
 
@@ -65,9 +68,8 @@ func (uc *EnviarOrcamentoParaAprovacaoUseCase) Executar(ctx context.Context, inp
 		return OrcamentoOutput{}, shared.NewInternalError("erro ao atualizar ordem de serviço", err)
 	}
 
-	if err := uc.notificador.Notificar(ctx, os, statusAnterior); err != nil {
-		return OrcamentoOutput{}, err
-	}
+	uc.notificadorStatus.Notificar(ctx, os, statusAnterior)
+	uc.notificadorOrcamento.Notificar(ctx, os, orcamento, false)
 
 	return toOutput(orcamento), nil
 }

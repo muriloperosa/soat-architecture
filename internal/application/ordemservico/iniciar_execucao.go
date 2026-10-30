@@ -42,9 +42,7 @@ func (uc *IniciarExecucaoUseCase) Executar(
 		return OrdemServicoOutput{}, shared.NewInternalError("erro ao iniciar execução da ordem de serviço", err)
 	}
 
-	if err := uc.notificador.Notificar(ctx, os, statusAnterior); err != nil {
-		return OrdemServicoOutput{}, err
-	}
+	uc.notificador.Notificar(ctx, os, statusAnterior)
 
 	return toOutput(os), nil
 }

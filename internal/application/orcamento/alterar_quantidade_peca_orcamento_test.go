@@ -2,6 +2,7 @@ package orcamento_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -80,8 +81,20 @@ func TestAlterarQuantidadePecaOrcamentoUseCase_AprovadoRemoveReservaEReenvia(t *
 	reservaRepo.EXPECT().Remover(mock.Anything, uint64(42), uint64(7)).Return(nil)
 	osRepo.EXPECT().Atualizar(mock.Anything, os).Return(nil)
 	orcamentoRepo.EXPECT().Atualizar(mock.Anything, orcamento).Return(nil)
-	clienteRepo.EXPECT().BuscarPorID(mock.Anything, uint64(10)).Return(&cliente, nil)
-	emailSender.EXPECT().Enviar(mock.Anything, "cliente@teste.com", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(nil)
+	clienteRepo.EXPECT().BuscarPorID(mock.Anything, uint64(10)).Return(&cliente, nil).Twice()
+	var corpoOrcamento, corpoStatus string
+	emailSender.EXPECT().
+		Enviar(mock.Anything, "cliente@teste.com", mock.MatchedBy(func(assunto string) bool {
+			return strings.Contains(assunto, "AGUARDANDO_APROVACAO")
+		}), mock.AnythingOfType("string")).
+		Run(func(_ context.Context, _, _, corpo string) { corpoStatus = corpo }).
+		Return(nil)
+	emailSender.EXPECT().
+		Enviar(mock.Anything, "cliente@teste.com", mock.MatchedBy(func(assunto string) bool {
+			return strings.Contains(assunto, "Orçamento atualizado da Ordem de Serviço")
+		}), mock.AnythingOfType("string")).
+		Run(func(_ context.Context, _, _, corpo string) { corpoOrcamento = corpo }).
+		Return(nil)
 
 	uc := app.NewAlterarQuantidadePecaOrcamentoUseCase(
 		orcamentoRepo,
@@ -90,6 +103,7 @@ func TestAlterarQuantidadePecaOrcamentoUseCase_AprovadoRemoveReservaEReenvia(t *
 		pecaRepo,
 		runner,
 		notificacao.NewStatus(clienteRepo, emailSender),
+		notificacao.NewOrcamento(clienteRepo, emailSender),
 	)
 
 	out, err := uc.Executar(context.Background(), app.AlterarQuantidadePecaOrcamentoInput{
@@ -104,6 +118,10 @@ func TestAlterarQuantidadePecaOrcamentoUseCase_AprovadoRemoveReservaEReenvia(t *
 	require.Equal(t, 200.0, out.ValorItemPecas)
 	require.Equal(t, domainordemservico.StatusAguardandoAprovacao, os.Status())
 	require.Equal(t, 1, runner.Calls)
+	require.Contains(t, corpoStatus, "Status anterior: APROVADA")
+	require.Contains(t, corpoStatus, "Status atual: AGUARDANDO_APROVACAO")
+	require.Contains(t, corpoOrcamento, "Pastilha | quantidade: 4 | valor unitário: R$ 50.00 | subtotal: R$ 200.00")
+	require.Contains(t, corpoOrcamento, "Valor total do orçamento: R$ 200.00")
 }
 
 func TestAlterarQuantidadePecaOrcamentoUseCase_EmDiagnosticoApenasEdita(t *testing.T) {
@@ -129,6 +147,7 @@ func TestAlterarQuantidadePecaOrcamentoUseCase_EmDiagnosticoApenasEdita(t *testi
 		nil,
 		runner,
 		notificacao.NewStatus(clientemocks.NewClienteRepository(t), emailSender),
+		nil,
 	)
 
 	out, err := uc.Executar(context.Background(), app.AlterarQuantidadePecaOrcamentoInput{

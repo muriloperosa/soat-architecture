@@ -42,9 +42,7 @@ func (uc *IniciarDiagnosticoUseCase) Executar(
 		return OrdemServicoOutput{}, shared.NewInternalError("erro ao iniciar diagnóstico da ordem de serviço", err)
 	}
 
-	if err := uc.notificador.Notificar(ctx, os, statusAnterior); err != nil {
-		return OrdemServicoOutput{}, err
-	}
+	uc.notificador.Notificar(ctx, os, statusAnterior)
 
 	return toOutput(os), nil
 }

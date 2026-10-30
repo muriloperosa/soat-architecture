@@ -34,9 +34,8 @@ func TestNotificadorStatus_InformaStatusAnteriorEAtual(t *testing.T) {
 		}).
 		Return(nil)
 
-	err = notificacao.NewStatus(clientes, emails).Notificar(context.Background(), os, "")
+	notificacao.NewStatus(clientes, emails).Notificar(context.Background(), os, "")
 
-	require.NoError(t, err)
 	require.Contains(t, assunto, "OS-20260827-a1b2c3d4e5f6")
 	require.Contains(t, assunto, "RECEBIDA")
 	require.Contains(t, corpo, "Maria Silva")
@@ -59,25 +58,29 @@ func TestNotificadorStatus_FalhaDeEnvioNaoRetornaErro(t *testing.T) {
 	log.SetOutput(&buf)
 	t.Cleanup(func() { log.SetOutput(anterior) })
 
-	err = notificacao.NewStatus(clientes, emails).Notificar(context.Background(), os, domainordemservico.StatusEmExecucao)
+	notificacao.NewStatus(clientes, emails).Notificar(context.Background(), os, domainordemservico.StatusEmExecucao)
 
-	require.NoError(t, err)
 	require.Contains(t, buf.String(), "falha ao enviar e-mail")
 }
 
-func TestNotificadorStatus_ClienteInexistenteRetornaErro(t *testing.T) {
+func TestNotificadorStatus_ClienteInexistenteNaoRetornaErro(t *testing.T) {
 	clientes := clientemocks.NewClienteRepository(t)
 	emails := sharedmocks.NewEmailSender(t)
 	clientes.EXPECT().BuscarPorID(mock.Anything, uint64(10)).Return(nil, domaincliente.ErrClienteNaoEncontrado)
 
-	err := notificacao.NewStatus(clientes, emails).Notificar(context.Background(), ordemRecebida(t), domainordemservico.StatusEmDiagnostico)
+	var buf bytes.Buffer
+	anterior := log.Writer()
+	log.SetOutput(&buf)
+	t.Cleanup(func() { log.SetOutput(anterior) })
 
-	require.ErrorIs(t, err, domaincliente.ErrClienteNaoEncontrado)
+	notificacao.NewStatus(clientes, emails).Notificar(context.Background(), ordemRecebida(t), domainordemservico.StatusEmDiagnostico)
+
+	require.Contains(t, buf.String(), "cliente não encontrado")
 }
 
 func TestNotificadorStatus_NilNaoEnvia(t *testing.T) {
 	var n *notificacao.NotificadorStatus
-	require.NoError(t, n.Notificar(context.Background(), ordemRecebida(t), ""))
+	n.Notificar(context.Background(), ordemRecebida(t), "")
 }
 
 func ordemRecebida(t *testing.T) *domainordemservico.OrdemServico {

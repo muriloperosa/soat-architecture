@@ -82,9 +82,7 @@ func (uc *FinalizarOrdemServicoUseCase) Executar(
 		return OrdemServicoOutput{}, err
 	}
 
-	if err := uc.notificador.Notificar(ctx, osFinalizada, domain.StatusEmExecucao); err != nil {
-		return OrdemServicoOutput{}, err
-	}
+	uc.notificador.Notificar(ctx, osFinalizada, domain.StatusEmExecucao)
 
 	return output, nil
 }

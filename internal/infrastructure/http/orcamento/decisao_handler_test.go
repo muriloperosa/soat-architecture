@@ -183,7 +183,7 @@ func TestHandler_AlterarQuantidadePeca_ComSucesso_Retorna200(t *testing.T) {
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(orcamento, nil)
 	orcamentoRepo.EXPECT().Atualizar(mock.Anything, orcamento).Return(nil)
 
-	uc := app.NewAlterarQuantidadePecaOrcamentoUseCase(orcamentoRepo, osRepo, nil, nil, runner, nil)
+	uc := app.NewAlterarQuantidadePecaOrcamentoUseCase(orcamentoRepo, osRepo, nil, nil, runner, nil, nil)
 	h := httporcamento.NewHandler(nil, nil, nil, nil, nil, uc, nil)
 
 	router := gin.New()
@@ -212,7 +212,7 @@ func TestHandler_AlterarQuantidadePeca_BodyInvalido_Retorna400(t *testing.T) {
 	orcamentoRepo := orcamentomocks.NewOrcamentoRepository(t)
 	runner := &helpers.TransactionRunnerMock{}
 
-	uc := app.NewAlterarQuantidadePecaOrcamentoUseCase(orcamentoRepo, osRepo, nil, nil, runner, nil)
+	uc := app.NewAlterarQuantidadePecaOrcamentoUseCase(orcamentoRepo, osRepo, nil, nil, runner, nil, nil)
 	h := httporcamento.NewHandler(nil, nil, nil, nil, nil, uc, nil)
 
 	router := gin.New()

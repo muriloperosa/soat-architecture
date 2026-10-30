@@ -42,9 +42,7 @@ func (uc *EntregarOrdemServicoUseCase) Executar(
 		return OrdemServicoOutput{}, shared.NewInternalError("erro ao entregar ordem de serviço", err)
 	}
 
-	if err := uc.notificador.Notificar(ctx, os, statusAnterior); err != nil {
-		return OrdemServicoOutput{}, err
-	}
+	uc.notificador.Notificar(ctx, os, statusAnterior)
 
 	return toOutput(os), nil
 }

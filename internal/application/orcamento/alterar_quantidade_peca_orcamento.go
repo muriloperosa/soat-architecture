@@ -23,7 +23,8 @@ type AlterarQuantidadePecaOrcamentoUseCase struct {
 	reservaRepository      domainreservapeca.Repository
 	pecaRepository         domainpeca.Repository
 	transactionRunner      shared.TransactionRunner
-	notificador            *notificacao.NotificadorStatus
+	notificadorStatus      *notificacao.NotificadorStatus
+	notificadorOrcamento   *notificacao.NotificadorOrcamento
 }
 
 func NewAlterarQuantidadePecaOrcamentoUseCase(
@@ -32,7 +33,8 @@ func NewAlterarQuantidadePecaOrcamentoUseCase(
 	reservaRepository domainreservapeca.Repository,
 	pecaRepository domainpeca.Repository,
 	transactionRunner shared.TransactionRunner,
-	notificador *notificacao.NotificadorStatus,
+	notificadorStatus *notificacao.NotificadorStatus,
+	notificadorOrcamento *notificacao.NotificadorOrcamento,
 ) *AlterarQuantidadePecaOrcamentoUseCase {
 	return &AlterarQuantidadePecaOrcamentoUseCase{
 		orcamentoRepository:    orcamentoRepository,
@@ -40,7 +42,8 @@ func NewAlterarQuantidadePecaOrcamentoUseCase(
 		reservaRepository:      reservaRepository,
 		pecaRepository:         pecaRepository,
 		transactionRunner:      transactionRunner,
-		notificador:            notificador,
+		notificadorStatus:      notificadorStatus,
+		notificadorOrcamento:   notificadorOrcamento,
 	}
 }
 
@@ -120,9 +123,8 @@ func (uc *AlterarQuantidadePecaOrcamentoUseCase) Executar(
 	}
 
 	if osReenviada != nil {
-		if err := uc.notificador.Notificar(ctx, osReenviada, domainordemservico.StatusAprovada); err != nil {
-			return OrcamentoOutput{}, err
-		}
+		uc.notificadorStatus.Notificar(ctx, osReenviada, domainordemservico.StatusAprovada)
+		uc.notificadorOrcamento.Notificar(ctx, osReenviada, atualizado, true)
 	}
 
 	return toOutput(atualizado), nil

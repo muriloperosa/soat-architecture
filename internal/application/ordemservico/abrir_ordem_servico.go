@@ -76,9 +76,7 @@ func (uc *AbrirOrdemServicoUseCase) Executar(
 		return OrdemServicoOutput{}, shared.NewInternalError("erro ao salvar ordem de serviço", err)
 	}
 
-	if err := uc.notificador.Notificar(ctx, os, ""); err != nil {
-		return OrdemServicoOutput{}, err
-	}
+	uc.notificador.Notificar(ctx, os, "")
 
 	return toOutput(os), nil
 }

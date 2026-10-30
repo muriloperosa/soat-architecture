@@ -42,9 +42,7 @@ func (uc *RejeitarOrcamentoUseCase) Executar(ctx context.Context, input Rejeitar
 		return FluxoOrcamentoOutput{}, shared.NewInternalError("erro ao atualizar ordem de serviço", err)
 	}
 
-	if err := uc.notificador.Notificar(ctx, os, statusAnterior); err != nil {
-		return FluxoOrcamentoOutput{}, err
-	}
+	uc.notificador.Notificar(ctx, os, statusAnterior)
 
 	return toFluxoOutput(os), nil
 }

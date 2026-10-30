@@ -2,7 +2,6 @@ package notificacao
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 
@@ -12,9 +11,10 @@ import (
 )
 
 // NotificadorStatus avisa o cliente por e-mail depois que a ordem de serviço
-// já foi persistida. Falha de envio é registrada e não desfaz a transição:
-// uma indisponibilidade do provedor não pode reabrir estoque nem reverter
-// um status que o banco já confirmou.
+// já foi persistida. Falhas são registradas e não desfazem a transição.
+// O envio é síncrono e usa o contexto da requisição; latência do provedor
+// afeta a resposta e cancelamento pode interromper o envio. Uma fila/Outbox
+// pode desacoplar esse efeito quando a garantia de entrega for necessária.
 type NotificadorStatus struct {
 	clientes domaincliente.ClienteRepository
 	emails   shared.EmailSender
@@ -28,18 +28,15 @@ func (n *NotificadorStatus) Notificar(
 	ctx context.Context,
 	os *domainordemservico.OrdemServico,
 	statusAnterior domainordemservico.StatusOrdemServico,
-) error {
+) {
 	if n == nil || n.emails == nil || os == nil {
-		return nil
+		return
 	}
 
 	cliente, err := n.clientes.BuscarPorID(ctx, os.ClienteID())
 	if err != nil {
-		if errors.Is(err, domaincliente.ErrClienteNaoEncontrado) {
-			return err
-		}
 		log.Printf("notificação de status da OS %s: falha ao buscar cliente: %v", os.Numero().String(), err)
-		return nil
+		return
 	}
 
 	anterior := string(statusAnterior)
@@ -59,6 +56,4 @@ func (n *NotificadorStatus) Notificar(
 	if err := n.emails.Enviar(ctx, cliente.Email().String(), assunto, corpo); err != nil {
 		log.Printf("notificação de status da OS %s: falha ao enviar e-mail: %v", os.Numero().String(), err)
 	}
-
-	return nil
 }

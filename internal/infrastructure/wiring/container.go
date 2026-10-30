@@ -240,8 +240,21 @@ func NewContainer(cfg *config.Config, db *gorm.DB) (*Container, error) {
 	c.AdicionarPecaOrcamentoUC = apporcamento.NewAdicionarPecaOrcamentoUseCase(c.OrcamentoRepo, c.PecaRepo, c.OrdemServicoRepo)
 	c.RemoverServicoOrcamentoUC = apporcamento.NewRemoverServicoOrcamentoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo)
 	c.RemoverPecaOrcamentoUC = apporcamento.NewRemoverPecaOrcamentoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo)
-	c.AlterarQuantidadePecaOrcamentoUC = apporcamento.NewAlterarQuantidadePecaOrcamentoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo, c.ReservaPecaRepo, c.PecaRepo, c.TransactionRunner, notificador)
-	c.EnviarOrcamentoParaAprovacaoUC = apporcamento.NewEnviarOrcamentoParaAprovacaoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo, notificador)
+	c.AlterarQuantidadePecaOrcamentoUC = apporcamento.NewAlterarQuantidadePecaOrcamentoUseCase(
+		c.OrcamentoRepo,
+		c.OrdemServicoRepo,
+		c.ReservaPecaRepo,
+		c.PecaRepo,
+		c.TransactionRunner,
+		notificador,
+		appnotificacao.NewOrcamento(c.ClienteRepository, c.EmailSender),
+	)
+	c.EnviarOrcamentoParaAprovacaoUC = apporcamento.NewEnviarOrcamentoParaAprovacaoUseCase(
+		c.OrcamentoRepo,
+		c.OrdemServicoRepo,
+		notificador,
+		appnotificacao.NewOrcamento(c.ClienteRepository, c.EmailSender),
+	)
 	c.AprovarOrcamentoUC = apporcamento.NewAprovarOrcamentoUseCase(c.OrdemServicoRepo, c.OrcamentoRepo, c.PecaRepo, c.ReservaPecaRepo, c.TransactionRunner, notificador)
 	c.RejeitarOrcamentoUC = apporcamento.NewRejeitarOrcamentoUseCase(c.OrdemServicoRepo, notificador)
 
