@@ -59,7 +59,7 @@ Cada job possui `timeout-minutes` para limitar consumo em execução travada. To
 Executada em runner Linux hospedado pelo GitHub:
 
 1. Checkout do repositório.
-2. Instalação da versão de Go indicada pelo `go.mod`, atualmente `1.26.6`.
+2. Instalação da versão de Go indicada pelo `go.mod`, atualmente `1.26.10`.
 3. Cache de dependências usando o `go.sum`.
 4. Verificação de formatação (`gofmt -l`).
 5. `go vet ./...`.
