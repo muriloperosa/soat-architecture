@@ -1472,8 +1472,14 @@ paths:
   /v1/ordens-servico:
     get:
       description: Lista Ordens de Serviço com paginação, ordenação e filtros diretos
-        por campo. Usuários do tipo cliente visualizam somente as próprias Ordens
-        de Serviço.
+        por campo. Sem o parâmetro order, prioriza EM_EXECUCAO, APROVADA, AGUARDANDO_APROVACAO/REJEITADA,
+        EM_DIAGNOSTICO e RECEBIDA, nessa ordem; dentro de cada prioridade, mostra
+        primeiro as OS mais antigas (data_cadastro ASC). order=status usa a mesma
+        prioridade; outros campos em order substituem essa ordenação. direction=DESC
+        inverte a ordem e os critérios de desempate. Sem filtro de status, FINALIZADA
+        e ENTREGUE são excluídas da listagem; quando um status é informado, a consulta
+        respeita o filtro, inclusive para esses status. Usuários do tipo cliente visualizam
+        somente as próprias Ordens de Serviço.
       parameters:
       - default: 1
         description: Número da página
@@ -1481,8 +1487,8 @@ paths:
         minimum: 1
         name: page
         type: integer
-      - default: id
-        description: Campo de ordenação
+      - description: Campo de ordenação; omitido ou status, usa prioridade do status
+          e data de cadastro crescente
         enum:
         - id
         - numero

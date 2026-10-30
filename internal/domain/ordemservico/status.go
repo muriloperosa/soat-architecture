@@ -74,6 +74,18 @@ var todosStatus = []StatusOrdemServico{
 	StatusEntregue,
 }
 
+// PrioridadeListagem retorna os grupos de status na ordem padrão da fila de
+// trabalho. Status no mesmo grupo são desempatados pelas regras da consulta.
+func PrioridadeListagem() [][]StatusOrdemServico {
+	return [][]StatusOrdemServico{
+		{StatusEmExecucao},
+		{StatusAprovada},
+		{StatusAguardandoAprovacao, StatusRejeitada},
+		{StatusEmDiagnostico},
+		{StatusRecebida},
+	}
+}
+
 // ExisteCaminhoValido informa se existe uma sequência de transições diretas
 // válidas (PermiteTransicaoPara) ligando s a destino. Usa busca em largura
 // sobre o grafo de transições, suportando o ciclo AguardandoAprovacao<->Rejeitada
