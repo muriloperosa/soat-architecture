@@ -1,0 +1,14 @@
+profile: coverage.out
+
+threshold:
+  package: 80
+
+exclude:
+  paths:
+    - /mocks/
+    - \.gen\.go$
+    - \.pb\.go$
+    - ^cmd/
+    - ^docs/swagger(/|$)
+    - ^migrations/
+    - ^test/helpers/

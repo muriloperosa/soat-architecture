@@ -1,18 +1,18 @@
-package auth_test
+package auth
 
 import (
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
-	infraauth "github.com/muriloperosa/soat-architecture/internal/infrastructure/auth"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGerarEValidarAccessToken_TokenValido(t *testing.T) {
-	autenticador := infraauth.NewAuthenticatorJWT("segredo-de-teste", 15*time.Minute)
+	autenticador := NewAuthenticatorJWT("segredo-de-teste", 15*time.Minute)
 
 	token, jti, err := autenticador.GerarAccessToken("user-123", domainauth.TipoCliente, shared.PapelCliente)
 	require.NoError(t, err)
@@ -28,7 +28,7 @@ func TestGerarEValidarAccessToken_TokenValido(t *testing.T) {
 }
 
 func TestGerarAccessToken_GeraJtiDiferenteACadaChamada(t *testing.T) {
-	autenticador := infraauth.NewAuthenticatorJWT("segredo-de-teste", 15*time.Minute)
+	autenticador := NewAuthenticatorJWT("segredo-de-teste", 15*time.Minute)
 
 	_, jtiA, err := autenticador.GerarAccessToken("user-123", domainauth.TipoCliente, shared.PapelCliente)
 	require.NoError(t, err)
@@ -40,7 +40,7 @@ func TestGerarAccessToken_GeraJtiDiferenteACadaChamada(t *testing.T) {
 }
 
 func TestValidarAccessToken_TokenExpirado(t *testing.T) {
-	autenticador := infraauth.NewAuthenticatorJWT("segredo-de-teste", -1*time.Minute)
+	autenticador := NewAuthenticatorJWT("segredo-de-teste", -1*time.Minute)
 
 	token, _, err := autenticador.GerarAccessToken("user-123", domainauth.TipoInterno, shared.PapelAdmin)
 	require.NoError(t, err)
@@ -50,8 +50,8 @@ func TestValidarAccessToken_TokenExpirado(t *testing.T) {
 }
 
 func TestValidarAccessToken_AssinaturaInvalida(t *testing.T) {
-	gerador := infraauth.NewAuthenticatorJWT("segredo-a", 15*time.Minute)
-	validador := infraauth.NewAuthenticatorJWT("segredo-b", 15*time.Minute)
+	gerador := NewAuthenticatorJWT("segredo-a", 15*time.Minute)
+	validador := NewAuthenticatorJWT("segredo-b", 15*time.Minute)
 
 	token, _, err := gerador.GerarAccessToken("user-123", domainauth.TipoInterno, shared.PapelAdmin)
 	require.NoError(t, err)
@@ -61,21 +61,21 @@ func TestValidarAccessToken_AssinaturaInvalida(t *testing.T) {
 }
 
 func TestValidarAccessToken_TokenMalformado(t *testing.T) {
-	autenticador := infraauth.NewAuthenticatorJWT("segredo-de-teste", 15*time.Minute)
+	autenticador := NewAuthenticatorJWT("segredo-de-teste", 15*time.Minute)
 
 	_, err := autenticador.ValidarAccessToken("isso-nao-e-um-jwt")
 	require.Error(t, err)
 }
 
 func TestValidarAccessToken_TokenVazio(t *testing.T) {
-	autenticador := infraauth.NewAuthenticatorJWT("segredo-de-teste", 15*time.Minute)
+	autenticador := NewAuthenticatorJWT("segredo-de-teste", 15*time.Minute)
 
 	_, err := autenticador.ValidarAccessToken("")
 	require.Error(t, err)
 }
 
 func TestValidarAccessToken_MetodoDeAssinaturaNaoHMAC_Rejeitado(t *testing.T) {
-	autenticador := infraauth.NewAuthenticatorJWT("segredo-de-teste", 15*time.Minute)
+	autenticador := NewAuthenticatorJWT("segredo-de-teste", 15*time.Minute)
 
 	// Forja um token com alg "none" (sem assinatura) — se o middleware não
 	// checasse o tipo do método, um atacante poderia forjar claims livremente.
@@ -95,7 +95,7 @@ func TestValidarAccessToken_MetodoDeAssinaturaNaoHMAC_Rejeitado(t *testing.T) {
 }
 
 func TestGerarRefreshToken_GeraValorNaoVazioEUnico(t *testing.T) {
-	autenticador := infraauth.NewAuthenticatorJWT("segredo-de-teste", 15*time.Minute)
+	autenticador := NewAuthenticatorJWT("segredo-de-teste", 15*time.Minute)
 
 	a, err := autenticador.GerarRefreshToken()
 	require.NoError(t, err)
@@ -106,8 +106,14 @@ func TestGerarRefreshToken_GeraValorNaoVazioEUnico(t *testing.T) {
 	require.NotEqual(t, a, b)
 }
 
+func TestGerarRefreshToken_UsaFontePadraoQuandoAuthenticatorFoiCriadoSemConstrutor(t *testing.T) {
+	token, err := (&AuthenticatorJWT{}).GerarRefreshToken()
+	require.NoError(t, err)
+	require.NotEmpty(t, token)
+}
+
 func TestGerarAccessToken_PayloadTemOsClaimsEsperados(t *testing.T) {
-	autenticador := infraauth.NewAuthenticatorJWT("segredo-de-teste", 15*time.Minute)
+	autenticador := NewAuthenticatorJWT("segredo-de-teste", 15*time.Minute)
 
 	token, jti, err := autenticador.GerarAccessToken("user-123", domainauth.TipoInterno, shared.PapelMecanico)
 	require.NoError(t, err)
@@ -122,4 +128,16 @@ func TestGerarAccessToken_PayloadTemOsClaimsEsperados(t *testing.T) {
 	require.Equal(t, jti, claims["jti"])
 	require.Contains(t, claims, "iat")
 	require.Contains(t, claims, "exp")
+}
+
+func TestGerarRefreshTokenFalhaQuandoFonteAleatoriaFalha(t *testing.T) {
+	autenticador := &AuthenticatorJWT{random: coverageFailingRandomReader{}}
+	_, err := autenticador.GerarRefreshToken()
+	require.Error(t, err)
+}
+
+type coverageFailingRandomReader struct{}
+
+func (coverageFailingRandomReader) Read([]byte) (int, error) {
+	return 0, errors.New("fonte aleatória indisponível")
 }

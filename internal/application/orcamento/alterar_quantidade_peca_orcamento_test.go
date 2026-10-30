@@ -2,6 +2,7 @@ package orcamento_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -141,4 +142,90 @@ func TestAlterarQuantidadePecaOrcamentoUseCase_EmDiagnosticoApenasEdita(t *testi
 	require.NoError(t, err)
 	require.Equal(t, 3, out.ItensPeca[0].Quantidade)
 	require.Equal(t, domainordemservico.StatusEmDiagnostico, os.Status())
+}
+
+func TestAlterarQuantidadePecaOrcamentoUseCase_RejeitaEstadoImutavel(t *testing.T) {
+	osRepo := ordemservicomocks.NewOrdemServicoRepository(t)
+	os := osAguardandoAprovacao(t, 10)
+	osRepo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
+
+	uc := app.NewAlterarQuantidadePecaOrcamentoUseCase(nil, osRepo, nil, nil, nil, &helpers.TransactionRunnerMock{}, nil)
+	_, err := uc.Executar(context.Background(), app.AlterarQuantidadePecaOrcamentoInput{
+		OrdemServicoID: 42,
+		ItemPecaID:     11,
+		Quantidade:     3,
+	})
+
+	require.ErrorIs(t, err, domainorcamento.ErrOrcamentoImutavel)
+}
+
+func TestAlterarQuantidadePecaOrcamentoUseCase_ItemNaoEncontrado(t *testing.T) {
+	osRepo := ordemservicomocks.NewOrdemServicoRepository(t)
+	orcamentoRepo := orcamentomocks.NewOrcamentoRepository(t)
+	runner := &helpers.TransactionRunnerMock{}
+	os, err := domainordemservico.NewOrdemServico("OS-20260830-a1b2c3d4e5f6", 10, 20, 1000, "", "", 1)
+	require.NoError(t, err)
+	os.AtribuirID(42)
+	require.NoError(t, os.IniciarDiagnostico(2))
+
+	osRepo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
+	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(orcamentoPersistidoComPeca(), nil)
+
+	uc := app.NewAlterarQuantidadePecaOrcamentoUseCase(orcamentoRepo, osRepo, nil, nil, nil, runner, nil)
+	_, err = uc.Executar(context.Background(), app.AlterarQuantidadePecaOrcamentoInput{
+		OrdemServicoID: 42,
+		ItemPecaID:     999,
+		Quantidade:     3,
+	})
+
+	require.ErrorIs(t, err, domainorcamento.ErrItemPecaNaoEncontrado)
+	require.Equal(t, 1, runner.Calls)
+}
+
+func TestAlterarQuantidadePecaOrcamentoUseCase_ErrosDePersistencia(t *testing.T) {
+	t.Run("falha ao consultar OS", func(t *testing.T) {
+		osRepo := ordemservicomocks.NewOrdemServicoRepository(t)
+		errConsulta := errors.New("banco indisponível")
+		osRepo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(nil, errConsulta)
+		uc := app.NewAlterarQuantidadePecaOrcamentoUseCase(nil, osRepo, nil, nil, nil, &helpers.TransactionRunnerMock{}, nil)
+		_, err := uc.Executar(context.Background(), app.AlterarQuantidadePecaOrcamentoInput{OrdemServicoID: 42})
+		require.ErrorIs(t, err, errConsulta)
+	})
+
+	t.Run("falha ao consultar orçamento", func(t *testing.T) {
+		osRepo := ordemservicomocks.NewOrdemServicoRepository(t)
+		orcamentoRepo := orcamentomocks.NewOrcamentoRepository(t)
+		os := osEmDiagnosticoComDiagnostico(t, 42)
+		errConsulta := errors.New("banco indisponível")
+		osRepo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
+		orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(nil, errConsulta)
+		uc := app.NewAlterarQuantidadePecaOrcamentoUseCase(orcamentoRepo, osRepo, nil, nil, nil, &helpers.TransactionRunnerMock{}, nil)
+		_, err := uc.Executar(context.Background(), app.AlterarQuantidadePecaOrcamentoInput{OrdemServicoID: 42})
+		require.ErrorIs(t, err, errConsulta)
+	})
+
+	t.Run("quantidade inválida", func(t *testing.T) {
+		osRepo := ordemservicomocks.NewOrdemServicoRepository(t)
+		orcamentoRepo := orcamentomocks.NewOrcamentoRepository(t)
+		os := osEmDiagnosticoComDiagnostico(t, 42)
+		osRepo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
+		orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(orcamentoPersistidoComPeca(), nil)
+		uc := app.NewAlterarQuantidadePecaOrcamentoUseCase(orcamentoRepo, osRepo, nil, nil, nil, &helpers.TransactionRunnerMock{}, nil)
+		_, err := uc.Executar(context.Background(), app.AlterarQuantidadePecaOrcamentoInput{OrdemServicoID: 42, ItemPecaID: 11, Quantidade: 0})
+		require.ErrorIs(t, err, domainorcamento.ErrQuantidadeInvalida)
+	})
+
+	t.Run("falha ao atualizar orçamento", func(t *testing.T) {
+		osRepo := ordemservicomocks.NewOrdemServicoRepository(t)
+		orcamentoRepo := orcamentomocks.NewOrcamentoRepository(t)
+		os := osEmDiagnosticoComDiagnostico(t, 42)
+		orcamento := orcamentoPersistidoComPeca()
+		errPersistencia := errors.New("banco indisponível")
+		osRepo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
+		orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(orcamento, nil)
+		orcamentoRepo.EXPECT().Atualizar(mock.Anything, orcamento).Return(errPersistencia)
+		uc := app.NewAlterarQuantidadePecaOrcamentoUseCase(orcamentoRepo, osRepo, nil, nil, nil, &helpers.TransactionRunnerMock{}, nil)
+		_, err := uc.Executar(context.Background(), app.AlterarQuantidadePecaOrcamentoInput{OrdemServicoID: 42, ItemPecaID: 11, Quantidade: 3})
+		require.ErrorIs(t, err, errPersistencia)
+	})
 }

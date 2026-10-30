@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
+	appquery "github.com/muriloperosa/soat-architecture/internal/application/query"
 	domain "github.com/muriloperosa/soat-architecture/internal/domain/peca"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
-	appquery "github.com/muriloperosa/soat-architecture/internal/application/query"
 )
 
 type ListarPecasUseCase struct {

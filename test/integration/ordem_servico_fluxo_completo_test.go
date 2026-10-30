@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
-	httpordemservico "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/ordemservico"
 	httporcamento "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/orcamento"
+	httpordemservico "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/ordemservico"
 	httpservico "github.com/muriloperosa/soat-architecture/internal/infrastructure/http/servico"
 	"github.com/stretchr/testify/require"
 )

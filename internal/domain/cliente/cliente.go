@@ -26,7 +26,7 @@ func NewCliente(
 	documento string,
 	tipo TipoPessoa,
 	nome string,
-	email string, 
+	email string,
 	telefone string,
 	senha string,
 	criadoPor uint64,

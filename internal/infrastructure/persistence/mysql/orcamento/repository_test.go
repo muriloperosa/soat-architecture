@@ -206,6 +206,64 @@ func TestRepositoryAtualizarInsereNovosERemoveAusentesNaSincronizacao(t *testing
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestTraduzirErroConsultaPreservaErroDesconhecido(t *testing.T) {
+	errConsulta := errors.New("falha de conexão")
+	require.ErrorIs(t, traduzirErroConsulta(errConsulta), errConsulta)
+}
+
+func TestRepositoryAtualizarRetornaErroAoConsultarItensDeServico(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewOrcamentoRepository(db)
+	o := orcamentoPersistido(t)
+	errConsulta := errors.New("falha ao consultar serviços")
+
+	mock.ExpectBegin()
+	mock.ExpectExec("UPDATE `orcamentos`").WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery("SELECT `id` FROM .*orcamentos_servicos.*WHERE orcamento_id = \\?").WillReturnError(errConsulta)
+	mock.ExpectRollback()
+
+	err := repository.Atualizar(context.Background(), o)
+	require.ErrorIs(t, err, errConsulta)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestRepositoryAtualizarRetornaErroAoSincronizarPecas(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewOrcamentoRepository(db)
+	o := orcamentoPersistido(t)
+	errUpdate := errors.New("falha ao atualizar quantidade")
+
+	mock.ExpectBegin()
+	mock.ExpectExec("UPDATE `orcamentos`").WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery("SELECT `id` FROM .*orcamentos_servicos.*WHERE orcamento_id = \\?").WillReturnRows(sqlmock.NewRows([]string{"id"}))
+	mock.ExpectQuery("SELECT `id` FROM .*orcamentos_pecas.*WHERE orcamento_id = \\?").WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(2))
+	mock.ExpectExec("UPDATE `orcamentos_pecas`").WillReturnError(errUpdate)
+	mock.ExpectRollback()
+
+	err := repository.Atualizar(context.Background(), o)
+	require.ErrorIs(t, err, errUpdate)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestRepositoryAtualizarRetornaErroAoRemoverPeca(t *testing.T) {
+	db, mock := newRepositoryTestDB(t)
+	repository := NewOrcamentoRepository(db)
+	o := orcamentoPersistido(t)
+	require.NoError(t, o.RemoverItemPeca(2))
+	errDelete := errors.New("falha ao remover peça")
+
+	mock.ExpectBegin()
+	mock.ExpectExec("UPDATE `orcamentos`").WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery("SELECT `id` FROM .*orcamentos_servicos.*WHERE orcamento_id = \\?").WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+	mock.ExpectQuery("SELECT `id` FROM .*orcamentos_pecas.*WHERE orcamento_id = \\?").WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(2))
+	mock.ExpectExec("DELETE FROM `orcamentos_pecas`").WillReturnError(errDelete)
+	mock.ExpectRollback()
+
+	err := repository.Atualizar(context.Background(), o)
+	require.ErrorIs(t, err, errDelete)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func orcamentoRows() *sqlmock.Rows {
 	agora := time.Now()
 	return sqlmock.NewRows([]string{"id", "ordem_servico_id", "valor_item_servicos", "valor_item_pecas", "valor_total", "observacoes", "criado_por", "criado_em", "atualizado_em"}).

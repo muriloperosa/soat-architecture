@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"io"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -27,13 +28,14 @@ type tokenClaims struct {
 type AuthenticatorJWT struct {
 	secret    []byte
 	accessTTL time.Duration
+	random    io.Reader
 }
 
 // NewAuthenticatorJWT monta o autenticador com o secret HS256 e o TTL do
 // access token. secret é lido de Config.JWTSecret; accessTTL de
 // Config.JWTAccessTokenTTLMinutes.
 func NewAuthenticatorJWT(secret string, accessTTL time.Duration) *AuthenticatorJWT {
-	return &AuthenticatorJWT{secret: []byte(secret), accessTTL: accessTTL}
+	return &AuthenticatorJWT{secret: []byte(secret), accessTTL: accessTTL, random: rand.Reader}
 }
 
 // GerarAccessToken assina um novo access token JWT (HS256) pro par
@@ -68,7 +70,11 @@ func (a *AuthenticatorJWT) GerarAccessToken(subject string, tipo domainauth.Tipo
 // codificado em base64, pra ser entregue ao cliente.
 func (a *AuthenticatorJWT) GerarRefreshToken() (string, error) {
 	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
+	random := a.random
+	if random == nil {
+		random = rand.Reader
+	}
+	if _, err := io.ReadFull(random, b); err != nil {
 		return "", err
 	}
 	return base64.RawURLEncoding.EncodeToString(b), nil

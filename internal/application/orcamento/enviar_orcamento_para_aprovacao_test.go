@@ -169,3 +169,19 @@ func TestEnviarOrcamentoParaAprovacaoUseCase_OrcamentoVazioNaoPodeSerEnviado(t *
 	require.ErrorIs(t, err, domainorcamento.ErrOrcamentoVazio)
 	require.Equal(t, domainordemservico.StatusEmDiagnostico, os.Status())
 }
+
+func TestEnviarOrcamentoParaAprovacaoUseCase_ErroAoConsultarOS(t *testing.T) {
+	orcamentoRepo := domainorcamentomocks.NewOrcamentoRepository(t)
+	osRepo := ordemservicomocks.NewOrdemServicoRepository(t)
+	errConsulta := errors.New("banco indisponível")
+	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(orcamentoVazio(t, 42), nil)
+	osRepo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(nil, errConsulta)
+
+	uc := app.NewEnviarOrcamentoParaAprovacaoUseCase(orcamentoRepo, osRepo, nil, nil)
+	_, err := uc.Executar(context.Background(), app.EnviarOrcamentoParaAprovacaoInput{OrdemServicoID: 42, UsuarioID: 30})
+
+	var appErr *shared.AppError
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindInternal, appErr.Kind)
+	require.ErrorIs(t, err, errConsulta)
+}
