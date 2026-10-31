@@ -270,3 +270,18 @@ jobs:
 
       - name: Build image
         run: docker build --tag "soat-architecture:${GITHUB_SHA}" .
+
+  ci_gate:
+    name: CI gate
+    if: ${{ always() }}
+    needs: [generated, quality, unit, integration, sca, sast, image]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every CI job to succeed
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        shell: bash
+        run: |
+          printf '%s\n' "$NEEDS_JSON" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          printf '%s\n' "$NEEDS_JSON" | jq -e 'length == 7 and all(.[]; .result == "success")'
