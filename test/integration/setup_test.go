@@ -70,7 +70,10 @@ func TestMain(m *testing.M) {
 		JWTRefreshTokenTTLHours:  1,
 	}
 
-	testContainer = wiring.NewContainer(cfg, db)
+	testContainer, err = wiring.NewContainer(cfg, db)
+	if err != nil {
+		log.Fatalf("erro ao montar container: %v", err)
+	}
 	testRouter = httpinfra.NewRouter(testContainer)
 
 	os.Exit(m.Run())

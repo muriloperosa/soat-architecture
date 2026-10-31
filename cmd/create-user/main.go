@@ -34,7 +34,10 @@ func main() {
 		log.Fatalf("erro ao conectar no banco: %v", err)
 	}
 
-	c := wiring.NewContainer(cfg, db)
+	c, err := wiring.NewContainer(cfg, db)
+	if err != nil {
+		log.Fatalf("erro ao montar container: %v", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
