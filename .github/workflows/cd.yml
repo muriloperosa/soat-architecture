@@ -34,7 +34,7 @@ jobs:
   # tagged commit to be green.
   guard:
     name: Validate release tag and CI
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
     permissions:
       contents: read
@@ -43,7 +43,7 @@ jobs:
       version: ${{ steps.check.outputs.version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -105,7 +105,7 @@ jobs:
   image:
     name: Build and push image to ECR
     needs: [guard]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: aws-deploy
     timeout-minutes: 20
     permissions:
@@ -115,7 +115,7 @@ jobs:
       image: ${{ steps.meta.outputs.image }}
     steps:
       - name: Checkout
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -181,7 +181,7 @@ jobs:
     name: Terraform apply
     needs: [image]
     if: false
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: aws-infra
     timeout-minutes: 45
     permissions:
@@ -194,7 +194,7 @@ jobs:
       TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
     steps:
       - name: Checkout
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -237,7 +237,7 @@ jobs:
     # Runs when infra succeeded or was skipped; a skipped need would otherwise
     # skip this job too.
     if: ${{ !cancelled() && needs.guard.result == 'success' && needs.image.result == 'success' && contains(fromJSON('["success", "skipped"]'), needs.infra.result) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: aws-deploy
       url: ${{ steps.summary.outputs.url }}
@@ -252,7 +252,7 @@ jobs:
       OVERLAY_FILE: k8s/overlays/eks/kustomization.yaml
     steps:
       - name: Checkout
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 

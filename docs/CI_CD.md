@@ -75,7 +75,7 @@ Não use `pull_request_target` para executar código do pull request. Esse event
 
 O workflow implementado separa as verificações em jobs paralelos: `quality`, `generated`, `unit`, `integration`, `sca` e `sast`. Isso permite que falhas rápidas de formatação/build apareçam sem aguardar os testes mais longos. O job `generated` executa as mesmas gerações de mocks e Swagger do hook local e falha se os arquivos gerados não estiverem commitados. Após qualidade e testes passarem, `image` constrói a imagem Docker sem publicar. O perfil de cobertura e os relatórios de segurança são processados no mesmo job que os gera, evitando upload/download entre jobs.
 
-Cada job possui `timeout-minutes` para limitar consumo em execução travada. Todas as actions são fixadas por SHA completo, com a versão legível registrada em comentário: `checkout` v4.4.0, `setup-go` v5.0.2 e `upload-artifact` v7.0.2 na CI; `configure-aws-credentials` v6.3.0, `amazon-ecr-login` v2.1.7 e `setup-terraform` v4.0.1 no deploy. Os checkouts usam `persist-credentials: false`, pois nenhum job precisa enviar alterações de volta ao repositório.
+Cada job possui `timeout-minutes` para limitar consumo em execução travada. Todas as actions são fixadas por SHA completo, com a versão legível registrada em comentário: `checkout` v7.0.1, `setup-go` v7.0.0 e `upload-artifact` v7.0.2 na CI; `configure-aws-credentials` v6.3.0, `amazon-ecr-login` v2.1.7 e `setup-terraform` v4.0.1 no deploy. Os checkouts usam `persist-credentials: false`, pois nenhum job precisa enviar alterações de volta ao repositório.
 
 #### Validação estática
 
