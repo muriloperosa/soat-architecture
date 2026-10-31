@@ -236,7 +236,8 @@ jobs:
     needs: [guard, image, infra]
     # Runs when infra succeeded or was skipped; a skipped need would otherwise
     # skip this job too.
-    if: ${{ !cancelled() && needs.guard.result == 'success' && needs.image.result == 'success' && contains(fromJSON('["success", "skipped"]'), needs.infra.result) }}
+    # if: ${{ !cancelled() && needs.guard.result == 'success' && needs.image.result == 'success' && contains(fromJSON('["success", "skipped"]'), needs.infra.result) }}
+    if: false
     runs-on: ubuntu-24.04
     environment:
       name: aws-deploy
