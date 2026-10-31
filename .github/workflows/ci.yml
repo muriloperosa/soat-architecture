@@ -1,4 +1,4 @@
-name: CI
+name: CI (Continuous Integration)
 
 on:
   pull_request:
@@ -12,9 +12,12 @@ on:
 permissions:
   contents: read
 
+# PRs: a new push cancels the previous run of the same PR. Pushes to main and
+# manual runs get one group per commit and are never cancelled, so every main
+# commit gets its own "CI gate" result (the CD workflow requires it).
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   GO_VERSION: '1.26.10'
