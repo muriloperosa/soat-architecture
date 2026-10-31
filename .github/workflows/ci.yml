@@ -111,7 +111,9 @@ jobs:
         run: go test ./... -coverprofile="${COVERAGE_FILE}" -covermode=atomic
 
       - name: Install go-test-coverage
-        run: go install github.com/vladopajic/go-test-coverage/v2@v2.20.0
+        # v2.19.0 is the latest release that builds with Go 1.26; setup-go sets
+        # GOTOOLCHAIN=local, so tools requiring a newer Go fail to install.
+        run: go install github.com/vladopajic/go-test-coverage/v2@v2.19.0
 
       - name: Enforce 80% coverage per package
         id: coverage_gate
