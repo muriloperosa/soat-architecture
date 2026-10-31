@@ -59,7 +59,7 @@ func TestNewClienteValido(t *testing.T) {
 
 	require.True(t, cliente.Ativo())
 	require.True(t, cliente.RequerAlterarSenha())
-	require.Equal(t, uint64(99999), cliente.CriadoPor())
+	require.Equal(t, uint64(1), cliente.CriadoPor())
 
 	require.False(t, cliente.DataCadastro().IsZero())
 	require.False(t, cliente.DataAtualizacao().IsZero())
