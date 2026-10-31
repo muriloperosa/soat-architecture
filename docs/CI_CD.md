@@ -183,10 +183,10 @@ Por enquanto o CD não provisiona infraestrutura. O job `infra` (`terraform appl
 flowchart TD
     TAG["git push origin 1.0.1"] --> GUARD["1. guard<br/>tag semver, commit na main<br/>e CI gate verde?"]
     GUARD -->|não| STOP1[Falha: AWS não é tocada]
-    GUARD -->|sim| TF["2. infra<br/>terraform apply<br/>(skipped por enquanto)"]
-    TF -->|sucesso ou skipped| IMG["3. image<br/>build e push oficina-api:1.0.1 no ECR"]
-    TF -->|falhou| STOP2[Falha: nada é publicado]
-    IMG --> DEP["4. deploy<br/>segredos, migrations e rollout"]
+    GUARD -->|sim| IMG["2. image<br/>build e push oficina-api:1.0.1 no ECR"]
+    IMG --> TF["3. infra<br/>terraform apply<br/>(skipped por enquanto)"]
+    TF -->|sucesso ou skipped| DEP["4. deploy<br/>segredos, migrations e rollout"]
+    TF -->|falhou| STOP2[Falha: cluster não é tocado]
     DEP --> OK["Resumo com versão, imagem e URL"]
 ```
 
@@ -228,8 +228,8 @@ sequenceDiagram
 | Passo | O que faz | Por que existe | Se falhar |
 | --- | --- | --- | --- |
 | **guard** | Confere que o workflow rodou a partir de uma tag `MAJOR.MINOR.PATCH`, que o commit da tag está na `main` e que o check **CI gate** desse commit passou | O filtro de tags do GitHub não olha a branch, e só versões validadas pela CI podem ir para o ar | Nada roda. Tag no commit errado: apague e crie de novo. CI vermelha: corrija na `main` e lance uma nova versão |
-| **infra** | Assume a role do Terraform por OIDC e roda `terraform init/plan/apply` em `infra/`, com state no S3 | Provisionamento automatizado e reproduzível do cluster e do banco | **Sempre pulado** por enquanto (`if: false`). Quando ativado, se falhar, nada é publicado |
 | **image** | Assume a role de deploy por OIDC, faz login no ECR, `docker build` com a tag da versão (ex.: `oficina-api:1.0.1`) e `docker push` | A imagem precisa estar num registry que o cluster alcance. A tag da versão deixa claro o que está rodando | Nada foi aplicado no cluster. Veja o log do build ou se o repositório ECR existe |
+| **infra** | Assume a role do Terraform por OIDC e roda `terraform init/plan/apply` em `infra/`, com state no S3 | Provisionamento automatizado e reproduzível do cluster e do banco | **Sempre pulado** por enquanto (`if: false`). Quando ativado, roda depois da imagem publicada; se falhar, o cluster não é tocado |
 | **deploy** | Assume a role de deploy, lê os segredos no Secrets Manager e roda `make k8s-deploy`: ConfigMap/Secret → Job de migration → rollout da API | Reaproveita o mesmo alvo usado manualmente, na ordem definida na [ADR 0006](adr/0006-migrations-em-job-kubernetes.md) | Se a migration falhar, a versão anterior da API continua no ar. O passo **Diagnostics** imprime pods, jobs, log da migration e eventos |
 
 A imagem no ECR é **imutável**: uma tag publicada não pode ser sobrescrita. Ao rodar o deploy de novo para uma versão que já existe no ECR (redeploy ou rollback), o passo `image` reaproveita a imagem existente em vez de reconstruir.
@@ -400,7 +400,7 @@ Para o deploy funcionar, o security group do RDS também precisa aceitar conexõ
 
 ### Terraform no pipeline
 
-O job `infra` está pronto no `cd.yml`, mas fica **skipped** em todo run por causa do `if: false`. Os jobs `image` e `deploy` rodam do mesmo jeito com ele pulado. Se ele rodar e falhar, nada é publicado.
+O job `infra` está pronto no `cd.yml`, mas fica **skipped** em todo run por causa do `if: false`. Ele roda depois do `image` e antes do `deploy`; o `deploy` roda do mesmo jeito com ele pulado. Se ele rodar e falhar, a imagem já está no ECR, mas o cluster não é tocado.
 
 Para ativar:
 

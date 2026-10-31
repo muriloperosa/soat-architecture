@@ -100,71 +100,11 @@ jobs:
           echo "::error::Timeout esperando o CI gate de ${GITHUB_SHA}."
           exit 1
 
-  # Stage 1: Terraform apply of infra/ (EKS cluster, network, database).
-  # Always skipped for now: the Terraform code and its S3 state backend are
-  # not ready yet. Enabling it means removing the "if: false" below and
-  # setting up the AWS_TERRAFORM_ROLE_ARN and TF_STATE_BUCKET variables and
-  # the aws-infra environment (docs/CI_CD.md).
-  infra:
-    name: Terraform apply
-    needs: [guard]
-    if: false
-    runs-on: ubuntu-latest
-    environment: aws-infra
-    timeout-minutes: 45
-    permissions:
-      contents: read
-      id-token: write
-    defaults:
-      run:
-        working-directory: infra
-    env:
-      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with:
-          persist-credentials: false
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
-        with:
-          role-to-assume: ${{ vars.AWS_TERRAFORM_ROLE_ARN }}
-          role-session-name: terraform-${{ github.run_id }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
-        with:
-          terraform_version: 1.17.1
-          terraform_wrapper: false
-
-      - name: Terraform init
-        run: |
-          if [[ -z "$TF_STATE_BUCKET" ]]; then
-            echo "::error::Variável TF_STATE_BUCKET não configurada (bucket S3 do state, ver docs/CI_CD.md)."
-            exit 1
-          fi
-          terraform init -input=false \
-            -backend-config="bucket=${TF_STATE_BUCKET}" \
-            -backend-config="key=oficina/terraform.tfstate" \
-            -backend-config="region=${AWS_REGION}" \
-            -backend-config="use_lockfile=true"
-
-      - name: Terraform plan
-        run: terraform plan -input=false -out=tfplan
-
-      - name: Terraform apply
-        run: terraform apply -input=false tfplan
-
-  # Stage 2: image tagged with the release version, pushed to ECR. ECR tags are
+  # Stage 1: image tagged with the release version, pushed to ECR. ECR tags are
   # immutable; redeploying the same version reuses the existing image.
   image:
     name: Build and push image to ECR
-    needs: [guard, infra]
-    # Runs when infra succeeded or was skipped; a skipped need would otherwise
-    # skip this job too.
-    if: ${{ !cancelled() && needs.guard.result == 'success' && contains(fromJSON('["success", "skipped"]'), needs.infra.result) }}
+    needs: [guard]
     runs-on: ubuntu-latest
     environment: aws-deploy
     timeout-minutes: 20
@@ -232,14 +172,71 @@ jobs:
           VERSION: ${{ needs.guard.outputs.version }}
         run: echo "::notice::${IMAGE}:${VERSION} já existe no ECR; build e push pulados."
 
+  # Stage 2: Terraform apply of infra/ (EKS cluster, network, database).
+  # Always skipped for now: the Terraform code and its S3 state backend are
+  # not ready yet. Enabling it means removing the "if: false" below and
+  # setting up the AWS_TERRAFORM_ROLE_ARN and TF_STATE_BUCKET variables and
+  # the aws-infra environment (docs/CI_CD.md).
+  infra:
+    name: Terraform apply
+    needs: [image]
+    if: false
+    runs-on: ubuntu-latest
+    environment: aws-infra
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: infra
+    env:
+      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_TERRAFORM_ROLE_ARN }}
+          role-session-name: terraform-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.17.1
+          terraform_wrapper: false
+
+      - name: Terraform init
+        run: |
+          if [[ -z "$TF_STATE_BUCKET" ]]; then
+            echo "::error::Variável TF_STATE_BUCKET não configurada (bucket S3 do state, ver docs/CI_CD.md)."
+            exit 1
+          fi
+          terraform init -input=false \
+            -backend-config="bucket=${TF_STATE_BUCKET}" \
+            -backend-config="key=oficina/terraform.tfstate" \
+            -backend-config="region=${AWS_REGION}" \
+            -backend-config="use_lockfile=true"
+
+      - name: Terraform plan
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Terraform apply
+        run: terraform apply -input=false tfplan
+
   # Stage 3: ConfigMap and Secret, migration Job and API rollout, in the order
   # of make k8s-deploy (ADR 0006). Secrets come from AWS Secrets Manager.
   deploy:
     name: Deploy to EKS (migrations and rollout)
-    needs: [guard, image]
-    # Explicit because the default success() also looks at indirect needs and
-    # would skip this job whenever infra is skipped.
-    if: ${{ !cancelled() && needs.guard.result == 'success' && needs.image.result == 'success' }}
+    needs: [guard, image, infra]
+    # Runs when infra succeeded or was skipped; a skipped need would otherwise
+    # skip this job too.
+    if: ${{ !cancelled() && needs.guard.result == 'success' && needs.image.result == 'success' && contains(fromJSON('["success", "skipped"]'), needs.infra.result) }}
     runs-on: ubuntu-latest
     environment:
       name: aws-deploy
