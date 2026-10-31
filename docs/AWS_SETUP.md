@@ -18,7 +18,12 @@ export ROLE_NAME=oficina-github-deploy
 export ECR_REPO=oficina-api
 export CLUSTER=oficina
 export APP_SECRET=oficina/api
+# Prefixo do claim `sub` do token OIDC. Com "immutable subject" ligado no repo,
+# o GitHub inclui os IDs numéricos: repo:<owner>@<id>/<repo>@<id>.
+export SUB_PREFIX=$(gh api "repos/${REPO}/actions/oidc/customization/sub" --jq '.sub_claim_prefix // empty')
+export SUB_PREFIX=${SUB_PREFIX:-repo:${REPO}}
 echo "Conta: $ACCOUNT"
+echo "Sub:   ${SUB_PREFIX}:environment:aws-deploy"
 ```
 
 ## 1. Provedor OIDC do GitHub (uma vez por conta)
@@ -35,7 +40,7 @@ aws iam create-open-id-connect-provider \
 
 ### 2.1 Trust policy (quem pode assumir a role)
 
-Só jobs do environment `aws-deploy` deste repositório:
+Só jobs do environment `aws-deploy` deste repositório. O `sub` precisa ser idêntico ao que o GitHub manda no token (a condição é `StringEquals`); por isso vem de `SUB_PREFIX`, e não do nome do repo escrito à mão:
 
 ```bash
 cat > trust.json <<JSON
@@ -48,7 +53,7 @@ cat > trust.json <<JSON
     "Condition": {
       "StringEquals": {
         "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-        "token.actions.githubusercontent.com:sub": "repo:${REPO}:environment:aws-deploy"
+        "token.actions.githubusercontent.com:sub": "${SUB_PREFIX}:environment:aws-deploy"
       }
     }
   }]

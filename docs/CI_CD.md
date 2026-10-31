@@ -319,7 +319,7 @@ aws iam create-open-id-connect-provider \
   --client-id-list sts.amazonaws.com
 ```
 
-**2. Role de deploy**, que confia só no environment `aws-deploy` deste repositório:
+**2. Role de deploy**, que confia só no environment `aws-deploy` deste repositório. O repositório usa *immutable subject* no OIDC, então o `sub` do token carrega os IDs numéricos do owner e do repo (`repo:<owner>@<id>/<repo>@<id>:environment:<env>`). Um `sub` no formato antigo (`repo:<owner>/<repo>:...`) faz o AssumeRole falhar com `Not authorized to perform sts:AssumeRoleWithWebIdentity`. Para conferir o prefixo: `gh api repos/muriloperosa/soat-architecture/actions/oidc/customization/sub`.
 
 ```bash
 cat > trust.json <<'JSON'
@@ -332,7 +332,7 @@ cat > trust.json <<'JSON'
     "Condition": {
       "StringEquals": {
         "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-        "token.actions.githubusercontent.com:sub": "repo:muriloperosa/soat-architecture:environment:aws-deploy"
+        "token.actions.githubusercontent.com:sub": "repo:muriloperosa@45050585/soat-architecture@1308980044:environment:aws-deploy"
       }
     }
   }]
