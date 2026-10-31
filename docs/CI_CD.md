@@ -307,6 +307,8 @@ O job `deploy` lê o secret e mascara os valores sensíveis no log (`::add-mask:
 
 ### Preparação da conta AWS (uma vez)
 
+> Roteiro completo em comandos, do zero até o primeiro deploy: [`AWS_SETUP.md`](AWS_SETUP.md).
+
 O pipeline precisa que estes recursos existam antes do primeiro deploy. Rode com um usuário administrador da conta (`aws configure` ou `aws sso login`), na região do cluster. Troque `<conta>` pelo ID da conta.
 
 **1. Provedor OIDC do GitHub**, uma vez por conta. Também pode ser feito em **IAM → Identity providers → Add provider** (OpenID Connect, URL `https://token.actions.githubusercontent.com`, audience `sts.amazonaws.com`).
