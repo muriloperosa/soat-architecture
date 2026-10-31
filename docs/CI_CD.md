@@ -175,7 +175,7 @@ Nunca aponte esse scan para produção ou para o banco de desenvolvimento. A sta
 
 O workflow [`cd.yml`](../.github/workflows/cd.yml) leva uma versão da `main` para o cluster EKS na conta AWS do projeto. Ele cobre os itens de CI/CD do Tech Challenge: build, testes, imagem Docker, deploy do banco (migrations), aplicação dos manifestos e deploy no Kubernetes.
 
-Por enquanto o CD não provisiona infraestrutura. O job `infra` (`terraform apply` de `infra/`) já está no workflow, mas é **pulado** (aparece como *skipped* no run) até a variable `TERRAFORM_ENABLED` valer `true`. Enquanto isso, cluster EKS, RDS e rede são criados pelo Terraform de `infra/` rodado fora do pipeline, e o deploy parte do princípio de que eles já existem. Ver [Terraform no pipeline](#terraform-no-pipeline).
+Por enquanto o CD não provisiona infraestrutura. O job `infra` (`terraform apply` de `infra/`) já está no workflow, mas está desligado (`if: false`) e aparece como *skipped* em todo run. Enquanto isso, cluster EKS, RDS e rede são criados pelo Terraform de `infra/` rodado fora do pipeline, e o deploy parte do princípio de que eles já existem. Ver [Terraform no pipeline](#terraform-no-pipeline).
 
 ### Fluxo do deploy
 
@@ -183,7 +183,7 @@ Por enquanto o CD não provisiona infraestrutura. O job `infra` (`terraform appl
 flowchart TD
     TAG["git push origin 1.0.1"] --> GUARD["1. guard<br/>tag semver, commit na main<br/>e CI gate verde?"]
     GUARD -->|não| STOP1[Falha: AWS não é tocada]
-    GUARD -->|sim| TF["2. infra<br/>terraform apply<br/>(skipped sem TERRAFORM_ENABLED)"]
+    GUARD -->|sim| TF["2. infra<br/>terraform apply<br/>(skipped por enquanto)"]
     TF -->|sucesso ou skipped| IMG["3. image<br/>build e push oficina-api:1.0.1 no ECR"]
     TF -->|falhou| STOP2[Falha: nada é publicado]
     IMG --> DEP["4. deploy<br/>segredos, migrations e rollout"]
@@ -228,7 +228,7 @@ sequenceDiagram
 | Passo | O que faz | Por que existe | Se falhar |
 | --- | --- | --- | --- |
 | **guard** | Confere que o workflow rodou a partir de uma tag `MAJOR.MINOR.PATCH`, que o commit da tag está na `main` e que o check **CI gate** desse commit passou | O filtro de tags do GitHub não olha a branch, e só versões validadas pela CI podem ir para o ar | Nada roda. Tag no commit errado: apague e crie de novo. CI vermelha: corrija na `main` e lance uma nova versão |
-| **infra** | Assume a role do Terraform por OIDC e roda `terraform init/plan/apply` em `infra/`, com state no S3 | Provisionamento automatizado e reproduzível do cluster e do banco | **Pulado** sem `TERRAFORM_ENABLED=true`. Se falhar com ele ativo, nada é publicado |
+| **infra** | Assume a role do Terraform por OIDC e roda `terraform init/plan/apply` em `infra/`, com state no S3 | Provisionamento automatizado e reproduzível do cluster e do banco | **Sempre pulado** por enquanto (`if: false`). Quando ativado, se falhar, nada é publicado |
 | **image** | Assume a role de deploy por OIDC, faz login no ECR, `docker build` com a tag da versão (ex.: `oficina-api:1.0.1`) e `docker push` | A imagem precisa estar num registry que o cluster alcance. A tag da versão deixa claro o que está rodando | Nada foi aplicado no cluster. Veja o log do build ou se o repositório ECR existe |
 | **deploy** | Assume a role de deploy, lê os segredos no Secrets Manager e roda `make k8s-deploy`: ConfigMap/Secret → Job de migration → rollout da API | Reaproveita o mesmo alvo usado manualmente, na ordem definida na [ADR 0006](adr/0006-migrations-em-job-kubernetes.md) | Se a migration falhar, a versão anterior da API continua no ar. O passo **Diagnostics** imprime pods, jobs, log da migration e eventos |
 
@@ -290,7 +290,7 @@ Configuração no GitHub:
 | Variables do repositório | `AWS_DEPLOY_ROLE_ARN` | ARN da role `oficina-github-deploy` |
 | Variables do repositório (opcionais) | `AWS_REGION`, `EKS_CLUSTER_NAME`, `ECR_REPOSITORY`, `APP_SECRET_ID` | Padrões: `us-east-1`, `oficina`, `oficina-api`, `oficina/api` |
 | Environments | `aws-deploy` | Restrinja a **tags** com o padrão `[0-9]*.[0-9]*.[0-9]*` |
-| Para o job `infra` | `TERRAFORM_ENABLED`, `AWS_TERRAFORM_ROLE_ARN`, `TF_STATE_BUCKET` e o environment `aws-infra` | Só quando o Terraform for para o pipeline (ver [Terraform no pipeline](#terraform-no-pipeline)) |
+| Para o job `infra` | `AWS_TERRAFORM_ROLE_ARN`, `TF_STATE_BUCKET` e o environment `aws-infra` | Só quando o Terraform for para o pipeline (ver [Terraform no pipeline](#terraform-no-pipeline)) |
 
 ARN de role não é segredo, por isso vai em *variables* e não em *secrets*.
 
@@ -400,7 +400,7 @@ Para o deploy funcionar, o security group do RDS também precisa aceitar conexõ
 
 ### Terraform no pipeline
 
-O job `infra` está pronto no `cd.yml`, mas fica **skipped** enquanto a variable de repositório `TERRAFORM_ENABLED` não for `true`. Os jobs `image` e `deploy` rodam do mesmo jeito com ele pulado. Se ele rodar e falhar, nada é publicado.
+O job `infra` está pronto no `cd.yml`, mas fica **skipped** em todo run por causa do `if: false`. Os jobs `image` e `deploy` rodam do mesmo jeito com ele pulado. Se ele rodar e falhar, nada é publicado.
 
 Para ativar:
 
@@ -409,7 +409,7 @@ Para ativar:
 3. Crie uma role `oficina-github-terraform`, igual à de deploy (passo 2 da preparação), mas com trust no environment `aws-infra` e permissão para criar os recursos do Terraform. Cadastre o ARN em `AWS_TERRAFORM_ROLE_ARN`.
 4. Crie o environment `aws-infra`, de preferência com revisores obrigatórios: cada release vai pedir aprovação antes do `apply`.
 5. Se a infraestrutura já tiver sido criada localmente, migre o state para o bucket (`terraform init -migrate-state` com os mesmos `-backend-config` do workflow) antes do primeiro run. Sem isso, o pipeline tenta criar tudo de novo.
-6. Defina `TERRAFORM_ENABLED=true`.
+6. Remova o `if: false` do job `infra` no `cd.yml`.
 
 ### Custos
 
@@ -494,5 +494,5 @@ Definido:
 Pendente:
 
 - cluster EKS e RDS provisionados pelo Terraform de `infra/` (fora do escopo do pipeline), com o secret `oficina/api` preenchido;
-- ativar o job `infra` (`TERRAFORM_ENABLED=true`) quando o Terraform de `infra/` tiver backend S3 e a role do Terraform existir;
+- ativar o job `infra` (remover o `if: false`) quando o Terraform de `infra/` tiver backend S3 e a role do Terraform existir;
 - ambiente de staging e aprovação humana antes de produção, se o projeto passar a ter mais de um ambiente.

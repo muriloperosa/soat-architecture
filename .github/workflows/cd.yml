@@ -101,14 +101,14 @@ jobs:
           exit 1
 
   # Stage 1: Terraform apply of infra/ (EKS cluster, network, database).
-  # Skipped unless the repository variable TERRAFORM_ENABLED is "true": the
-  # Terraform code and its S3 state backend are not ready yet. Enabling it
-  # needs the AWS_TERRAFORM_ROLE_ARN and TF_STATE_BUCKET variables and the
-  # aws-infra environment (docs/CI_CD.md).
+  # Always skipped for now: the Terraform code and its S3 state backend are
+  # not ready yet. Enabling it means removing the "if: false" below and
+  # setting up the AWS_TERRAFORM_ROLE_ARN and TF_STATE_BUCKET variables and
+  # the aws-infra environment (docs/CI_CD.md).
   infra:
     name: Terraform apply
     needs: [guard]
-    if: vars.TERRAFORM_ENABLED == 'true'
+    if: false
     runs-on: ubuntu-latest
     environment: aws-infra
     timeout-minutes: 45
