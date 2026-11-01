@@ -9,6 +9,7 @@ import (
 )
 
 func TestLoad_UsaValoresDasEnvs(t *testing.T) {
+	unsetEnv(t, "EMAIL_PROVIDER", "AWS_REGION", "SES_FROM_ADDRESS", "APPROVAL_TOKEN_SECRET", "APPROVAL_TOKEN_TTL_HOURS", "PUBLIC_BASE_URL")
 	t.Setenv("APP_PORT", "9090")
 	t.Setenv("DB_HOST", "db-host")
 	t.Setenv("DB_PORT", "3307")
@@ -31,6 +32,22 @@ func TestLoad_UsaValoresDasEnvs(t *testing.T) {
 	require.Empty(t, cfg.SESFromAddress)
 	require.Empty(t, cfg.ApprovalTokenSecret)
 	require.Equal(t, 24, cfg.ApprovalTokenTTLHours)
+}
+
+func unsetEnv(t *testing.T, names ...string) {
+	t.Helper()
+	for _, name := range names {
+		name := name
+		previous, existed := os.LookupEnv(name)
+		require.NoError(t, os.Unsetenv(name))
+		t.Cleanup(func() {
+			if existed {
+				require.NoError(t, os.Setenv(name, previous))
+			} else {
+				require.NoError(t, os.Unsetenv(name))
+			}
+		})
+	}
 }
 
 func TestLoad_UsaValoresDoPoolDasEnvs(t *testing.T) {
