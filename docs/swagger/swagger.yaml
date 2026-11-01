@@ -866,13 +866,13 @@ definitions:
         example: 15000
         type: integer
     type: object
-host: localhost:8080
 info:
   contact: {}
-  description: API de gestão de ordens de serviço de uma oficina mecânica. Tech Challenge
-    Fase 1 - Soat.
+  description: |-
+    API de gestão de ordens de serviço de uma oficina mecânica. Tech Challenge Fase 2 - Soat.
+    Sem host fixo: o Swagger UI chama o mesmo host que o serve (EKS, Minikube ou localhost).
   title: Sistema de Oficina Mecânica API
-  version: "1.0"
+  version: "2.0"
 paths:
   /v1/auth/cliente/login:
     post:

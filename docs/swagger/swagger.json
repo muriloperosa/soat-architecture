@@ -4,12 +4,11 @@
     ],
     "swagger": "2.0",
     "info": {
-        "description": "API de gestão de ordens de serviço de uma oficina mecânica. Tech Challenge Fase 1 - Soat.",
+        "description": "API de gestão de ordens de serviço de uma oficina mecânica. Tech Challenge Fase 2 - Soat.\nSem host fixo: o Swagger UI chama o mesmo host que o serve (EKS, Minikube ou localhost).",
         "title": "Sistema de Oficina Mecânica API",
         "contact": {},
-        "version": "1.0"
+        "version": "2.0"
     },
-    "host": "localhost:8080",
     "basePath": "/",
     "paths": {
         "/v1/auth/cliente/login": {

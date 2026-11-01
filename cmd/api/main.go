@@ -15,10 +15,10 @@ import (
 )
 
 // @title Sistema de Oficina Mecânica API
-// @version 1.0
-// @description API de gestão de ordens de serviço de uma oficina mecânica. Tech Challenge Fase 1 - Soat.
+// @version 2.0
+// @description API de gestão de ordens de serviço de uma oficina mecânica. Tech Challenge Fase 2 - Soat.
+// @description Sem host fixo: o Swagger UI chama o mesmo host que o serve (EKS, Minikube ou localhost).
 // @BasePath /
-// @host localhost:8080
 // @Schemes http
 // @securityDefinitions.apikey BearerAuth
 // @in header

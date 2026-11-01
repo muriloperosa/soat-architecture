@@ -5296,12 +5296,12 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.0",
-	Host:             "localhost:8080",
+	Version:          "2.0",
+	Host:             "",
 	BasePath:         "/",
 	Schemes:          []string{"http"},
 	Title:            "Sistema de Oficina Mecânica API",
-	Description:      "API de gestão de ordens de serviço de uma oficina mecânica. Tech Challenge Fase 1 - Soat.",
+	Description:      "API de gestão de ordens de serviço de uma oficina mecânica. Tech Challenge Fase 2 - Soat.\nSem host fixo: o Swagger UI chama o mesmo host que o serve (EKS, Minikube ou localhost).",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",
