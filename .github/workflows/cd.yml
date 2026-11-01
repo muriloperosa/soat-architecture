@@ -235,9 +235,8 @@ jobs:
     name: Deploy to EKS (migrations and rollout)
     needs: [guard, image, infra]
     # Runs when infra succeeded or was skipped; a skipped need would otherwise
-    # skip this job too.
-    # if: ${{ !cancelled() && needs.guard.result == 'success' && needs.image.result == 'success' && contains(fromJSON('["success", "skipped"]'), needs.infra.result) }}
-    if: false
+    # skip this job too. The infra job stays if: false until the S3 backend exists.
+    if: ${{ !cancelled() && needs.guard.result == 'success' && needs.image.result == 'success' && contains(fromJSON('["success", "skipped"]'), needs.infra.result) }}
     runs-on: ubuntu-24.04
     environment:
       name: aws-deploy

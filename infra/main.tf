@@ -1,13 +1,11 @@
-# Cluster EKS do lab. Não cria VPC, NAT Gateway nem role IAM.
-# A Academy não permite iam:CreateRole e o NAT cobra mesmo com o cluster ocioso.
+# Conta própria do projeto (não é o Learner Lab). Não cria VPC, NAT Gateway,
+# repositório ECR nem a role oficina-github-deploy: esses dois últimos ficam
+# de pé no destroy porque a imagem e o OIDC sobrevivem ao cluster.
 #
-# Ao fim da sessão do Learner Lab, rode `terraform destroy` neste diretório
-# antes de encerrar o lab. O control plane continua cobrando por hora depois
-# que a sessão expira se o cluster ficar de pé.
-
-data "aws_iam_role" "lab" {
-  name = "LabRole"
-}
+# O control plane cobra cerca de US$ 0,10/h mesmo parado. Antes do
+# terraform destroy, apague o namespace oficina. O Service LoadBalancer
+# cria um balanceador que o Terraform não gerencia; se ele sobrar, continua
+# cobrando e trava a remoção do security group.
 
 data "aws_vpc" "default" {
   count   = var.vpc_id == null ? 1 : 0
@@ -34,41 +32,18 @@ data "aws_subnets" "public" {
 
 locals {
   subnet_ids = var.subnet_ids != null ? var.subnet_ids : data.aws_subnets.public[0].ids
-}
-
-resource "aws_eks_cluster" "this" {
-  name     = var.cluster_name
-  role_arn = data.aws_iam_role.lab.arn
-  version  = var.kubernetes_version
-
-  vpc_config {
-    subnet_ids              = local.subnet_ids
-    endpoint_public_access  = true
-    endpoint_private_access = false
-  }
 
   tags = {
     Project = "soat-oficina"
   }
 }
 
-resource "aws_eks_node_group" "this" {
-  cluster_name    = aws_eks_cluster.this.name
-  node_group_name = "${var.cluster_name}-nodes"
-  node_role_arn   = data.aws_iam_role.lab.arn
-  subnet_ids      = local.subnet_ids
+data "aws_iam_role" "github_deploy" {
+  name = var.github_deploy_role_name
+}
 
-  instance_types = [var.node_instance_type]
-  ami_type       = "AL2023_x86_64_STANDARD"
-  capacity_type  = "ON_DEMAND"
-
-  scaling_config {
-    desired_size = var.node_desired_size
-    min_size     = var.node_min_size
-    max_size     = var.node_max_size
-  }
-
-  tags = {
-    Project = "soat-oficina"
-  }
+data "aws_rds_engine_version" "mysql" {
+  engine  = "mysql"
+  version = "8.0"
+  latest  = true
 }

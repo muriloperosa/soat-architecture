@@ -175,7 +175,7 @@ Nunca aponte esse scan para produção ou para o banco de desenvolvimento. A sta
 
 O workflow [`cd.yml`](../.github/workflows/cd.yml) leva uma versão da `main` para o cluster EKS na conta AWS do projeto. Ele cobre os itens de CI/CD do Tech Challenge: build, testes, imagem Docker, deploy do banco (migrations), aplicação dos manifestos e deploy no Kubernetes.
 
-Por enquanto o CD não provisiona infraestrutura. O job `infra` (`terraform apply` de `infra/`) já está no workflow, mas está desligado (`if: false`) e aparece como *skipped* em todo run. Enquanto isso, cluster EKS, RDS e rede são criados pelo Terraform de `infra/` rodado fora do pipeline, e o deploy parte do princípio de que eles já existem. Ver [Terraform no pipeline](#terraform-no-pipeline).
+Por enquanto o CD não provisiona infraestrutura. O job `infra` (`terraform apply` de `infra/`) já está no workflow, mas está desligado (`if: false`) e aparece como *skipped* em todo run. Enquanto isso, cluster EKS, RDS e o secret `oficina/api` são criados pelo Terraform de [`infra/`](../infra/README.md) rodado fora do pipeline, e o deploy parte do princípio de que eles já existem. Ver [Terraform no pipeline](#terraform-no-pipeline).
 
 ### Fluxo do deploy
 
