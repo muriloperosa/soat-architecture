@@ -14,7 +14,8 @@
     { "key": "veiculo_id", "value": "" },
     { "key": "peca_id", "value": "" },
     { "key": "servico_id", "value": "" },
-    { "key": "ordem_servico_id", "value": "" }
+    { "key": "ordem_servico_id", "value": "" },
+    { "key": "hoje", "value": "" }
   ],
   "item": [
     {
@@ -464,16 +465,27 @@
     },
     {
       "name": "21 - Relatório de transição de status das OS",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// A API recusa final_date no futuro; usa a data de hoje (UTC).",
+              "pm.collectionVariables.set('hoje', new Date().toISOString().slice(0, 10));"
+            ]
+          }
+        }
+      ],
       "request": {
         "method": "GET",
         "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
         "url": {
-          "raw": "{{base_url}}/v1/relatorios/ordens-servico/transicao-status?start_date=2020-01-01&final_date=2030-12-31&from_status=RECEBIDA&to_status=ENTREGUE&unit=h",
+          "raw": "{{base_url}}/v1/relatorios/ordens-servico/transicao-status?start_date=2026-01-01&final_date={{hoje}}&from_status=RECEBIDA&to_status=ENTREGUE&unit=h",
           "host": ["{{base_url}}"],
           "path": ["v1", "relatorios", "ordens-servico", "transicao-status"],
           "query": [
-            { "key": "start_date", "value": "2020-01-01" },
-            { "key": "final_date", "value": "2030-12-31" },
+            { "key": "start_date", "value": "2026-01-01" },
+            { "key": "final_date", "value": "{{hoje}}" },
             { "key": "from_status", "value": "RECEBIDA" },
             { "key": "to_status", "value": "ENTREGUE" },
             { "key": "unit", "value": "h" }
