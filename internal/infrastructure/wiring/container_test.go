@@ -11,7 +11,8 @@ import (
 )
 
 func TestNewContainerSemConfiguracao(t *testing.T) {
-	container := NewContainer(nil, nil)
+	container, err := NewContainer(nil, nil)
+	require.NoError(t, err)
 
 	require.NotNil(t, container)
 	require.Nil(t, container.JWTAuth)
@@ -41,11 +42,12 @@ func TestNewContainerComConfiguracao(t *testing.T) {
 	}), &gorm.Config{DisableAutomaticPing: true})
 	require.NoError(t, err)
 
-	container := NewContainer(&config.Config{
+	container, err := NewContainer(&config.Config{
 		JWTSecret:                "test-secret",
 		JWTAccessTokenTTLMinutes: 15,
 		JWTRefreshTokenTTLHours:  24,
 	}, db)
+	require.NoError(t, err)
 
 	require.NotNil(t, container.JWTAuth)
 	require.NotNil(t, container.LoginInternoUC)

@@ -34,7 +34,10 @@ func main() {
 		log.Fatalf("error connecting to MySQL: %v", err)
 	}
 
-	container := wiring.NewContainer(cfg, db)
+	container, err := wiring.NewContainer(cfg, db)
+	if err != nil {
+		log.Fatalf("error wiring container: %v", err)
+	}
 	router := httpinfra.NewRouter(container)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
