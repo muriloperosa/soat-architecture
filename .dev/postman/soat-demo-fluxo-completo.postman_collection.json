@@ -17,6 +17,19 @@
     { "key": "ordem_servico_id", "value": "" },
     { "key": "hoje", "value": "" }
   ],
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "exec": [
+          "// Fluxo feliz: qualquer passo fora de 2xx quebra a demo.",
+          "pm.test(`${pm.info.requestName} responde 2xx`, function () {",
+          "    pm.expect(pm.response.code).to.be.within(200, 299);",
+          "});"
+        ]
+      }
+    }
+  ],
   "item": [
     {
       "name": "01 - Login admin",
