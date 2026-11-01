@@ -42,7 +42,7 @@ Todos os recursos ficam no namespace `oficina`.
 | Service | `oficina-api` | Endereço estável da API. `NodePort` no Minikube, `LoadBalancer` no EKS |
 | HorizontalPodAutoscaler | `oficina-api` | Escala a API de 2 a 6 réplicas por CPU (70%) e memória (90%) |
 | ConfigMap | `oficina-api-config` | Variáveis de ambiente não sensíveis (porta, host e nome do banco, pool de conexões, TTL do JWT) |
-| Secret | `oficina-api-secrets` | `DB_PASSWORD` e `JWT_SECRET`, gerados a partir de um arquivo local que não vai para o git |
+| Secret | `oficina-api-secrets` | Credenciais do banco/JWT e, opcionalmente, credenciais SES e configuração dos links de aprovação, geradas a partir de um arquivo local que não vai para o git |
 | Job | `oficina-migrate` | Aplica as migrations de `migrations/mysql/` uma vez a cada deploy |
 | ConfigMap | `oficina-migrations` | Os arquivos `.sql`, montados no Job. Criado pelo `make k8s-migrate` |
 | StatefulSet + Service headless | `oficina-mysql` | MySQL 8 com volume persistente. Só no Minikube |
@@ -155,6 +155,8 @@ cp k8s/overlays/minikube/secrets.env.example k8s/overlays/minikube/secrets.env
 ```
 
 Edite o `secrets.env` e troque os dois `changeme`. A `DB_PASSWORD` deve ter apenas letras e números, porque entra na URL de conexão do Job de migration. Para o `JWT_SECRET`, `openssl rand -hex 32` gera um valor adequado.
+
+O exemplo também contém variáveis opcionais de email. Para envio real, altere `EMAIL_PROVIDER` para `ses`, configure `SES_FROM_ADDRESS` e as credenciais AWS; com credenciais temporárias, inclua `AWS_SESSION_TOKEN`. Para inserir os links de aprovação no email do orçamento, configure `APPROVAL_TOKEN_SECRET` e `PUBLIC_BASE_URL` juntos. Use um segredo distinto do `JWT_SECRET` e uma URL alcançável pelo cliente. Os overlays geram o Secret `oficina-api-secrets` a partir desse `secrets.env`; não aplique `k8s/email-secret.example.yaml` junto com Kustomize.
 
 ### Checklist
 

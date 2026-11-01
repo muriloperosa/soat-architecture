@@ -1469,6 +1469,100 @@ paths:
       summary: Readiness probe
       tags:
       - Health
+  /v1/orcamentos/aprovacao:
+    get:
+      description: Valida o link e apresenta um formulário de confirmação. O GET não
+        altera a Ordem de Serviço.
+      parameters:
+      - description: Token temporário recebido por email
+        in: query
+        name: token
+        required: true
+        type: string
+      - description: Decisão pretendida
+        enum:
+        - APROVAR
+        - REJEITAR
+        in: query
+        name: acao
+        required: true
+        type: string
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: Página HTML de confirmação
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      summary: Confirma a intenção de aprovar ou recusar um orçamento
+      tags:
+      - Orçamentos
+  /v1/orcamentos/aprovacao/decisao:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Valida o token e delega a decisão aos mesmos casos de uso das rotas
+        autenticadas. Para REJEITAR, o motivo é obrigatório.
+      parameters:
+      - description: Token temporário recebido por email
+        in: formData
+        name: token
+        required: true
+        type: string
+      - description: Decisão
+        enum:
+        - APROVAR
+        - REJEITAR
+        in: formData
+        name: decisao
+        required: true
+        type: string
+      - description: Motivo obrigatório quando decisao=REJEITAR
+        in: formData
+        name: motivo
+        type: string
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: Página HTML de resultado
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperror.ErrorResponse'
+      summary: Registra a aprovação ou recusa de orçamento pelo link de email
+      tags:
+      - Orçamentos
   /v1/ordens-servico:
     get:
       description: Lista Ordens de Serviço com paginação, ordenação e filtros diretos

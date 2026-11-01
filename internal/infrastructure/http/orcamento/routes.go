@@ -22,6 +22,16 @@ func RegisterOrcamentoRoutes(rg *gin.RouterGroup, container *wiring.Container) {
 		container.EnviarOrcamentoParaAprovacaoUC,
 	)
 	decisaoHandler := NewDecisaoHandler(container.AprovarOrcamentoUC, container.RejeitarOrcamentoUC)
+	if container.ApprovalToken != nil {
+		approvalLinkHandler := NewAprovacaoEmailHandler(
+			container.ApprovalToken,
+			container.Config.PublicBaseURL,
+			container.AprovarOrcamentoUC,
+			container.RejeitarOrcamentoUC,
+		)
+		rg.GET("/orcamentos/aprovacao", approvalLinkHandler.Confirmar)
+		rg.POST("/orcamentos/aprovacao/decisao", approvalLinkHandler.Decidir)
+	}
 
 	orcamentos := rg.Group(
 		"/ordens-servico/:id/orcamento",

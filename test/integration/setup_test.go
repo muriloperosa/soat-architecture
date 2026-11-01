@@ -68,6 +68,10 @@ func TestMain(m *testing.M) {
 		JWTSecret:                "segredo-de-teste-integracao",
 		JWTAccessTokenTTLMinutes: 15,
 		JWTRefreshTokenTTLHours:  1,
+		ApprovalTokenSecret:      "segredo-aprovacao-de-teste-integracao",
+		ApprovalTokenTTLHours:    24,
+		PublicBaseURL:            "http://localhost:8080",
+		EmailProvider:            "log",
 	}
 
 	testContainer, err = wiring.NewContainer(cfg, db)

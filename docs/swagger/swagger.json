@@ -915,6 +915,143 @@
                 }
             }
         },
+        "/v1/orcamentos/aprovacao": {
+            "get": {
+                "description": "Valida o link e apresenta um formulário de confirmação. O GET não altera a Ordem de Serviço.",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "Orçamentos"
+                ],
+                "summary": "Confirma a intenção de aprovar ou recusar um orçamento",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Token temporário recebido por email",
+                        "name": "token",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "APROVAR",
+                            "REJEITAR"
+                        ],
+                        "type": "string",
+                        "description": "Decisão pretendida",
+                        "name": "acao",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Página HTML de confirmação",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/orcamentos/aprovacao/decisao": {
+            "post": {
+                "description": "Valida o token e delega a decisão aos mesmos casos de uso das rotas autenticadas. Para REJEITAR, o motivo é obrigatório.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "Orçamentos"
+                ],
+                "summary": "Registra a aprovação ou recusa de orçamento pelo link de email",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Token temporário recebido por email",
+                        "name": "token",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "APROVAR",
+                            "REJEITAR"
+                        ],
+                        "type": "string",
+                        "description": "Decisão",
+                        "name": "decisao",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Motivo obrigatório quando decisao=REJEITAR",
+                        "name": "motivo",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Página HTML de resultado",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httperror.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/ordens-servico": {
             "get": {
                 "security": [
