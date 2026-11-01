@@ -18,9 +18,10 @@ resource "aws_secretsmanager_secret" "app" {
 resource "aws_secretsmanager_secret_version" "app" {
   secret_id = aws_secretsmanager_secret.app.id
   secret_string = jsonencode({
-    DB_HOST     = aws_db_instance.this.address
-    DB_USER     = aws_db_instance.this.username
-    DB_PASSWORD = random_password.db.result
-    JWT_SECRET  = random_password.jwt.result
+    DB_HOST          = aws_db_instance.this.address
+    DB_USER          = aws_db_instance.this.username
+    DB_PASSWORD      = random_password.db.result
+    JWT_SECRET       = random_password.jwt.result
+    SES_FROM_ADDRESS = var.ses_from_address
   })
 }

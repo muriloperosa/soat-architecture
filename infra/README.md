@@ -7,13 +7,13 @@ Não há NAT Gateway. A VPC e as subnets públicas já existem (a default da con
 ## O que é criado
 
 - Role `oficina-eks-cluster` (`AmazonEKSClusterPolicy`), assumida por `eks.amazonaws.com`.
-- Role `oficina-eks-node` (`AmazonEKSWorkerNodePolicy`, `AmazonEKS_CNI_Policy`, `AmazonEC2ContainerRegistryReadOnly`), assumida por `ec2.amazonaws.com`. Sem a policy de leitura do ECR os pods ficam em `ImagePullBackOff`.
+- Role `oficina-eks-node` (`AmazonEKSWorkerNodePolicy`, `AmazonEKS_CNI_Policy`, `AmazonEC2ContainerRegistryReadOnly` e `ses:SendEmail`), assumida por `ec2.amazonaws.com`. Sem a policy de leitura do ECR os pods ficam em `ImagePullBackOff`. O hop limit do IMDS fica em 2 para o pod conseguir usar essa role. Não há access key no cluster.
 - Cluster EKS `oficina`, Kubernetes 1.34, endpoint público, autenticação `API_AND_CONFIG_MAP`. Quem aplica o Terraform vira admin do cluster.
 - Access entry da role `oficina-github-deploy` com `AmazonEKSClusterAdminPolicy`. O primeiro deploy cria o namespace `oficina`, por isso a policy é de admin do cluster.
 - Node group `oficina-nodes`: `t3.small`, AMI `AL2023_x86_64_STANDARD`, `desired = 1`, `min = 1`, `max = 2`.
 - Addon `metrics-server`. Sem ele o HPA fica com CPU `<unknown>`.
 - RDS MySQL 8, instância `db.t3.micro`, 20 GiB, uma zona, sem backup e sem snapshot final. O database é `mecanica` e o usuário é `oficina`. A instância não é pública. O security group só aceita a porta 3306 vinda do security group do cluster.
-- Secret `oficina/api` no Secrets Manager, com `DB_HOST` (hostname, sem `:3306`), `DB_USER`, `DB_PASSWORD` e `JWT_SECRET`. As senhas são só letras e números. `recovery_window_in_days = 0` apaga o secret no destroy; sem isso o nome fica reservado e o próximo apply falha.
+- Secret `oficina/api` no Secrets Manager, com `DB_HOST` (hostname, sem `:3306`), `DB_USER`, `DB_PASSWORD`, `JWT_SECRET` e `SES_FROM_ADDRESS`. As senhas são só letras e números. `SES_FROM_ADDRESS` vazio deixa o CD em `EMAIL_PROVIDER=log`. `recovery_window_in_days = 0` apaga o secret no destroy; sem isso o nome fica reservado e o próximo apply falha.
 
 ## O que não é criado
 

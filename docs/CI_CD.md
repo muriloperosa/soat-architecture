@@ -302,8 +302,9 @@ ARN de role não é segredo, por isso vai em *variables* e não em *secrets*.
 | `DB_USER` | Usuário do banco |
 | `DB_PASSWORD` | Senha, só letras e números (entra na URL do Job de migration, ver ADR 0006). O pipeline recusa outro formato |
 | `JWT_SECRET` | Chave HS256, gere com `openssl rand -hex 32` |
+| `SES_FROM_ADDRESS` | Remetente verificado no SES. Vazio faz o deploy usar `EMAIL_PROVIDER=log` |
 
-O job `deploy` lê o secret e mascara os valores sensíveis no log (`::add-mask::`). `DB_PASSWORD` e `JWT_SECRET` vão para `k8s/overlays/eks/secrets.env` (permissão 600, apagado no fim do job mesmo se algo falhar), de onde o Kustomize gera o Secret `oficina-api-secrets`. `DB_HOST` e `DB_USER` substituem os placeholders `REPLACE_WITH_RDS_ENDPOINT` e `REPLACE_WITH_RDS_USERNAME` do overlay EKS, só na cópia do repositório dentro do runner.
+O job `deploy` lê o secret e mascara os valores sensíveis no log (`::add-mask::`). `DB_PASSWORD` e `JWT_SECRET` vão para `k8s/overlays/eks/secrets.env` (permissão 600, apagado no fim do job mesmo se algo falhar), de onde o Kustomize gera o Secret `oficina-api-secrets`. `DB_HOST`, `DB_USER`, `EMAIL_PROVIDER` e `SES_FROM_ADDRESS` substituem os placeholders do overlay EKS, só na cópia do repositório dentro do runner. O pod não recebe access key da AWS.
 
 ### Preparação da conta AWS (uma vez)
 

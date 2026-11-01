@@ -295,15 +295,23 @@ jobs:
           fi
           # The versioned overlay has placeholders for the database endpoint and
           # user. They are replaced only in the runner's checkout, never committed.
-          for placeholder in REPLACE_WITH_RDS_ENDPOINT REPLACE_WITH_RDS_USERNAME; do
+          for placeholder in REPLACE_WITH_RDS_ENDPOINT REPLACE_WITH_RDS_USERNAME REPLACE_WITH_EMAIL_PROVIDER REPLACE_WITH_SES_FROM_ADDRESS; do
             if ! grep -q "$placeholder" "$OVERLAY_FILE"; then
               echo "::error::Placeholder ${placeholder} não encontrado em ${OVERLAY_FILE}."
               exit 1
             fi
           done
+          ses_from="$(jq -r '.SES_FROM_ADDRESS // empty' <<<"$payload")"
+          if [[ -n "$ses_from" ]]; then
+            email_provider=ses
+          else
+            email_provider=log
+          fi
           sed -i \
             -e "s|REPLACE_WITH_RDS_ENDPOINT|${db_host}|" \
             -e "s|REPLACE_WITH_RDS_USERNAME|${db_user}|" \
+            -e "s|REPLACE_WITH_EMAIL_PROVIDER|${email_provider}|" \
+            -e "s|REPLACE_WITH_SES_FROM_ADDRESS|${ses_from}|" \
             "$OVERLAY_FILE"
 
       - name: Apply config, run migrations and roll out API

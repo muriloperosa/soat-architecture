@@ -28,6 +28,12 @@ variable "subnet_ids" {
   default     = null
 }
 
+variable "eks_availability_zones" {
+  description = "Zonas aceitas pelo control plane do EKS. us-east-1e fica de fora."
+  type        = list(string)
+  default     = ["us-east-1a", "us-east-1b", "us-east-1c", "us-east-1d", "us-east-1f"]
+}
+
 variable "node_instance_type" {
   description = "Tipo da instância do node group."
   type        = string
@@ -80,6 +86,12 @@ variable "db_instance_class" {
   description = "Classe da instância RDS."
   type        = string
   default     = "db.t3.micro"
+}
+
+variable "ses_from_address" {
+  description = "Remetente verificado no SES. Vazio faz o CD subir a API com EMAIL_PROVIDER=log."
+  type        = string
+  default     = ""
 }
 
 variable "db_allocated_storage" {

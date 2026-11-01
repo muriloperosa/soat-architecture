@@ -30,6 +30,26 @@ data "aws_subnets" "public" {
   }
 }
 
+# us-east-1e existe na VPC default, mas o EKS recusa o control plane nessa zona.
+data "aws_subnets" "eks" {
+  count = var.subnet_ids == null ? 1 : 0
+
+  filter {
+    name   = "vpc-id"
+    values = [local.vpc_id]
+  }
+
+  filter {
+    name   = "map-public-ip-on-launch"
+    values = ["true"]
+  }
+
+  filter {
+    name   = "availability-zone"
+    values = var.eks_availability_zones
+  }
+}
+
 locals {
   subnet_ids = var.subnet_ids != null ? var.subnet_ids : data.aws_subnets.public[0].ids
 
