@@ -1,11 +1,12 @@
 {
   "info": {
     "name": "SOAT — Demo Fluxo Completo OS",
-    "description": "Fluxo sequencial para apresentação: login (admin + cliente), cadastro de dependências, abertura de OS, diagnóstico, orçamento, aprovação do cliente, execução, finalização e entrega. Todos os tokens e IDs são setados automaticamente nas variáveis da collection (aba Tests de cada request); basta rodar com o Collection Runner, na ordem em que aparecem.",
+    "description": "Fluxo sequencial para apresentação: login (admin + cliente), cadastro de dependências, abertura de OS, diagnóstico, orçamento, aprovação do cliente, execução, finalização e entrega. Todos os tokens e IDs são setados automaticamente nas variáveis da collection (aba Tests de cada request); basta rodar com o Collection Runner, na ordem em que aparecem.\n\nbase_url aponta para o LoadBalancer do EKS: troque o placeholder pelo hostname exibido em \"URL da API\" no resumo do workflow de CD (ou em `kubectl get svc oficina-api -n oficina`). Para rodar localmente, use o valor de local_url.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "base_url", "value": "http://localhost:8080" },
+    { "key": "base_url", "value": "http://REPLACE_WITH_EKS_LOADBALANCER_HOSTNAME" },
+    { "key": "local_url", "value": "http://localhost:8080" },
     { "key": "access_token", "value": "" },
     { "key": "refresh_token", "value": "" },
     { "key": "cliente_access_token", "value": "" },

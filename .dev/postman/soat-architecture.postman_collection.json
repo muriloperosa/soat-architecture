@@ -1,12 +1,16 @@
 {
   "info": {
     "name": "SOAT Architecture — Oficina Mecânica",
-    "description": "Cobertura completa da API (auth JWT interno/cliente, usuários, clientes, veículos, peças, serviços, ordens de serviço, relatórios). Login/Refresh/Criar salvam token/id automaticamente nas variáveis da collection (veja as abas Tests de cada request).",
+    "description": "Cobertura completa da API (auth JWT interno/cliente, usuários, clientes, veículos, peças, serviços, ordens de serviço, relatórios) na Fase 2. Login/Refresh/Criar salvam token/id automaticamente nas variáveis da collection (veja as abas Tests de cada request).\n\nbase_url aponta para o LoadBalancer do EKS: troque o placeholder pelo hostname exibido em \"URL da API\" no resumo do workflow de CD (ou em `kubectl get svc oficina-api -n oficina`). Para rodar localmente, use o valor de local_url.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "base_url",
+      "value": "http://REPLACE_WITH_EKS_LOADBALANCER_HOSTNAME"
+    },
+    {
+      "key": "local_url",
       "value": "http://localhost:8080"
     },
     {
@@ -82,6 +86,40 @@
               "path": [
                 "v1",
                 "health"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Liveness",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/v1/health/live",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "health",
+                "live"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Readiness",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/v1/health/ready",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "health",
+                "ready"
               ]
             }
           }
@@ -1431,6 +1469,7 @@
         {
           "name": "Listar ordens de serviço",
           "request": {
+            "description": "Sem `order`, a listagem usa a prioridade da Fase 2: EM_EXECUCAO > APROVADA > AGUARDANDO_APROVACAO/REJEITADA > EM_DIAGNOSTICO > RECEBIDA, mais antigas primeiro, sem FINALIZADA/ENTREGUE. Os filtros abaixo vêm desabilitados; aceitam um valor ou lista separada por vírgula.",
             "method": "GET",
             "header": [
               {
@@ -1439,7 +1478,7 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/ordens-servico?page=1&order=id&direction=ASC",
+              "raw": "{{base_url}}/v1/ordens-servico?page=1",
               "host": [
                 "{{base_url}}"
               ],
@@ -1453,12 +1492,29 @@
                   "value": "1"
                 },
                 {
+                  "key": "status",
+                  "value": "RECEBIDA,EM_DIAGNOSTICO",
+                  "disabled": true
+                },
+                {
+                  "key": "cliente_id",
+                  "value": "{{cliente_id}}",
+                  "disabled": true
+                },
+                {
+                  "key": "veiculo_id",
+                  "value": "{{veiculo_id}}",
+                  "disabled": true
+                },
+                {
                   "key": "order",
-                  "value": "id"
+                  "value": "data_cadastro",
+                  "disabled": true
                 },
                 {
                   "key": "direction",
-                  "value": "ASC"
+                  "value": "DESC",
+                  "disabled": true
                 }
               ]
             }
