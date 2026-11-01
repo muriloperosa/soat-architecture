@@ -1,0 +1,361 @@
+name: CD (Continuous Deployment)
+
+# Releases are triggered by a semver tag (e.g. 1.0.1) on a commit in main.
+# workflow_dispatch is for redeploy or rollback: run it picking a tag in
+# "Use workflow from".
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+
+# AWS credentials via OIDC: every job that talks to AWS requests an id-token and
+# assumes the deploy role (no keys stored in GitHub). The role only trusts the
+# aws-deploy environment of this repository (docs/CI_CD.md).
+permissions:
+  contents: read
+
+# One deploy at a time, never cancelled midway: interrupting a migration Job or
+# a rollout leaves the environment in an intermediate state.
+concurrency:
+  group: deploy-eks
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  EKS_CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME || 'oficina' }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY || 'oficina-api' }}
+  APP_SECRET_ID: ${{ vars.APP_SECRET_ID || 'oficina/api' }}
+
+jobs:
+  # Stage 0: GitHub's tag filter ignores the branch, so the tag's origin is
+  # checked here. The main ruleset already requires CI on every merge, so
+  # instead of re-running it this job requires the "CI gate" check of the
+  # tagged commit to be green.
+  guard:
+    name: Validate release tag and CI
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      checks: read
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check tag format and origin
+        id: check
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          if [[ "$REF_TYPE" != "tag" ]]; then
+            echo "::error::O deploy só roda a partir de uma tag (recebido: ${REF_TYPE} ${REF_NAME})."
+            exit 1
+          fi
+          if [[ ! "$REF_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::A tag ${REF_NAME} não segue o formato MAJOR.MINOR.PATCH (ex.: 1.0.1)."
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::O commit da tag ${REF_NAME} (${GITHUB_SHA}) não está na main."
+            exit 1
+          fi
+          echo "version=${REF_NAME}" >> "$GITHUB_OUTPUT"
+
+      # Waits while CI is still running (tag pushed right after the merge) and
+      # fails if the latest "CI gate" run of this commit did not succeed.
+      - name: Require green CI for the tagged commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          for _ in $(seq 1 60); do
+            run="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/check-runs?check_name=CI%20gate&filter=latest" \
+              --jq '[.check_runs[] | select(.app.slug == "github-actions")] | sort_by(.started_at) | last // empty')"
+            if [[ -z "$run" ]]; then
+              echo "::error::Nenhuma execução do CI gate para ${GITHUB_SHA}. Commits só com Markdown não disparam a CI no push; rode a CI manualmente na main (Actions → CI → Run workflow) e tente o deploy de novo."
+              exit 1
+            fi
+            status="$(jq -r .status <<<"$run")"
+            conclusion="$(jq -r .conclusion <<<"$run")"
+            url="$(jq -r .html_url <<<"$run")"
+            if [[ "$status" == "completed" ]]; then
+              if [[ "$conclusion" == "success" ]]; then
+                echo "CI gate verde: ${url}"
+                exit 0
+              fi
+              echo "::error::O CI gate de ${GITHUB_SHA} terminou como ${conclusion}: ${url}"
+              exit 1
+            fi
+            echo "CI gate ainda em ${status}, aguardando... (${url})"
+            sleep 30
+          done
+          echo "::error::Timeout esperando o CI gate de ${GITHUB_SHA}."
+          exit 1
+
+  # Stage 1: image tagged with the release version, pushed to ECR. ECR tags are
+  # immutable; redeploying the same version reuses the existing image.
+  image:
+    name: Build and push image to ECR
+    needs: [guard]
+    runs-on: ubuntu-24.04
+    environment: aws-deploy
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          role-session-name: image-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+          # The account ID is part of the image URL, which is a job output. If
+          # it were masked, GitHub would drop the output.
+          mask-aws-account-id: false
+
+      - name: Log in to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd # v2.1.7
+
+      - name: Resolve image name
+        id: meta
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          VERSION: ${{ needs.guard.outputs.version }}
+        shell: bash
+        run: |
+          # Only "image not found" means a new version; any other error
+          # (missing repository, access denied) fails the job.
+          if err="$(aws ecr describe-images --repository-name "$ECR_REPOSITORY" --image-ids imageTag="$VERSION" 2>&1 >/dev/null)"; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          elif [[ "$err" == *ImageNotFoundException* ]]; then
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "$err" >&2
+            echo "::error::Falha ao consultar o ECR ${ECR_REPOSITORY}. Confira se o repositório existe e a permissão da role (docs/CI_CD.md, Preparação da conta AWS)."
+            exit 1
+          fi
+          echo "image=${REGISTRY}/${ECR_REPOSITORY}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        if: steps.meta.outputs.exists == 'false'
+        env:
+          IMAGE: ${{ steps.meta.outputs.image }}
+          VERSION: ${{ needs.guard.outputs.version }}
+        run: |
+          docker build \
+            --label "org.opencontainers.image.version=${VERSION}" \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            --tag "${IMAGE}:${VERSION}" .
+          docker push "${IMAGE}:${VERSION}"
+
+      - name: Reuse existing image
+        if: steps.meta.outputs.exists == 'true'
+        env:
+          IMAGE: ${{ steps.meta.outputs.image }}
+          VERSION: ${{ needs.guard.outputs.version }}
+        run: echo "::notice::${IMAGE}:${VERSION} já existe no ECR; build e push pulados."
+
+  # Stage 2: Terraform apply of infra/ (EKS cluster, network, database).
+  # Always skipped for now: the Terraform code and its S3 state backend are
+  # not ready yet. Enabling it means removing the "if: false" below and
+  # setting up the AWS_TERRAFORM_ROLE_ARN and TF_STATE_BUCKET variables and
+  # the aws-infra environment (docs/CI_CD.md).
+  infra:
+    name: Terraform apply
+    needs: [image]
+    if: false
+    runs-on: ubuntu-24.04
+    environment: aws-infra
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: infra
+    env:
+      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_TERRAFORM_ROLE_ARN }}
+          role-session-name: terraform-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.17.1
+          terraform_wrapper: false
+
+      - name: Terraform init
+        run: |
+          if [[ -z "$TF_STATE_BUCKET" ]]; then
+            echo "::error::Variável TF_STATE_BUCKET não configurada (bucket S3 do state, ver docs/CI_CD.md)."
+            exit 1
+          fi
+          terraform init -input=false \
+            -backend-config="bucket=${TF_STATE_BUCKET}" \
+            -backend-config="key=oficina/terraform.tfstate" \
+            -backend-config="region=${AWS_REGION}" \
+            -backend-config="use_lockfile=true"
+
+      - name: Terraform plan
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Terraform apply
+        run: terraform apply -input=false tfplan
+
+  # Stage 3: ConfigMap and Secret, migration Job and API rollout, in the order
+  # of make k8s-deploy (ADR 0006). Secrets come from AWS Secrets Manager.
+  deploy:
+    name: Deploy to EKS (migrations and rollout)
+    needs: [guard, image, infra]
+    # Runs when infra succeeded or was skipped; a skipped need would otherwise
+    # skip this job too.
+    # if: ${{ !cancelled() && needs.guard.result == 'success' && needs.image.result == 'success' && contains(fromJSON('["success", "skipped"]'), needs.infra.result) }}
+    if: false
+    runs-on: ubuntu-24.04
+    environment:
+      name: aws-deploy
+      url: ${{ steps.summary.outputs.url }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TERM: dumb
+      KUBE_CONTEXT: oficina-eks
+      SECRETS_FILE: k8s/overlays/eks/secrets.env
+      OVERLAY_FILE: k8s/overlays/eks/kustomization.yaml
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          role-session-name: deploy-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Configure kubectl
+        run: aws eks update-kubeconfig --region "$AWS_REGION" --name "$EKS_CLUSTER_NAME" --alias "$KUBE_CONTEXT"
+
+      - name: Load application secrets from Secrets Manager
+        shell: bash
+        run: |
+          payload="$(aws secretsmanager get-secret-value --secret-id "$APP_SECRET_ID" --query SecretString --output text)"
+          for key in DB_HOST DB_USER DB_PASSWORD JWT_SECRET; do
+            if [[ -z "$(jq -r --arg k "$key" '.[$k] // empty' <<<"$payload")" ]]; then
+              echo "::error::Chave ${key} ausente no secret ${APP_SECRET_ID}."
+              exit 1
+            fi
+          done
+          db_password="$(jq -r .DB_PASSWORD <<<"$payload")"
+          jwt_secret="$(jq -r .JWT_SECRET <<<"$payload")"
+          echo "::add-mask::${db_password}"
+          echo "::add-mask::${jwt_secret}"
+          # The password goes into the migration Job's URL (ADR 0006).
+          if [[ ! "$db_password" =~ ^[A-Za-z0-9]+$ ]]; then
+            echo "::error::DB_PASSWORD precisa ter apenas letras e números."
+            exit 1
+          fi
+          umask 077
+          printf 'DB_PASSWORD=%s\nJWT_SECRET=%s\n' "$db_password" "$jwt_secret" > "$SECRETS_FILE"
+          db_host="$(jq -r .DB_HOST <<<"$payload")"
+          db_user="$(jq -r .DB_USER <<<"$payload")"
+          if [[ ! "$db_host" =~ ^[A-Za-z0-9.-]+$ || ! "$db_user" =~ ^[A-Za-z0-9_]+$ ]]; then
+            echo "::error::DB_HOST ou DB_USER com caracteres inválidos."
+            exit 1
+          fi
+          # The versioned overlay has placeholders for the database endpoint and
+          # user. They are replaced only in the runner's checkout, never committed.
+          for placeholder in REPLACE_WITH_RDS_ENDPOINT REPLACE_WITH_RDS_USERNAME; do
+            if ! grep -q "$placeholder" "$OVERLAY_FILE"; then
+              echo "::error::Placeholder ${placeholder} não encontrado em ${OVERLAY_FILE}."
+              exit 1
+            fi
+          done
+          sed -i \
+            -e "s|REPLACE_WITH_RDS_ENDPOINT|${db_host}|" \
+            -e "s|REPLACE_WITH_RDS_USERNAME|${db_user}|" \
+            "$OVERLAY_FILE"
+
+      - name: Apply config, run migrations and roll out API
+        env:
+          IMAGE: ${{ needs.image.outputs.image }}
+          VERSION: ${{ needs.guard.outputs.version }}
+        run: |
+          make k8s-deploy \
+            K8S_OVERLAY=eks \
+            KUBE_CONTEXT="$KUBE_CONTEXT" \
+            IMAGE_NAME="$IMAGE" \
+            IMAGE_TAG="$VERSION"
+
+      - name: Diagnostics
+        if: failure()
+        run: |
+          kubectl --context "$KUBE_CONTEXT" -n oficina get pods,jobs,svc,hpa || true
+          kubectl --context "$KUBE_CONTEXT" -n oficina logs job/oficina-migrate --tail=100 || true
+          kubectl --context "$KUBE_CONTEXT" -n oficina describe deployment oficina-api || true
+          kubectl --context "$KUBE_CONTEXT" -n oficina get events --sort-by=.lastTimestamp | tail -n 30 || true
+
+      - name: Remove secrets file
+        if: always()
+        run: rm -f "$SECRETS_FILE"
+
+      # The LoadBalancer DNS can take a few minutes to show up; its absence does
+      # not invalidate the deploy, which already passed rollout status.
+      - name: Summary
+        id: summary
+        env:
+          IMAGE: ${{ needs.image.outputs.image }}
+          VERSION: ${{ needs.guard.outputs.version }}
+        shell: bash
+        run: |
+          host=""
+          for _ in $(seq 1 36); do
+            host="$(kubectl --context "$KUBE_CONTEXT" -n oficina get svc oficina-api \
+              -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
+            [[ -n "$host" ]] && break
+            sleep 5
+          done
+          url="${host:+http://${host}}"
+          echo "url=${url}" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Deploy ${VERSION}"
+            echo
+            echo "| Item | Valor |"
+            echo "| --- | --- |"
+            echo "| Versão | \`${VERSION}\` |"
+            echo "| Commit | \`${GITHUB_SHA}\` |"
+            echo "| Imagem | \`${IMAGE}:${VERSION}\` |"
+            echo "| Cluster | \`${EKS_CLUSTER_NAME}\` (${AWS_REGION}) |"
+            echo "| URL da API | ${url:-ainda sem hostname do LoadBalancer} |"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -18,7 +18,7 @@ O versionamento do schema do banco é feito com `golang-migrate`, migrations em 
 - [Modelo de domínio](docs/DOMAIN_MODEL.md): agregados, entidades e Value Objects
 - [Segurança](docs/SECURITY.md): ferramentas de SCA, SAST e DAST usadas e a justificativa de cada uma
 - [Kubernetes](docs/KUBERNETES.md): manifestos em `k8s/`, requisitos da máquina, deploy no Minikube, comandos `kubectl` e demonstração do autoscaling
-- [CI/CD](docs/CI_CD.md): proposta de pipeline de CI com GitHub Actions, testes, segurança e proteção dos workflows
+- [CI/CD](docs/CI_CD.md): CI em GitHub Actions (testes, cobertura, segurança) e deploy no EKS por tag, com diagramas de cada etapa, credenciais e rollback
 - [Swagger](docs/swagger/): documentação da API gerada a partir dos handlers (UI disponível em `/swagger/index.html` com a aplicação no ar)
 - [Coleção Postman](.dev/postman/): coleção pronta para testar os endpoints da API
 
@@ -54,6 +54,8 @@ Cada mudança de status da ordem de serviço dispara um e-mail ao cliente depois
 ## Deploy em Kubernetes
 
 Os manifestos ficam em [`k8s/`](k8s/), organizados com Kustomize: uma base comum (Deployment, Service, ConfigMap e HPA da API) e overlays para Minikube e EKS. As migrations rodam num Job separado ([ADR 0006](docs/adr/0006-migrations-em-job-kubernetes.md)).
+
+No EKS o deploy é automatizado: criar uma tag semver (`git tag 1.0.1 && git push origin 1.0.1`) num commit da `main` dispara o workflow [`cd.yml`](.github/workflows/cd.yml), que confere que a CI do commit passou, publica a imagem no ECR, aplica as migrations e faz o rollout. Detalhes em [CI/CD](docs/CI_CD.md#parte-2-deploy). O roteiro abaixo é para o Minikube.
 
 Pré-requisitos: Docker rodando, Minikube, `kubectl`, k6, Go 1.26 e `make`. Versões mínimas e recursos de máquina estão em [`docs/KUBERNETES.md`](docs/KUBERNETES.md#requisitos-da-máquina).
 
