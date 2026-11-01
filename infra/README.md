@@ -45,15 +45,16 @@ A conta esperada é `081473213177`.
 
 ## Subir
 
-Dentro de `infra/`:
+Na raiz do repositório, com o profile `oficina-temp`:
 
 ```bash
-terraform init
-terraform plan
-terraform apply
+make tf-plan
+make tf-apply
 ```
 
-Todas as variables têm padrão, então o `plan` do pipeline (quando for ligado) não precisa de `-var`. O control plane passa a cobrar por hora assim que o cluster existe.
+O `tf-apply` pede confirmação. O control plane passa a cobrar por hora assim que o cluster existe. Estes alvos não rodam no push da tag: o job `infra` do CD continua desligado. Suba o ambiente com `make tf-apply`, espere o nó ficar `Ready` e só então envie a tag.
+
+Todas as variables têm padrão, então o `plan` do pipeline (quando for ligado) não precisa de `-var`.
 
 Depois do apply:
 
@@ -93,10 +94,10 @@ Antes do destroy, ainda com `kubectl` apontando para o cluster, apague o que o S
 kubectl delete namespace oficina
 ```
 
-Espere o Load Balancer sumir e só então, em `infra/`:
+Espere o Load Balancer sumir e só então, na raiz do repositório:
 
 ```bash
-terraform destroy
+make tf-destroy CONFIRM=yes
 ```
 
 ECR, provedor OIDC e a role `oficina-github-deploy` permanecem.
