@@ -44,7 +44,7 @@ func TestFinalizarOrdemServicoUseCase_ComSucessoConsomeReservas(t *testing.T) {
 		}).
 		Return(nil)
 
-	uc := app.NewFinalizarOrdemServicoUseCase(repository, pecaRepo, reservaRepo, runner)
+	uc := app.NewFinalizarOrdemServicoUseCase(repository, pecaRepo, reservaRepo, runner, notificadorComEnvio(t))
 	output, err := uc.Executar(context.Background(), app.FinalizarOrdemServicoInput{
 		OrdemServicoID: 42,
 		UsuarioID:      7,
@@ -66,7 +66,7 @@ func TestFinalizarOrdemServicoUseCase_SemReservasAindaFinaliza(t *testing.T) {
 	reservaRepo.EXPECT().BuscarPorOrdemServico(mock.Anything, uint64(42)).Return(nil, nil)
 	repository.EXPECT().Atualizar(mock.Anything, os).Return(nil)
 
-	uc := app.NewFinalizarOrdemServicoUseCase(repository, pecaRepo, reservaRepo, &helpers.TransactionRunnerMock{})
+	uc := app.NewFinalizarOrdemServicoUseCase(repository, pecaRepo, reservaRepo, &helpers.TransactionRunnerMock{}, notificadorComEnvio(t))
 	output, err := uc.Executar(context.Background(), app.FinalizarOrdemServicoInput{OrdemServicoID: 42, UsuarioID: 7})
 
 	require.NoError(t, err)
@@ -82,6 +82,7 @@ func TestFinalizarOrdemServicoUseCase_OSInexistente(t *testing.T) {
 		pecamocks.NewRepository(t),
 		reservamocks.NewRepository(t),
 		&helpers.TransactionRunnerMock{},
+		nil,
 	)
 	_, err := uc.Executar(context.Background(), app.FinalizarOrdemServicoInput{OrdemServicoID: 999, UsuarioID: 7})
 
@@ -98,6 +99,7 @@ func TestFinalizarOrdemServicoUseCase_ErroAoBuscar(t *testing.T) {
 		pecamocks.NewRepository(t),
 		reservamocks.NewRepository(t),
 		&helpers.TransactionRunnerMock{},
+		nil,
 	)
 	_, err := uc.Executar(context.Background(), app.FinalizarOrdemServicoInput{OrdemServicoID: 42, UsuarioID: 7})
 
@@ -116,6 +118,7 @@ func TestFinalizarOrdemServicoUseCase_OSNula(t *testing.T) {
 		pecamocks.NewRepository(t),
 		reservamocks.NewRepository(t),
 		&helpers.TransactionRunnerMock{},
+		nil,
 	)
 	_, err := uc.Executar(context.Background(), app.FinalizarOrdemServicoInput{OrdemServicoID: 42, UsuarioID: 7})
 
@@ -132,6 +135,7 @@ func TestFinalizarOrdemServicoUseCase_TransicaoInvalida(t *testing.T) {
 		pecamocks.NewRepository(t),
 		reservamocks.NewRepository(t),
 		&helpers.TransactionRunnerMock{},
+		notificadorSemEnvio(t),
 	)
 	_, err := uc.Executar(context.Background(), app.FinalizarOrdemServicoInput{OrdemServicoID: 42, UsuarioID: 7})
 
@@ -150,7 +154,7 @@ func TestFinalizarOrdemServicoUseCase_EstoqueAbaixoDoMinimo(t *testing.T) {
 	reservaRepo.EXPECT().BuscarPorOrdemServico(mock.Anything, uint64(42)).Return([]*domainreservapeca.ReservaPeca{reserva}, nil)
 	pecaRepo.EXPECT().BuscarPorIDComBloqueio(mock.Anything, uint64(1)).Return(peca, nil)
 
-	uc := app.NewFinalizarOrdemServicoUseCase(repository, pecaRepo, reservaRepo, &helpers.TransactionRunnerMock{})
+	uc := app.NewFinalizarOrdemServicoUseCase(repository, pecaRepo, reservaRepo, &helpers.TransactionRunnerMock{}, nil)
 	_, err := uc.Executar(context.Background(), app.FinalizarOrdemServicoInput{OrdemServicoID: 42, UsuarioID: 7})
 
 	require.ErrorIs(t, err, domainpeca.ErrEstoqueInsuficiente)
@@ -171,6 +175,7 @@ func TestFinalizarOrdemServicoUseCase_ErroAoPersistir(t *testing.T) {
 		pecamocks.NewRepository(t),
 		reservaRepo,
 		&helpers.TransactionRunnerMock{},
+		nil,
 	)
 	_, err := uc.Executar(context.Background(), app.FinalizarOrdemServicoInput{OrdemServicoID: 42, UsuarioID: 7})
 
@@ -188,7 +193,7 @@ func TestFinalizarOrdemServicoUseCase_ErroAoBuscarReservas(t *testing.T) {
 	repository.EXPECT().BuscarPorIDComBloqueio(mock.Anything, uint64(42)).Return(os, nil)
 	reservaRepo.EXPECT().BuscarPorOrdemServico(mock.Anything, uint64(42)).Return(nil, infraErr)
 
-	_, err := app.NewFinalizarOrdemServicoUseCase(repository, pecamocks.NewRepository(t), reservaRepo, &helpers.TransactionRunnerMock{}).
+	_, err := app.NewFinalizarOrdemServicoUseCase(repository, pecamocks.NewRepository(t), reservaRepo, &helpers.TransactionRunnerMock{}, nil).
 		Executar(context.Background(), app.FinalizarOrdemServicoInput{OrdemServicoID: 42, UsuarioID: 7})
 
 	var appErr *shared.AppError
@@ -208,7 +213,7 @@ func TestFinalizarOrdemServicoUseCase_ErroAoBloquearPeca(t *testing.T) {
 	reservaRepo.EXPECT().BuscarPorOrdemServico(mock.Anything, uint64(42)).Return([]*domainreservapeca.ReservaPeca{reserva}, nil)
 	pecaRepo.EXPECT().BuscarPorIDComBloqueio(mock.Anything, uint64(1)).Return(nil, infraErr)
 
-	_, err := app.NewFinalizarOrdemServicoUseCase(repository, pecaRepo, reservaRepo, &helpers.TransactionRunnerMock{}).
+	_, err := app.NewFinalizarOrdemServicoUseCase(repository, pecaRepo, reservaRepo, &helpers.TransactionRunnerMock{}, nil).
 		Executar(context.Background(), app.FinalizarOrdemServicoInput{OrdemServicoID: 42, UsuarioID: 7})
 
 	require.ErrorIs(t, err, infraErr)
@@ -227,7 +232,7 @@ func TestFinalizarOrdemServicoUseCase_ErroInfraAoAtualizarPeca(t *testing.T) {
 	pecaRepo.EXPECT().BuscarPorIDComBloqueio(mock.Anything, uint64(1)).Return(peca, nil)
 	pecaRepo.EXPECT().Atualizar(mock.Anything, peca).Return(infraErr)
 
-	_, err := app.NewFinalizarOrdemServicoUseCase(repository, pecaRepo, reservaRepo, &helpers.TransactionRunnerMock{}).
+	_, err := app.NewFinalizarOrdemServicoUseCase(repository, pecaRepo, reservaRepo, &helpers.TransactionRunnerMock{}, nil).
 		Executar(context.Background(), app.FinalizarOrdemServicoInput{OrdemServicoID: 42, UsuarioID: 7})
 
 	var appErr *shared.AppError
@@ -248,7 +253,7 @@ func TestFinalizarOrdemServicoUseCase_PecaNaoEncontradaAoAtualizar(t *testing.T)
 	pecaRepo.EXPECT().BuscarPorIDComBloqueio(mock.Anything, uint64(1)).Return(peca, nil)
 	pecaRepo.EXPECT().Atualizar(mock.Anything, peca).Return(domainpeca.ErrPecaNaoEncontrada)
 
-	_, err := app.NewFinalizarOrdemServicoUseCase(repository, pecaRepo, reservaRepo, &helpers.TransactionRunnerMock{}).
+	_, err := app.NewFinalizarOrdemServicoUseCase(repository, pecaRepo, reservaRepo, &helpers.TransactionRunnerMock{}, nil).
 		Executar(context.Background(), app.FinalizarOrdemServicoInput{OrdemServicoID: 42, UsuarioID: 7})
 
 	require.ErrorIs(t, err, domainpeca.ErrPecaNaoEncontrada)
@@ -268,7 +273,7 @@ func TestFinalizarOrdemServicoUseCase_ErroInfraAoRemoverReserva(t *testing.T) {
 	pecaRepo.EXPECT().Atualizar(mock.Anything, peca).Return(nil)
 	reservaRepo.EXPECT().Remover(mock.Anything, uint64(42), uint64(1)).Return(infraErr)
 
-	_, err := app.NewFinalizarOrdemServicoUseCase(repository, pecaRepo, reservaRepo, &helpers.TransactionRunnerMock{}).
+	_, err := app.NewFinalizarOrdemServicoUseCase(repository, pecaRepo, reservaRepo, &helpers.TransactionRunnerMock{}, nil).
 		Executar(context.Background(), app.FinalizarOrdemServicoInput{OrdemServicoID: 42, UsuarioID: 7})
 
 	var appErr *shared.AppError
@@ -290,7 +295,7 @@ func TestFinalizarOrdemServicoUseCase_ReservaNaoEncontradaAoRemover(t *testing.T
 	pecaRepo.EXPECT().Atualizar(mock.Anything, peca).Return(nil)
 	reservaRepo.EXPECT().Remover(mock.Anything, uint64(42), uint64(1)).Return(domainreservapeca.ErrReservaNaoEncontrada)
 
-	_, err := app.NewFinalizarOrdemServicoUseCase(repository, pecaRepo, reservaRepo, &helpers.TransactionRunnerMock{}).
+	_, err := app.NewFinalizarOrdemServicoUseCase(repository, pecaRepo, reservaRepo, &helpers.TransactionRunnerMock{}, nil).
 		Executar(context.Background(), app.FinalizarOrdemServicoInput{OrdemServicoID: 42, UsuarioID: 7})
 
 	require.ErrorIs(t, err, domainreservapeca.ErrReservaNaoEncontrada)
@@ -315,7 +320,7 @@ func TestFinalizarOrdemServicoUseCase_OrdenaReservasPorPeca(t *testing.T) {
 	reservaRepo.EXPECT().Remover(mock.Anything, uint64(42), uint64(2)).Return(nil)
 	repository.EXPECT().Atualizar(mock.Anything, os).Return(nil)
 
-	_, err := app.NewFinalizarOrdemServicoUseCase(repository, pecaRepo, reservaRepo, &helpers.TransactionRunnerMock{}).
+	_, err := app.NewFinalizarOrdemServicoUseCase(repository, pecaRepo, reservaRepo, &helpers.TransactionRunnerMock{}, nil).
 		Executar(context.Background(), app.FinalizarOrdemServicoInput{OrdemServicoID: 42, UsuarioID: 7})
 	require.NoError(t, err)
 }

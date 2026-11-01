@@ -4,16 +4,18 @@ import (
 	"context"
 	"errors"
 
+	"github.com/muriloperosa/soat-architecture/internal/application/notificacao"
 	domain "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 )
 
 type EntregarOrdemServicoUseCase struct {
-	repository domain.OrdemServicoRepository
+	repository  domain.OrdemServicoRepository
+	notificador *notificacao.NotificadorStatus
 }
 
-func NewEntregarOrdemServicoUseCase(repository domain.OrdemServicoRepository) *EntregarOrdemServicoUseCase {
-	return &EntregarOrdemServicoUseCase{repository: repository}
+func NewEntregarOrdemServicoUseCase(repository domain.OrdemServicoRepository, notificador *notificacao.NotificadorStatus) *EntregarOrdemServicoUseCase {
+	return &EntregarOrdemServicoUseCase{repository: repository, notificador: notificador}
 }
 
 func (uc *EntregarOrdemServicoUseCase) Executar(
@@ -31,6 +33,7 @@ func (uc *EntregarOrdemServicoUseCase) Executar(
 		return OrdemServicoOutput{}, domain.ErrOrdemServicoNaoEncontrada
 	}
 
+	statusAnterior := os.Status()
 	if err := os.Entregar(input.UsuarioID); err != nil {
 		return OrdemServicoOutput{}, err
 	}
@@ -38,6 +41,8 @@ func (uc *EntregarOrdemServicoUseCase) Executar(
 	if err := uc.repository.Atualizar(ctx, os); err != nil {
 		return OrdemServicoOutput{}, shared.NewInternalError("erro ao entregar ordem de serviço", err)
 	}
+
+	uc.notificador.Notificar(ctx, os, statusAnterior)
 
 	return toOutput(os), nil
 }
