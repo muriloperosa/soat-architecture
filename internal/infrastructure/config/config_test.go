@@ -29,6 +29,8 @@ func TestLoad_UsaValoresDasEnvs(t *testing.T) {
 	require.Equal(t, "log", cfg.EmailProvider)
 	require.Equal(t, "us-east-1", cfg.AWSRegion)
 	require.Empty(t, cfg.SESFromAddress)
+	require.Empty(t, cfg.ApprovalTokenSecret)
+	require.Equal(t, 24, cfg.ApprovalTokenTTLHours)
 }
 
 func TestLoad_UsaValoresDoPoolDasEnvs(t *testing.T) {
@@ -112,6 +114,25 @@ func TestLoad_CamposJWT(t *testing.T) {
 	require.Equal(t, "segredo-de-teste", cfg.JWTSecret)
 	require.Equal(t, 60, cfg.JWTAccessTokenTTLMinutes)
 	require.Equal(t, 168, cfg.JWTRefreshTokenTTLHours)
+}
+
+func TestLoad_CamposTokenAprovacao(t *testing.T) {
+	t.Setenv("DB_HOST", "db-host")
+	t.Setenv("DB_PORT", "3306")
+	t.Setenv("DB_USER", "user")
+	t.Setenv("DB_PASSWORD", "pass")
+	t.Setenv("DB_NAME", "oficina_test")
+	t.Setenv("JWT_SECRET", "segredo-de-teste")
+	t.Setenv("APPROVAL_TOKEN_SECRET", "segredo-de-aprovacao")
+	t.Setenv("APPROVAL_TOKEN_TTL_HOURS", "12")
+	t.Setenv("PUBLIC_BASE_URL", "https://oficina.example")
+
+	cfg, err := config.Load()
+
+	require.NoError(t, err)
+	require.Equal(t, "segredo-de-aprovacao", cfg.ApprovalTokenSecret)
+	require.Equal(t, 12, cfg.ApprovalTokenTTLHours)
+	require.Equal(t, "https://oficina.example", cfg.PublicBaseURL)
 }
 
 func TestLoad_JWTSecretObrigatorio(t *testing.T) {

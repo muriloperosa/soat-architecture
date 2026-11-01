@@ -17,13 +17,18 @@ import (
 // quantidades e valores para decidir. O envio também é síncrono, no contexto da
 // requisição, e uma falha aqui não desfaz a transição já persistida.
 type NotificadorOrcamento struct {
-	clientes domaincliente.ClienteRepository
-	emails   shared.EmailSender
+	clientes      domaincliente.ClienteRepository
+	emails        shared.EmailSender
+	approvalLinks shared.ApprovalLinkProvider
 }
 
 // NewOrcamento cria um notificador para o envio detalhado de orçamentos.
-func NewOrcamento(clientes domaincliente.ClienteRepository, emails shared.EmailSender) *NotificadorOrcamento {
-	return &NotificadorOrcamento{clientes: clientes, emails: emails}
+func NewOrcamento(
+	clientes domaincliente.ClienteRepository,
+	emails shared.EmailSender,
+	approvalLinks shared.ApprovalLinkProvider,
+) *NotificadorOrcamento {
+	return &NotificadorOrcamento{clientes: clientes, emails: emails, approvalLinks: approvalLinks}
 }
 
 func (n *NotificadorOrcamento) Notificar(
@@ -48,9 +53,22 @@ func (n *NotificadorOrcamento) Notificar(
 	}
 	assunto := fmt.Sprintf("%s %s", prefixo, os.Numero().String())
 	corpo := montarCorpoEmail(os.Numero().String(), cliente.Nome(), orcamento)
+	if n.approvalLinks != nil {
+		links, err := n.approvalLinks.GerarLinksAprovacao(os.ID(), os.ClienteID())
+		if err != nil {
+			log.Printf("notificação de orçamento da OS %s: falha ao gerar links de aprovação: %v", os.Numero().String(), err)
+		} else {
+			corpo += montarTextoLinksAprovacao(links)
+		}
+	}
 	if err := n.emails.Enviar(ctx, cliente.Email().String(), assunto, corpo); err != nil {
 		log.Printf("notificação de orçamento da OS %s: falha ao enviar e-mail: %v", os.Numero().String(), err)
 	}
+}
+
+func montarTextoLinksAprovacao(links shared.ApprovalEmailLinks) string {
+	return fmt.Sprintf("\n\nPara aprovar ou recusar este orçamento, acesse um dos links abaixo.\nAceitar orçamento: %s\nRecusar orçamento: %s\n",
+		links.AprovarURL, links.RejeitarURL)
 }
 
 func montarCorpoEmail(numeroOS, nomeCliente string, o *domainorcamento.Orcamento) string {
