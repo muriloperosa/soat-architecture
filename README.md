@@ -25,7 +25,7 @@ Onde encontrar cada requisito da fase no repositório:
 | --- | --- |
 | Clean Code, Clean Architecture e testes automatizados | Camadas em `internal/`, regra de dependência verificada em `test/architecture/`, testes unitários e de integração ([Qualidade](#qualidade)) |
 | Abertura, consulta de status e listagem priorizada de OS | `/v1/ordens-servico` ([APIs](#apis)) |
-| Aprovação ou recusa do orçamento pelo cliente | `/v1/ordens-servico/{id}/orcamento/aprovar` e `/rejeitar` |
+| Aprovação ou recusa do orçamento pelo cliente | Rotas autenticadas `/v1/ordens-servico/{id}/orcamento/aprovar` e `/rejeitar`; links por e-mail em `GET /v1/orcamentos/aprovacao` (confirmação) e `POST /v1/orcamentos/aprovacao/decisao` (decisão), que reutilizam os mesmos casos de uso |
 | Aviso de mudança de status por e-mail | Notificações via Amazon SES ([Componentes](#componentes-da-aplicação)) |
 | Dockerfile e docker-compose | [`Dockerfile`](Dockerfile), [`compose.yml`](compose.yml) |
 | Deployments, Services, ConfigMaps, Secrets e HPA | [`k8s/`](k8s/) |
