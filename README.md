@@ -88,7 +88,7 @@ flowchart TB
     email -.->|AWS Academy| smtp[["Servidor SMTP<br/>STARTTLS"]]
 ```
 
-[Versão em SVG](docs/diagramas/1-componentes-da-aplicacao.svg)
+[Versão em SVG](docs/diagrams/1-componentes-da-aplicacao.svg)
 
 Domínio (entidades e value objects), aplicação (casos de uso) e infraestrutura (adaptadores HTTP, de persistência e de e-mail, frameworks) são pacotes separados, e as dependências apontam só para dentro: infraestrutura conhece aplicação e domínio, aplicação conhece só domínio, e domínio não conhece nada do projeto. Os repositórios e serviços externos que o domínio usa são interfaces declaradas nele e implementadas na infraestrutura. Essa regra é verificada por um teste automático (`test/architecture/`). Cada agregado (ordem de serviço, cliente, veículo, peça, usuário) carrega suas próprias regras de negócio em Value Objects auto validáveis, como `Documento`, `Placa` e `Status`, que nascem válidos ou não nascem.
 
@@ -121,7 +121,7 @@ stateDiagram-v2
     ENTREGUE --> [*]
 ```
 
-[Versão em SVG](docs/diagramas/2-ciclo-de-vida-da-os.svg)
+[Versão em SVG](docs/diagrams/2-ciclo-de-vida-da-os.svg)
 
 Quando o cliente aprova o orçamento, as peças ficam reservadas, e a baixa no estoque só acontece na finalização. A listagem de ordens de serviço segue a ordem de prioridade da oficina: em execução, aprovadas, aguardando aprovação ou rejeitadas, em diagnóstico e recebidas, das mais antigas para as mais novas. As finalizadas e entregues saem da listagem, mas continuam disponíveis na consulta por id ou por número.
 
@@ -175,7 +175,7 @@ flowchart TB
     style eks fill:#f0fdf4,stroke:#16a34a,color:#14532d
 ```
 
-[Versão em SVG](docs/diagramas/3-infraestrutura-aws.svg)
+[Versão em SVG](docs/diagrams/3-infraestrutura-aws.svg)
 
 | Recurso | Como é criado |
 | --- | --- |
@@ -198,7 +198,7 @@ flowchart TB
     img --> dep["deploy<br/>migrations e rollout no EKS"]
 ```
 
-[Versão em SVG](docs/diagramas/4-fluxo-de-deploy.svg)
+[Versão em SVG](docs/diagrams/4-fluxo-de-deploy.svg)
 
 A CI ([`ci.yml`](.github/workflows/ci.yml)) roda em todo PR e em todo push na `main`, e não tem acesso à AWS. O deploy ([`cd.yml`](.github/workflows/cd.yml)) só acontece quando alguém cria uma tag de versão, como `1.0.1`, num commit da `main` que passou na CI. O mesmo run aplica o Terraform de [`infra/`](infra/) antes de publicar a imagem, então não há `apply` manual. O workflow usa as credenciais da sessão do AWS Academy Learner Lab, guardadas no environment `aws-deploy`.
 
@@ -384,6 +384,6 @@ Um hook de `pre-push` local, instalado via `make hooks-install`, roda mocks, lin
 - [Kubernetes](docs/KUBERNETES.md): manifestos em `k8s/`, requisitos da máquina, deploy no Minikube, comandos `kubectl` e demonstração do autoscaling
 - [Infraestrutura AWS](docs/TERRAFORM.md): Terraform do cluster EKS, do RDS, do ECR e do secret, aplicado pelo deploy por tag
 - [Preparação do Learner Lab](docs/AWS_SETUP.md): environment e credenciais da sessão do lab no GitHub
-- [CI/CD](docs/CI_CD.md): CI em GitHub Actions (testes, cobertura, segurança) e deploy no EKS por tag, com diagramas de cada etapa, credenciais e rollback
+- [CI/CD](docs/CI_CD.md): CI em GitHub Actions (testes, cobertura, segurança) e deploy no EKS por tag, com diagrams de cada etapa, credenciais e rollback
 - [Swagger](docs/swagger/): documentação da API gerada a partir dos handlers
 - [Collections Postman](.dev/postman/): todos os endpoints e o fluxo completo da demo
