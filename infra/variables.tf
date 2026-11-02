@@ -99,3 +99,9 @@ variable "db_allocated_storage" {
   type        = number
   default     = 20
 }
+
+variable "ses_sender_email" {
+  description = "Domínio utilizado para envio de e-mails"
+  type        = string
+  default     = "soatoficinapos@gmail.com"
+}

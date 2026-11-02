@@ -37,3 +37,8 @@ output "subnet_ids" {
   description = "Subnets públicas existentes usadas pelo cluster, pelos nós e pelo RDS."
   value       = local.subnet_ids
 }
+
+output "ses_sender_identity_arn" {
+  description = "ARN da identidade de e-mail verificada no SES"
+  value       = aws_ses_email_identity.sender.arn
+}
