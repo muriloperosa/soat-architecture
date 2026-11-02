@@ -1,8 +1,16 @@
-# Preparação do AWS Learner Lab para o CD
+# Preparação do AWS Academy Learner Lab para o CD
 
-Roteiro para deixar o GitHub pronto para o workflow [`cd.yml`](../.github/workflows/cd.yml) numa conta do AWS Academy Learner Lab. A infraestrutura (EKS, RDS, ECR e o secret da aplicação) é criada pelo próprio CD, pelo Terraform de [`infra/`](../infra/) ([`TERRAFORM.md`](TERRAFORM.md)). Aqui só entram as credenciais.
+Roteiro para deixar o GitHub pronto para o workflow [`cd.yml`](../.github/workflows/cd.yml) numa conta do AWS Academy Learner Lab. A infraestrutura (EKS, RDS, ECR e os secrets `oficina/api` e `oficina/smtp`) é criada pelo próprio CD, pelo Terraform de [`infra/`](../infra/) ([`TERRAFORM.md`](TERRAFORM.md)). Aqui só entram credenciais e configuração do GitHub.
 
-O Learner Lab não deixa criar provedor OIDC nem role IAM. Por isso o pipeline não usa OIDC: ele usa as credenciais temporárias da sessão do lab, guardadas como secrets do environment `aws-deploy`.
+## Restrições do AWS Academy
+
+O Learner Lab é uma conta AWS temporária com permissões reduzidas. Três limitações moldam o pipeline:
+
+| Limitação | Consequência no projeto |
+| --- | --- |
+| Não deixa criar provedor OIDC, role nem usuário IAM | O CD usa as credenciais temporárias da sessão (role `voclabs`), guardadas como secrets do GitHub. Cluster e nós usam a `LabRole` que já existe na conta ([ADR 0009](adr/0009-terraform-no-cd-com-learner-lab.md)) |
+| As credenciais expiram com a sessão, em cerca de 4 horas | Os três secrets AWS precisam ser atualizados a cada sessão, antes de criar a tag |
+| Nega `ses:VerifyEmailIdentity` | O Amazon SES, provedor de e-mail planejado, não envia sem remetente verificado. No lab, o e-mail sai por SMTP (Gmail), configurado pelo secret `SMTP_PASSWORD` ([ADR 0010](adr/0010-smtp-no-lugar-do-ses-no-learner-lab.md)) |
 
 Cada integrante do grupo tem a própria conta de Learner Lab. Escolham **uma** conta para o ambiente e usem sempre as credenciais dela no GitHub: o state, o cluster e o bucket ficam nessa conta, e credenciais de outra conta não enxergam nada disso.
 
@@ -10,6 +18,21 @@ Pré-requisitos:
 
 - Sessão do Learner Lab iniciada (**Start Lab**, indicador verde)
 - GitHub CLI autenticada (`gh auth login`), com permissão de admin no repositório
+- Uma conta Gmail com verificação em duas etapas e uma [senha de app](https://myaccount.google.com/apppasswords) gerada para o envio
+
+## Resumo: o que configurar no GitHub
+
+Todos os secrets ficam no environment `aws-deploy` (**Settings → Environments → aws-deploy → Environment secrets**).
+
+| Nome | Tipo | Quando atualizar | Valor |
+| --- | --- | --- | --- |
+| `AWS_ACCESS_KEY_ID` | Secret | **A cada sessão do lab** | `aws_access_key_id` de **AWS Details → AWS CLI** |
+| `AWS_SECRET_ACCESS_KEY` | Secret | **A cada sessão do lab** | `aws_secret_access_key` |
+| `AWS_SESSION_TOKEN` | Secret | **A cada sessão do lab** | `aws_session_token` |
+| `SMTP_PASSWORD` | Secret | Uma vez, e ao trocar a senha | Senha de app do Gmail remetente, sem espaços |
+| `SMTP_SECRET_VERSION` | Variable | Ao trocar `SMTP_PASSWORD` | Número inteiro, incrementado a cada troca (padrão `1`) |
+
+As demais variables são opcionais (passo 4).
 
 ## 1. Environment `aws-deploy` (uma vez)
 
@@ -32,11 +55,21 @@ gh secret set AWS_SESSION_TOKEN     --repo "$REPO" --env aws-deploy --body '<aws
 
 Secrets de repositório com esses mesmos nomes também podem ser lidos pelos jobs; secrets do environment `aws-deploy` têm precedência. Prefira o environment para limitar o uso às etapas de deploy. As credenciais expiram quando a sessão acaba (cerca de 4 horas). Um run com credencial vencida falha no primeiro passo da AWS com `ExpiredToken` ou `InvalidClientTokenId`: atualize os três secrets e rode de novo (**Actions → CD → Run workflow**, escolhendo a tag).
 
-## 3. Senha de app do Gmail
+## 3. E-mail: senha de app do Gmail (uma vez)
 
-Em **Settings → Environments → aws-deploy → Environment secrets**, crie `SMTP_PASSWORD` e cole a senha de app do Gmail remetente, sem os espaços visuais. Um Repository secret `SMTP_PASSWORD` também funciona para os jobs deste workflow, mas fica disponível a outros workflows do repositório; prefira o Environment secret para restringir o acesso. Não use uma variable, pois ela não é criptografada. Essa configuração é feita uma vez; ao trocar a senha, atualize o secret e incremente `SMTP_SECRET_VERSION` nas variables do repositório.
+O provedor de e-mail planejado é o Amazon SES, mas o lab não deixa verificar o remetente. Por isso o ambiente envia por SMTP com STARTTLS (`smtp.gmail.com:587`).
 
-O Terraform cria automaticamente `oficina/smtp` no Secrets Manager e grava a senha pela propriedade write-only `secret_string_wo`, que não persiste seu valor no state nem no plano. `SMTP_SECRET_ID` já deve estar configurada como variable do repositório, com valor `oficina/smtp`.
+```bash
+gh secret set SMTP_PASSWORD --repo "$REPO" --env aws-deploy --body '<senha_de_app_sem_espacos>'
+```
+
+Não use uma variable, pois ela não é criptografada. O Terraform cria `oficina/smtp` no Secrets Manager e grava a senha pela propriedade write-only `secret_string_wo`, que não persiste o valor no state nem no plano. O CD lê esse secret e configura `EMAIL_PROVIDER=smtp`.
+
+Ao trocar a senha, atualize o secret e incremente `SMTP_SECRET_VERSION`. Sem isso, o Terraform não publica uma nova versão:
+
+```bash
+gh variable set SMTP_SECRET_VERSION --repo "$REPO" --body '2'
+```
 
 ## 4. Variables opcionais
 
@@ -49,6 +82,14 @@ Todas têm padrão no workflow:
 | `ECR_REPOSITORY` | `oficina-api` |
 | `APP_SECRET_ID` | `oficina/api` |
 | `TF_STATE_BUCKET` | `oficina-tfstate-<conta>` |
+| `SMTP_SECRET_ID` | `oficina/smtp` |
+| `SMTP_SECRET_VERSION` | `1` |
+| `SMTP_HOST` | `smtp.gmail.com` |
+| `SMTP_PORT` | `587` |
+| `SMTP_USERNAME` | `soatoficinapos@gmail.com` |
+| `SMTP_FROM_ADDRESS` | `soatoficinapos@gmail.com` |
+
+Ao usar outra conta Gmail, altere `SMTP_USERNAME` e `SMTP_FROM_ADDRESS` junto com o `SMTP_PASSWORD`.
 
 ## 5. Primeiro deploy
 
@@ -62,4 +103,8 @@ Acompanhe em **Actions → CD (Continuous Deployment)**. O primeiro run cria o b
 
 ## 6. Conta nova do lab
 
-Se o lab for reiniciado (**Reset**) ou trocado, a conta volta vazia. Atualize os secrets (passo 2) e crie uma tag: o CD recria o bucket do state e o ambiente do zero.
+Se o lab for reiniciado (**Reset**) ou trocado, a conta volta vazia. Atualize os três secrets AWS (passo 2) e crie uma tag: o CD recria o bucket do state, os secrets `oficina/api` e `oficina/smtp` e o ambiente do zero. `SMTP_PASSWORD` fica no GitHub e não precisa ser cadastrado de novo.
+
+## Fora do AWS Academy
+
+Numa conta AWS sem as restrições do lab, a aplicação volta ao Amazon SES sem mudança de código: `EMAIL_PROVIDER=ses` e um `SES_FROM_ADDRESS` verificado, com o pod autenticando pela role dos nós, sem access key. O pipeline, porém, foi ajustado ao lab e sempre configura SMTP. Para usar o SES nele, torne `SMTP_PASSWORD` opcional no Terraform e no CD, grave `SES_FROM_ADDRESS` no secret `oficina/api` e dê `ses:SendEmail` à role dos nós ([ADR 0010](adr/0010-smtp-no-lugar-do-ses-no-learner-lab.md)).

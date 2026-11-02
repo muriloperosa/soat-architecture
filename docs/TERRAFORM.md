@@ -67,7 +67,8 @@ Recursos criados, todos com a tag `Project = soat-oficina`:
 | DB subnet group | `oficina-db` | Subnets onde o RDS pode ficar |
 | Security group | `oficina-rds` | Libera a porta 3306 só a partir do security group do cluster |
 | RDS | `oficina-mysql` | MySQL 8 (última 8.0), 20 GiB gp3 criptografado, uma zona, database `mecanica` |
-| Secrets Manager | `oficina/api` | `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET` e `SES_FROM_ADDRESS`, lidos pelo CD |
+| Secrets Manager | `oficina/api` | `DB_HOST`, `DB_USER`, `DB_PASSWORD` e `JWT_SECRET`, lidos pelo CD |
+| Secrets Manager | `oficina/smtp` | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` e `SMTP_FROM_ADDRESS`. Envio de e-mail no AWS Academy, no lugar do SES |
 
 Fica de fora, de propósito:
 
@@ -136,7 +137,7 @@ Versões com que este guia foi testado: Terraform 1.17.1, provider `hashicorp/aw
 - Uma conta AWS com a região `us-east-1` habilitada. Pode ser outra região, desde que `aws_region`, `eks_availability_zones` e a variable `AWS_REGION` do repositório acompanhem.
 - VPC default com subnets públicas em pelo menos duas zonas. Contas novas já vêm assim. Se a VPC default foi apagada, recrie com `aws ec2 create-default-vpc` ou passe `vpc_id` e `subnet_ids`.
 - Os passos 1 a 3 do [AWS_SETUP.md](AWS_SETUP.md) feitos: provedor OIDC, role `oficina-github-deploy` e repositório ECR. Os passos 4 (secret) e 5 (access entry) **não** devem ser feitos à mão, o Terraform cria os dois.
-- Para enviar e-mail de verdade: um remetente verificado no SES (fora do sandbox, também o destinatário). Sem isso a API sobe com `EMAIL_PROVIDER=log`.
+- Para enviar e-mail de verdade: o provedor-alvo é o Amazon SES, que exige remetente verificado (e, no sandbox, destinatário verificado). O AWS Academy Learner Lab nega essa verificação, então lá o envio é por SMTP: o secret `SMTP_PASSWORD` no environment `aws-deploy` ([AWS_SETUP.md](AWS_SETUP.md)). Sem esse secret, o CD falha antes do `apply`.
 
 ### Credenciais
 
@@ -348,7 +349,8 @@ O addon `metrics-server` ainda está subindo. Confira com `aws eks describe-addo
 
 ### API sem conseguir enviar e-mail
 
-- `EMAIL_PROVIDER=log` nos logs: `ses_from_address` estava vazio no `apply`. Rode o `apply` de novo com o remetente e faça um novo deploy.
+- Erro de autenticação SMTP: a senha de app está errada ou foi revogada. Atualize `SMTP_PASSWORD` e incremente `SMTP_SECRET_VERSION`.
+- Os itens abaixo valem só para o SES, provedor-alvo fora do AWS Academy.
 - `AccessDenied` ou erro de credencial: o pod não alcançou o IMDS. Confira se o launch template está com hop limit 2 (`aws ec2 describe-launch-template-versions --launch-template-name <nome> --query 'LaunchTemplateVersions[0].LaunchTemplateData.MetadataOptions'`).
 - `MessageRejected: Email address is not verified`: o SES está em sandbox e o destinatário não foi verificado.
 
