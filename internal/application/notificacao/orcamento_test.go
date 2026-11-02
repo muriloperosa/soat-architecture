@@ -11,6 +11,8 @@ import (
 	domaincliente "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
 	clientemocks "github.com/muriloperosa/soat-architecture/internal/domain/cliente/mocks"
 	domainorcamento "github.com/muriloperosa/soat-architecture/internal/domain/orcamento"
+	domainordemservico "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
+	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	sharedmocks "github.com/muriloperosa/soat-architecture/internal/domain/shared/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -35,13 +37,38 @@ func TestNotificadorOrcamento_EnviaItensETotal(t *testing.T) {
 		}).
 		Return(nil)
 
-	notificacao.NewOrcamento(clientes, emails).Notificar(context.Background(), os, orcamento, false)
+	notificacao.NewOrcamento(clientes, emails, nil).Notificar(context.Background(), os, orcamento, false)
 
 	require.Contains(t, assunto, "Orçamento da Ordem de Serviço OS-20260827-a1b2c3d4e5f6")
 	require.NotContains(t, assunto, "atualizado")
 	require.Contains(t, corpo, "Maria Silva")
 	require.Contains(t, corpo, "Filtro de óleo | quantidade: 3 | valor unitário: R$ 50.00 | subtotal: R$ 150.00")
 	require.Contains(t, corpo, "Valor total do orçamento: R$ 150.00")
+}
+
+func TestNotificadorOrcamento_IncluiLinksDeAprovacaoNoEmail(t *testing.T) {
+	clientes := clientemocks.NewClienteRepository(t)
+	emails := sharedmocks.NewEmailSender(t)
+	os := ordemAguardandoAprovacao(t)
+	os.AtribuirID(99)
+	cliente, err := domaincliente.NewCliente("52998224725", domaincliente.TipoPessoaFisica, "Maria Silva", "maria@email.com", "11999998888", "senha123", 1)
+	require.NoError(t, err)
+	cliente.DefinirID(10)
+	clientes.EXPECT().BuscarPorID(mock.Anything, uint64(10)).Return(&cliente, nil)
+
+	var corpo string
+	emails.EXPECT().Enviar(mock.Anything, "maria@email.com", mock.Anything, mock.Anything).
+		Run(func(_ context.Context, _, _, c string) { corpo = c }).
+		Return(nil)
+
+	links := approvalLinkProviderStub{links: shared.ApprovalEmailLinks{
+		AprovarURL:  "https://oficina.example/v1/orcamentos/aprovacao?token=token-assinado&acao=APROVAR",
+		RejeitarURL: "https://oficina.example/v1/orcamentos/aprovacao?token=token-assinado&acao=REJEITAR",
+	}}
+	notificacao.NewOrcamento(clientes, emails, links).Notificar(context.Background(), os, orcamentoComItens(t), false)
+
+	require.Contains(t, corpo, "https://oficina.example/v1/orcamentos/aprovacao?token=token-assinado&acao=APROVAR")
+	require.Contains(t, corpo, "https://oficina.example/v1/orcamentos/aprovacao?token=token-assinado&acao=REJEITAR")
 }
 
 func TestNotificadorOrcamento_ReenvioUsaAssuntoDeAtualizacao(t *testing.T) {
@@ -57,7 +84,7 @@ func TestNotificadorOrcamento_ReenvioUsaAssuntoDeAtualizacao(t *testing.T) {
 		Run(func(_ context.Context, _, a, _ string) { assunto = a }).
 		Return(nil)
 
-	notificacao.NewOrcamento(clientes, emails).Notificar(context.Background(), ordemRecebida(t), orcamentoComItens(t), true)
+	notificacao.NewOrcamento(clientes, emails, nil).Notificar(context.Background(), ordemRecebida(t), orcamentoComItens(t), true)
 
 	require.Contains(t, assunto, "Orçamento atualizado da Ordem de Serviço")
 }
@@ -72,7 +99,7 @@ func TestNotificadorOrcamento_ClienteInexistenteNaoEnvia(t *testing.T) {
 	log.SetOutput(&buf)
 	t.Cleanup(func() { log.SetOutput(anterior) })
 
-	notificacao.NewOrcamento(clientes, emails).Notificar(context.Background(), ordemRecebida(t), orcamentoComItens(t), false)
+	notificacao.NewOrcamento(clientes, emails, nil).Notificar(context.Background(), ordemRecebida(t), orcamentoComItens(t), false)
 
 	require.Contains(t, buf.String(), "cliente não encontrado")
 }
@@ -91,7 +118,7 @@ func TestNotificadorOrcamento_FalhaDeEnvioNaoInterrompeChamador(t *testing.T) {
 	log.SetOutput(&buf)
 	t.Cleanup(func() { log.SetOutput(anterior) })
 
-	notificacao.NewOrcamento(clientes, emails).Notificar(context.Background(), ordemRecebida(t), orcamentoComItens(t), false)
+	notificacao.NewOrcamento(clientes, emails, nil).Notificar(context.Background(), ordemRecebida(t), orcamentoComItens(t), false)
 
 	require.Contains(t, buf.String(), "falha ao enviar e-mail")
 }
@@ -102,4 +129,22 @@ func orcamentoComItens(t *testing.T) *domainorcamento.Orcamento {
 	require.NoError(t, err)
 	require.NoError(t, o.AdicionarItemPeca(8, "Filtro de óleo", 3, 50))
 	return o
+}
+
+type approvalLinkProviderStub struct {
+	links shared.ApprovalEmailLinks
+}
+
+func (s approvalLinkProviderStub) GerarLinksAprovacao(uint64, uint64, uint64) (shared.ApprovalEmailLinks, error) {
+	return s.links, nil
+}
+
+func ordemAguardandoAprovacao(t *testing.T) *domainordemservico.OrdemServico {
+	t.Helper()
+	os := ordemRecebida(t)
+	require.NoError(t, os.IniciarDiagnostico(2))
+	require.NoError(t, os.InformarDiagnostico("Diagnóstico realizado"))
+	require.NoError(t, os.EnviarParaAprovacao(2))
+	os.AtribuirIDsHistoricoPendente([]uint64{1, 2, 3})
+	return os
 }

@@ -55,6 +55,8 @@ func TestNewSender_PadraoLogNaoExigeAWS(t *testing.T) {
 }
 
 func TestNewSESSender_RegiaoVaziaUsaPadrao(t *testing.T) {
+	// A construcao do sender nao deve depender do perfil AWS configurado na
+	// maquina que executa os testes.
 	t.Setenv("AWS_PROFILE", "")
 	t.Setenv("AWS_ACCESS_KEY_ID", "test")
 	t.Setenv("AWS_SECRET_ACCESS_KEY", "test")

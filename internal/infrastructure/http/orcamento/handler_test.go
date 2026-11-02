@@ -477,7 +477,7 @@ func TestHandlerEnviarParaAprovacaoRetorna200EEnviaEmail(t *testing.T) {
 		orcamentoRepo,
 		osRepo,
 		notificacao.NewStatus(clienteRepo, emailSender),
-		notificacao.NewOrcamento(clienteRepo, emailSender),
+		notificacao.NewOrcamento(clienteRepo, emailSender, nil),
 	))
 	router := gin.New()
 	router.Use(comClaims)
@@ -505,7 +505,7 @@ func TestHandlerEnviarParaAprovacaoOrcamentoInexistenteRetorna404(t *testing.T) 
 		orcamentoRepo,
 		osRepo,
 		notificacao.NewStatus(clienteRepo, emailSender),
-		notificacao.NewOrcamento(clienteRepo, emailSender),
+		notificacao.NewOrcamento(clienteRepo, emailSender, nil),
 	))
 	router := gin.New()
 	router.Use(comClaims)

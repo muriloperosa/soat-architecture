@@ -1,11 +1,13 @@
 package http_test
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/gin-gonic/gin"
 	handler "github.com/muriloperosa/soat-architecture/internal/infrastructure/http"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/wiring"
 	"github.com/stretchr/testify/require"
@@ -104,4 +106,29 @@ func TestHealthReady_Retorna503QuandoBancoFalha(t *testing.T) {
 	router.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusServiceUnavailable, rec.Code)
+}
+
+func TestRouter_NaoRegistraTokenDeAprovacaoNoAccessLog(t *testing.T) {
+	previousWriter := gin.DefaultWriter
+	var logOutput bytes.Buffer
+	gin.DefaultWriter = &logOutput
+	t.Cleanup(func() { gin.DefaultWriter = previousWriter })
+
+	db, _ := newMockedGormDB(t)
+	container, err := wiring.NewContainer(nil, db)
+	require.NoError(t, err)
+	router := handler.NewRouter(container)
+
+	secretToken := "eyJhbGciOiJIUzI1NiJ9.secret.signature"
+	request := httptest.NewRequest(http.MethodGet, "/v1/orcamentos/aprovacao?token="+secretToken+"&acao=APROVAR", nil)
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+
+	require.NotContains(t, logOutput.String(), secretToken)
+
+	request = httptest.NewRequest(http.MethodGet, "/v1/health/live", nil)
+	response = httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+	require.Contains(t, logOutput.String(), "/v1/health/live", "o access log continua ativo para outras rotas")
+	require.NotContains(t, logOutput.String(), secretToken)
 }

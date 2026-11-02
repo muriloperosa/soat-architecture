@@ -33,6 +33,25 @@ func TestRejeitarOrcamentoUseCase_RegistraMotivoNoHistorico(t *testing.T) {
 	require.Equal(t, uint64(2), historico[len(historico)-1].AlteradoPor())
 }
 
+func TestRejeitarOrcamentoUseCase_LinkDeCicloAnteriorRetornaConflict(t *testing.T) {
+	repo := ordemservicomocks.NewOrdemServicoRepository(t)
+	os := osComDoisCiclosAprovacao(t, 10)
+	repo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
+	uc := app.NewRejeitarOrcamentoUseCase(repo, nil)
+
+	_, err := uc.Executar(context.Background(), app.RejeitarOrcamentoInput{
+		OrdemServicoID:    42,
+		ClienteID:         10,
+		Motivo:            "Recusa antiga",
+		ApprovalHistoryID: 103,
+	})
+
+	var appErr *shared.AppError
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindConflict, appErr.Kind)
+	require.Equal(t, domainordemservico.StatusAguardandoAprovacao, os.Status())
+}
+
 func TestRejeitarOrcamentoUseCase_ErrosDeBuscaEAtualizacao(t *testing.T) {
 	t.Run("ordem de serviço não encontrada", func(t *testing.T) {
 		repo := ordemservicomocks.NewOrdemServicoRepository(t)

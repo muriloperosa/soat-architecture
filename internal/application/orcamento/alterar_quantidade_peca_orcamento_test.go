@@ -104,7 +104,7 @@ func TestAlterarQuantidadePecaOrcamentoUseCase_AprovadoRemoveReservaEReenvia(t *
 		pecaRepo,
 		runner,
 		notificacao.NewStatus(clienteRepo, emailSender),
-		notificacao.NewOrcamento(clienteRepo, emailSender),
+		notificacao.NewOrcamento(clienteRepo, emailSender, nil),
 	)
 
 	out, err := uc.Executar(context.Background(), app.AlterarQuantidadePecaOrcamentoInput{

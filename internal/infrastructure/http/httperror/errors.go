@@ -30,6 +30,14 @@ var statusByKind = map[shared.ErrorKind]int{
 // Erros que não são *shared.AppError são tratados como internos, sem
 // vazar detalhes de infraestrutura na resposta.
 func RespondError(c *gin.Context, err error) {
+	status, response := ErrorResponseFor(err)
+	c.JSON(status, response)
+}
+
+// ErrorResponseFor traduz um erro de domínio/aplicação para status e corpo HTTP.
+// Erros que não são *shared.AppError são tratados como internos, sem
+// vazar detalhes de infraestrutura na resposta.
+func ErrorResponseFor(err error) (int, ErrorResponse) {
 	var appErr *shared.AppError
 	if !errors.As(err, &appErr) {
 		appErr = shared.NewInternalError("erro interno", err)
@@ -45,11 +53,11 @@ func RespondError(c *gin.Context, err error) {
 		message = "erro interno"
 	}
 
-	c.JSON(status, ErrorResponse{
+	return status, ErrorResponse{
 		Type:    string(appErr.Kind),
 		Message: message,
 		Details: appErr.Details,
-	})
+	}
 }
 
 // RespondValidationError responde 400 (ErrorKind validation), atalho pra

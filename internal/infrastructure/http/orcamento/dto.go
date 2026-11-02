@@ -51,6 +51,12 @@ type RejeitarOrcamentoRequest struct {
 	Motivo string `json:"motivo" binding:"required" example:"Valor acima do esperado"`
 }
 
+type DecisaoPorEmailRequest struct {
+	Token   string `json:"token" form:"token" binding:"required"`
+	Decisao string `json:"decisao" form:"decisao" binding:"required"`
+	Motivo  string `json:"motivo" form:"motivo"`
+}
+
 type FluxoOrcamentoResponse struct {
 	OrdemServicoID uint64 `json:"ordem_servico_id" example:"1"`
 	Status         string `json:"status" example:"APROVADA"`

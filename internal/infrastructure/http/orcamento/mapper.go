@@ -35,6 +35,26 @@ func toAlterarQuantidadePecaInput(ordemServicoID, itemPecaID, usuarioID uint64, 
 	}
 }
 
+func toAprovarOrcamentoInput(ordemServicoID, clienteID, approvalHistoryID uint64) app.AprovarOrcamentoInput {
+	return app.AprovarOrcamentoInput{
+		OrdemServicoID:    ordemServicoID,
+		ClienteID:         clienteID,
+		ApprovalHistoryID: approvalHistoryID,
+	}
+}
+
+func toRejeitarOrcamentoInput(
+	ordemServicoID, clienteID, approvalHistoryID uint64,
+	request DecisaoPorEmailRequest,
+) app.RejeitarOrcamentoInput {
+	return app.RejeitarOrcamentoInput{
+		OrdemServicoID:    ordemServicoID,
+		ClienteID:         clienteID,
+		Motivo:            request.Motivo,
+		ApprovalHistoryID: approvalHistoryID,
+	}
+}
+
 func toRemoverServicoInput(ordemServicoID, itemServicoID uint64) app.RemoverServicoOrcamentoInput {
 	return app.RemoverServicoOrcamentoInput{
 		OrdemServicoID: ordemServicoID,
