@@ -20,9 +20,9 @@ func (_m *ApprovalLinkProvider) EXPECT() *ApprovalLinkProvider_Expecter {
 	return &ApprovalLinkProvider_Expecter{mock: &_m.Mock}
 }
 
-// GerarLinksAprovacao provides a mock function with given fields: ordemServicoID, clienteID
-func (_m *ApprovalLinkProvider) GerarLinksAprovacao(ordemServicoID uint64, clienteID uint64) (shared.ApprovalEmailLinks, error) {
-	ret := _m.Called(ordemServicoID, clienteID)
+// GerarLinksAprovacao provides a mock function with given fields: ordemServicoID, clienteID, approvalHistoryID
+func (_m *ApprovalLinkProvider) GerarLinksAprovacao(ordemServicoID uint64, clienteID uint64, approvalHistoryID uint64) (shared.ApprovalEmailLinks, error) {
+	ret := _m.Called(ordemServicoID, clienteID, approvalHistoryID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GerarLinksAprovacao")
@@ -30,17 +30,17 @@ func (_m *ApprovalLinkProvider) GerarLinksAprovacao(ordemServicoID uint64, clien
 
 	var r0 shared.ApprovalEmailLinks
 	var r1 error
-	if rf, ok := ret.Get(0).(func(uint64, uint64) (shared.ApprovalEmailLinks, error)); ok {
-		return rf(ordemServicoID, clienteID)
+	if rf, ok := ret.Get(0).(func(uint64, uint64, uint64) (shared.ApprovalEmailLinks, error)); ok {
+		return rf(ordemServicoID, clienteID, approvalHistoryID)
 	}
-	if rf, ok := ret.Get(0).(func(uint64, uint64) shared.ApprovalEmailLinks); ok {
-		r0 = rf(ordemServicoID, clienteID)
+	if rf, ok := ret.Get(0).(func(uint64, uint64, uint64) shared.ApprovalEmailLinks); ok {
+		r0 = rf(ordemServicoID, clienteID, approvalHistoryID)
 	} else {
 		r0 = ret.Get(0).(shared.ApprovalEmailLinks)
 	}
 
-	if rf, ok := ret.Get(1).(func(uint64, uint64) error); ok {
-		r1 = rf(ordemServicoID, clienteID)
+	if rf, ok := ret.Get(1).(func(uint64, uint64, uint64) error); ok {
+		r1 = rf(ordemServicoID, clienteID, approvalHistoryID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -56,13 +56,14 @@ type ApprovalLinkProvider_GerarLinksAprovacao_Call struct {
 // GerarLinksAprovacao is a helper method to define mock.On call
 //   - ordemServicoID uint64
 //   - clienteID uint64
-func (_e *ApprovalLinkProvider_Expecter) GerarLinksAprovacao(ordemServicoID interface{}, clienteID interface{}) *ApprovalLinkProvider_GerarLinksAprovacao_Call {
-	return &ApprovalLinkProvider_GerarLinksAprovacao_Call{Call: _e.mock.On("GerarLinksAprovacao", ordemServicoID, clienteID)}
+//   - approvalHistoryID uint64
+func (_e *ApprovalLinkProvider_Expecter) GerarLinksAprovacao(ordemServicoID interface{}, clienteID interface{}, approvalHistoryID interface{}) *ApprovalLinkProvider_GerarLinksAprovacao_Call {
+	return &ApprovalLinkProvider_GerarLinksAprovacao_Call{Call: _e.mock.On("GerarLinksAprovacao", ordemServicoID, clienteID, approvalHistoryID)}
 }
 
-func (_c *ApprovalLinkProvider_GerarLinksAprovacao_Call) Run(run func(ordemServicoID uint64, clienteID uint64)) *ApprovalLinkProvider_GerarLinksAprovacao_Call {
+func (_c *ApprovalLinkProvider_GerarLinksAprovacao_Call) Run(run func(ordemServicoID uint64, clienteID uint64, approvalHistoryID uint64)) *ApprovalLinkProvider_GerarLinksAprovacao_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uint64), args[1].(uint64))
+		run(args[0].(uint64), args[1].(uint64), args[2].(uint64))
 	})
 	return _c
 }
@@ -72,7 +73,7 @@ func (_c *ApprovalLinkProvider_GerarLinksAprovacao_Call) Return(_a0 shared.Appro
 	return _c
 }
 
-func (_c *ApprovalLinkProvider_GerarLinksAprovacao_Call) RunAndReturn(run func(uint64, uint64) (shared.ApprovalEmailLinks, error)) *ApprovalLinkProvider_GerarLinksAprovacao_Call {
+func (_c *ApprovalLinkProvider_GerarLinksAprovacao_Call) RunAndReturn(run func(uint64, uint64, uint64) (shared.ApprovalEmailLinks, error)) *ApprovalLinkProvider_GerarLinksAprovacao_Call {
 	_c.Call.Return(run)
 	return _c
 }

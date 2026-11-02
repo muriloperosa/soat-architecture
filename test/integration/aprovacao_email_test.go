@@ -23,7 +23,7 @@ func TestAprovacaoEmail_EmittedLinkConfirmsApprovalEndToEnd(t *testing.T) {
 	resetDB(t)
 	admin := seedUsuario(t, "Admin Oficina", "admin@oficina.com", "senha123", shared.PapelAdmin)
 	login := doLogin(t, "admin@oficina.com", "senha123")
-	os, links := prepararOrcamentoComLinksEmail(t, admin.ID, login.AccessToken)
+	os, links, _ := prepararOrcamentoComLinksEmail(t, admin.ID, login.AccessToken)
 	approveURL := links["APROVAR"]
 	path := approveURL.RequestURI()
 
@@ -48,7 +48,7 @@ func TestAprovacaoEmail_EmittedLinkRejectsWithRequiredReasonEndToEnd(t *testing.
 	resetDB(t)
 	admin := seedUsuario(t, "Admin Oficina", "admin@oficina.com", "senha123", shared.PapelAdmin)
 	login := doLogin(t, "admin@oficina.com", "senha123")
-	os, links := prepararOrcamentoComLinksEmail(t, admin.ID, login.AccessToken)
+	os, links, _ := prepararOrcamentoComLinksEmail(t, admin.ID, login.AccessToken)
 	rejectURL := links["REJEITAR"]
 
 	getResponse := doRequest(t, http.MethodGet, rejectURL.RequestURI(), "", nil, nil)
@@ -72,7 +72,50 @@ func TestAprovacaoEmail_EmittedLinkRejectsWithRequiredReasonEndToEnd(t *testing.
 	require.Equal(t, "Cliente solicita revisao do valor", motivo)
 }
 
-func prepararOrcamentoComLinksEmail(t *testing.T, adminID uint64, token string) (httpordemservico.OrdemServicoResponse, map[string]*url.URL) {
+func TestAprovacaoEmail_LinkAntigoNaoDecideOrcamentoReenviado(t *testing.T) {
+	resetDB(t)
+	admin := seedUsuario(t, "Admin Oficina", "admin@oficina.com", "senha123", shared.PapelAdmin)
+	login := doLogin(t, "admin@oficina.com", "senha123")
+	os, links, serviceID := prepararOrcamentoComLinksEmail(t, admin.ID, login.AccessToken)
+	linkAntigo := links["APROVAR"]
+
+	rejeitarForm := url.Values{
+		"token":   {links["REJEITAR"].Query().Get("token")},
+		"decisao": {"REJEITAR"},
+		"motivo":  {"Solicito revisão do orçamento"},
+	}
+	rejeitarResponse := postDecisionIntegration(t, rejeitarForm)
+	require.Equal(t, http.StatusOK, rejeitarResponse.Code, rejeitarResponse.Body.String())
+	require.Equal(t, "REJEITADA", statusOSPersistido(t, os.ID))
+
+	osPath := "/v1/ordens-servico/" + strconv.FormatUint(os.ID, 10)
+	editResponse := doRequest(t, http.MethodPost, osPath+"/orcamento/itens-servico", login.AccessToken,
+		httporcamento.AdicionarServicoOrcamentoRequest{ServicoID: serviceID, Quantidade: 1}, nil)
+	require.Equal(t, http.StatusOK, editResponse.Code, editResponse.Body.String())
+
+	var emailReenviado bytes.Buffer
+	previousLogWriter := log.Writer()
+	log.SetOutput(&emailReenviado)
+	defer log.SetOutput(previousLogWriter)
+	resendResponse := doRequest(t, http.MethodPatch, osPath+"/orcamento/enviar-aprovacao", login.AccessToken, nil, nil)
+	require.Equal(t, http.StatusOK, resendResponse.Code, resendResponse.Body.String())
+	linksNovos := linksAprovacaoDoEmail(t, emailReenviado.String())
+	linkNovo := linksNovos["APROVAR"]
+	require.NotEqual(t, linkAntigo.Query().Get("token"), linkNovo.Query().Get("token"))
+	require.Equal(t, "AGUARDANDO_APROVACAO", statusOSPersistido(t, os.ID))
+
+	linkAntigoForm := url.Values{"token": {linkAntigo.Query().Get("token")}, "decisao": {"APROVAR"}}
+	oldLinkResponse := postDecisionIntegration(t, linkAntigoForm)
+	require.Equal(t, http.StatusConflict, oldLinkResponse.Code, oldLinkResponse.Body.String())
+	require.Equal(t, "AGUARDANDO_APROVACAO", statusOSPersistido(t, os.ID), "o link antigo nao deve aprovar o orçamento reenviado")
+
+	linkNovoForm := url.Values{"token": {linkNovo.Query().Get("token")}, "decisao": {"APROVAR"}}
+	newLinkResponse := postDecisionIntegration(t, linkNovoForm)
+	require.Equal(t, http.StatusOK, newLinkResponse.Code, newLinkResponse.Body.String())
+	require.Equal(t, "APROVADA", statusOSPersistido(t, os.ID))
+}
+
+func prepararOrcamentoComLinksEmail(t *testing.T, adminID uint64, token string) (httpordemservico.OrdemServicoResponse, map[string]*url.URL, uint64) {
 	t.Helper()
 
 	os := abrirOrdemServicoParaExecucao(t, adminID, token)
@@ -98,8 +141,17 @@ func prepararOrcamentoComLinksEmail(t *testing.T, adminID uint64, token string) 
 	sendResponse := doRequest(t, http.MethodPatch, osPath+"/orcamento/enviar-aprovacao", token, nil, nil)
 	require.Equal(t, http.StatusOK, sendResponse.Code, sendResponse.Body.String())
 
+	links := linksAprovacaoDoEmail(t, emailLog.String())
+	require.Contains(t, links, "APROVAR", "email simulado deve conter link de aprovacao")
+	require.Contains(t, links, "REJEITAR", "email simulado deve conter link de rejeicao")
+	require.Equal(t, links["APROVAR"].Query().Get("token"), links["REJEITAR"].Query().Get("token"))
+	return os, links, service.ID
+}
+
+func linksAprovacaoDoEmail(t *testing.T, emailLog string) map[string]*url.URL {
+	t.Helper()
 	links := make(map[string]*url.URL, 2)
-	for _, line := range strings.Split(emailLog.String(), "\n") {
+	for _, line := range strings.Split(emailLog, "\n") {
 		for action, marker := range map[string]string{"APROVAR": "Aceitar orçamento: ", "REJEITAR": "Recusar orçamento: "} {
 			index := strings.Index(line, marker)
 			if index < 0 {
@@ -115,7 +167,7 @@ func prepararOrcamentoComLinksEmail(t *testing.T, adminID uint64, token string) 
 	require.Contains(t, links, "APROVAR", "email simulado deve conter link de aprovacao")
 	require.Contains(t, links, "REJEITAR", "email simulado deve conter link de rejeicao")
 	require.Equal(t, links["APROVAR"].Query().Get("token"), links["REJEITAR"].Query().Get("token"))
-	return os, links
+	return links
 }
 
 func postDecisionIntegration(t *testing.T, values url.Values) *httptest.ResponseRecorder {

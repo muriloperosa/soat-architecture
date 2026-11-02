@@ -22,7 +22,9 @@ import (
 
 func NewRouter(c *wiring.Container) *gin.Engine {
 	router := gin.New()
-	router.Use(gin.Logger())
+	router.Use(gin.LoggerWithConfig(gin.LoggerConfig{
+		SkipPaths: []string{"/v1/orcamentos/aprovacao"},
+	}))
 	router.Use(middleware.RecoveryMiddleware())
 	router.Use(middleware.SecurityHeadersMiddleware())
 

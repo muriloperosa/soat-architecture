@@ -14,7 +14,7 @@ func TestApprovalTokenJWT_GerarEValidarToken(t *testing.T) {
 	provider, err := NewApprovalTokenJWT(approvalTestSecret, 24*time.Hour)
 	require.NoError(t, err)
 
-	token, err := provider.GerarToken(123, 456)
+	token, err := provider.GerarToken(123, 456, 789)
 	require.NoError(t, err)
 	require.NotEmpty(t, token)
 
@@ -22,6 +22,7 @@ func TestApprovalTokenJWT_GerarEValidarToken(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint64(123), claims.OrdemServicoID)
 	require.Equal(t, uint64(456), claims.ClienteID)
+	require.Equal(t, uint64(789), claims.ApprovalHistoryID)
 	require.WithinDuration(t, time.Now().Add(24*time.Hour), claims.ExpiresAt, time.Minute)
 }
 
@@ -31,8 +32,9 @@ func TestApprovalTokenJWT_RejeitaTokenExpirado(t *testing.T) {
 	require.Nil(t, provider)
 
 	claims := approvalTokenClaims{
-		OrdemServicoID: 123,
-		ClienteID:      456,
+		OrdemServicoID:    123,
+		ClienteID:         456,
+		ApprovalHistoryID: 789,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(-time.Minute)),
 		},
@@ -52,7 +54,7 @@ func TestApprovalTokenJWT_RejeitaAssinaturaDeOutroSegredo(t *testing.T) {
 	validator, err := NewApprovalTokenJWT("outro-segredo-proprio-de-aprovacao", 24*time.Hour)
 	require.NoError(t, err)
 
-	token, err := issuer.GerarToken(123, 456)
+	token, err := issuer.GerarToken(123, 456, 789)
 	require.NoError(t, err)
 	_, err = validator.ValidarToken(token)
 	require.Error(t, err)
@@ -65,20 +67,34 @@ func TestApprovalTokenJWT_RejeitaTokenMalformadoOuSemExpiracao(t *testing.T) {
 	_, err = provider.ValidarToken("nao-e-um-token")
 	require.Error(t, err)
 
-	withoutExpiry := approvalTokenClaims{OrdemServicoID: 123, ClienteID: 456}
+	withoutExpiry := approvalTokenClaims{OrdemServicoID: 123, ClienteID: 456, ApprovalHistoryID: 789}
 	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, withoutExpiry).SignedString([]byte(approvalTestSecret))
 	require.NoError(t, err)
 	_, err = provider.ValidarToken(token)
 	require.Error(t, err)
+
+	withoutApprovalHistory := approvalTokenClaims{
+		OrdemServicoID: 123,
+		ClienteID:      456,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		},
+	}
+	token, err = jwt.NewWithClaims(jwt.SigningMethodHS256, withoutApprovalHistory).SignedString([]byte(approvalTestSecret))
+	require.NoError(t, err)
+	_, err = provider.ValidarToken(token)
+	require.Error(t, err, "tokens sem identificador do ciclo devem ser inválidos")
 }
 
 func TestApprovalTokenJWT_RejeitaIdentificadoresZero(t *testing.T) {
 	provider, err := NewApprovalTokenJWT(approvalTestSecret, 24*time.Hour)
 	require.NoError(t, err)
 
-	_, err = provider.GerarToken(0, 456)
+	_, err = provider.GerarToken(0, 456, 789)
 	require.Error(t, err)
-	_, err = provider.GerarToken(123, 0)
+	_, err = provider.GerarToken(123, 0, 789)
+	require.Error(t, err)
+	_, err = provider.GerarToken(123, 456, 0)
 	require.Error(t, err)
 }
 

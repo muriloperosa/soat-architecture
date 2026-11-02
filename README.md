@@ -2,10 +2,6 @@
 
 [![CI](https://github.com/muriloperosa/soat-architecture/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/muriloperosa/soat-architecture/actions/workflows/ci.yml)
 [![CD](https://github.com/muriloperosa/soat-architecture/actions/workflows/cd.yml/badge.svg)](https://github.com/muriloperosa/soat-architecture/actions/workflows/cd.yml)
-# Sistema de Oficina Mecânica: Tech Challenge Fase 2
-
-[![CI](https://github.com/muriloperosa/soat-architecture/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/muriloperosa/soat-architecture/actions/workflows/ci.yml)
-[![CD](https://github.com/muriloperosa/soat-architecture/actions/workflows/cd.yml/badge.svg)](https://github.com/muriloperosa/soat-architecture/actions/workflows/cd.yml)
 
 API de gestão de ordens de serviço de uma oficina mecânica, cobrindo o fluxo completo desde o cadastro do cliente e do veículo até a execução do serviço, passando por diagnóstico, orçamento, aprovação, reserva de peças e entrega. Back-end em Go, com Gin, GORM e MySQL 8.
 
@@ -29,7 +25,7 @@ Onde encontrar cada requisito da fase no repositório:
 | --- | --- |
 | Clean Code, Clean Architecture e testes automatizados | Camadas em `internal/`, regra de dependência verificada em `test/architecture/`, testes unitários e de integração ([Qualidade](#qualidade)) |
 | Abertura, consulta de status e listagem priorizada de OS | `/v1/ordens-servico` ([APIs](#apis)) |
-| Aprovação ou recusa do orçamento pelo cliente | `/v1/ordens-servico/{id}/orcamento/aprovar` e `/rejeitar` |
+| Aprovação ou recusa do orçamento pelo cliente | Rotas autenticadas `/v1/ordens-servico/{id}/orcamento/aprovar` e `/rejeitar`; links por e-mail em `GET /v1/orcamentos/aprovacao` (confirmação) e `POST /v1/orcamentos/aprovacao/decisao` (decisão), que reutilizam os mesmos casos de uso |
 | Aviso de mudança de status por e-mail | Notificações via Amazon SES ([Componentes](#componentes-da-aplicação)) |
 | Dockerfile e docker-compose | [`Dockerfile`](Dockerfile), [`compose.yml`](compose.yml) |
 | Deployments, Services, ConfigMaps, Secrets e HPA | [`k8s/`](k8s/) |
@@ -96,6 +92,8 @@ Domínio (entidades e value objects), aplicação (casos de uso) e infraestrutur
 A persistência usa GORM, mas de forma isolada: os models do GORM nunca vazam para a camada de domínio, existe um mapeamento explícito entre entidade e model na fronteira do repositório. Autenticação é feita via JWT, com um middleware que reavalida se o usuário segue ativo a cada requisição, não só no login, e um segundo middleware que autoriza por tipo e papel de usuário. Situações que exigem consistência entre agregados diferentes, como reservar peça e verificar estoque, passam por um `TransactionRunner` que garante atomicidade e usa `SELECT ... FOR UPDATE` para serializar concorrência.
 
 Cada mudança de status da ordem de serviço dispara um e-mail ao cliente depois que a transição já foi persistida. Se o envio falhar, o erro fica no log e o status não é desfeito. No envio do orçamento vai um segundo e-mail, com serviços, peças, quantidades e valores. Localmente o provedor padrão é `log` (`EMAIL_PROVIDER`), que só registra a mensagem e não precisa de AWS. Com `ses`, a aplicação envia pelo Amazon SES e não sobe sem `SES_FROM_ADDRESS`. No SES em sandbox a mensagem só chega a identidades verificadas. No EKS o pod não recebe access key: usa a role do nó. Sem `SES_FROM_ADDRESS` no secret `oficina/api`, o CD sobe com `EMAIL_PROVIDER=log`.
+
+Quando a OS entra em `AGUARDANDO_APROVACAO`, o e-mail do orçamento inclui links temporários para aceitar ou recusar. A validade padrão é de 24 horas (`APPROVAL_TOKEN_TTL_HOURS`). Para habilitá-los, configure `APPROVAL_TOKEN_SECRET` com um segredo forte diferente de `JWT_SECRET` e `PUBLIC_BASE_URL` com uma URL alcançável pelo cliente. O link abre uma página de confirmação; somente o `POST` de decisão altera o orçamento. Os endpoints validam o token e reutilizam os mesmos casos de uso das rotas autenticadas. O `GET` não altera o estado, para evitar decisões causadas por scanners de e-mail. O fluxo usa a própria API e não exige webhook externo.
 
 O versionamento do schema do banco é feito com `golang-migrate`, migrations em `migrations/mysql/`. As decisões estruturais do projeto estão registradas como ADRs em [`docs/adr/`](docs/adr/), e o detalhamento das convenções internas está em [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md).
 
@@ -369,52 +367,6 @@ Um hook de `pre-push` local, instalado via `make hooks-install`, roda mocks, lin
 - [Kubernetes](docs/KUBERNETES.md): manifestos em `k8s/`, requisitos da máquina, deploy no Minikube, comandos `kubectl` e demonstração do autoscaling
 - [Infraestrutura AWS](docs/TERRAFORM.md): Terraform do cluster EKS, do RDS e do secret que o deploy por tag espera encontrar
 - [Preparação da conta AWS](docs/AWS_SETUP.md): ECR, provedor OIDC e role de deploy, uma vez por conta
-- [CI/CD](docs/CI_CD.md): CI em GitHub Actions (testes, cobertura, segurança) e deploy no EKS por tag, com diagramas de cada etapa, credenciais e rollback
-- [Swagger](docs/swagger/): documentação da API gerada a partir dos handlers
-- [Collections Postman](.dev/postman/): todos os endpoints e o fluxo completo da demo
-
-### EKS
-
-Pré-requisitos: o cluster criado pelo [Terraform](#provisionar-a-infraestrutura-com-terraform) e a conta da AWS preparada seguindo [`docs/AWS_SETUP.md`](docs/AWS_SETUP.md). Isso só precisa ser feito uma vez e cria o RDS, o repositório no ECR, o secret `oficina/api` e a role que o GitHub Actions usa para fazer o deploy.
-
-**1. Lançar uma versão.** Basta criar uma tag de versão num commit da `main`. Isso dispara o [`cd.yml`](.github/workflows/cd.yml), que confere se a CI do commit passou, publica a imagem no ECR, roda as migrations e atualiza a API.
-
-```bash
-git switch main
-git pull
-git tag 1.0.1
-git push origin 1.0.1
-```
-
-**2. Acompanhar o deploy** em **Actions → CD (Continuous Deployment)**. No fim do run, o resumo mostra a versão, a imagem e a URL da API. Também dá para pegar a URL direto no cluster:
-
-```bash
-kubectl -n oficina get svc oficina-api -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
-```
-
-**3. Conferir** com `curl http://<url>/v1/health/ready`. O Swagger fica em `http://<url>/swagger/index.html`.
-
-O HPA precisa do `metrics-server`, que não vem instalado no EKS. Sem ele, as metas do HPA ficam em `<unknown>`. Rollback, credenciais e o deploy manual com `make k8s-deploy K8S_OVERLAY=eks` estão em [`docs/CI_CD.md`](docs/CI_CD.md#parte-2-deploy) e [`docs/KUBERNETES.md`](docs/KUBERNETES.md#eks).
-
-## Qualidade
-
-O projeto mantém uma meta de cobertura de 80% ou mais nos domínios críticos, com testes unitários isolados por camada via mocks (`mockery`) e testes de integração que sobem um MySQL real com `testcontainers`, aplicam as migrations de produção e batem no router completo da aplicação, sem nenhum tipo de mock. `make lint` roda `go vet` e as regras estáticas do projeto antes de qualquer commit ser aceito.
-
-A análise de vulnerabilidades cobre três frentes independentes: `govulncheck` para dependências conhecidas (SCA), `gosec` para padrões de risco no código fonte (SAST) e OWASP ZAP para ataques simulados contra a API em execução (DAST), este último rodando autenticado uma vez por papel de usuário para provar que o controle de acesso bloqueia de fato quem não tem permissão. SonarQube fica disponível localmente para análise estática complementar. Todos os detalhes e a justificativa de cada ferramenta estão em [`docs/SECURITY.md`](docs/SECURITY.md).
-
-Um hook de `pre-push` local, instalado via `make hooks-install`, roda mocks, lint, testes e geração do Swagger antes de liberar qualquer push, evitando que código desatualizado ou quebrado chegue ao repositório remoto.
-
-## Documentação
-
-- [Guia de desenvolvimento](docs/DEVELOPMENT_GUIDE.md): pacote completo das informações necessárias para o desenvolvimento do projeto, serve como guia para os desenvolvedores
-- [Arquitetura](docs/ARQUITETURA.md): convenções internas de camadas, mapeamento e injeção de dependência
-- [ADRs](docs/adr/): decisões estruturais registradas e justificadas
-- [Modelo de domínio](docs/DOMAIN_MODEL.md): agregados, entidades e Value Objects
-- [Banco de dados](docs/database/DATABASE.md): modelo relacional e diagrama
-- [Segurança](docs/SECURITY.md): ferramentas de SCA, SAST e DAST usadas e a justificativa de cada uma
-- [Kubernetes](docs/KUBERNETES.md): manifestos em `k8s/`, requisitos da máquina, deploy no Minikube, comandos `kubectl` e demonstração do autoscaling
-- [Infraestrutura AWS](infra/README.md): Terraform do cluster EKS no Learner Lab, com credenciais, apply e destroy
-- [Preparação da conta AWS](docs/AWS_SETUP.md): RDS, ECR, secret da aplicação e role de deploy, uma vez por conta
 - [CI/CD](docs/CI_CD.md): CI em GitHub Actions (testes, cobertura, segurança) e deploy no EKS por tag, com diagramas de cada etapa, credenciais e rollback
 - [Swagger](docs/swagger/): documentação da API gerada a partir dos handlers
 - [Collections Postman](.dev/postman/): todos os endpoints e o fluxo completo da demo

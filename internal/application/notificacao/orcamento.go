@@ -54,11 +54,16 @@ func (n *NotificadorOrcamento) Notificar(
 	assunto := fmt.Sprintf("%s %s", prefixo, os.Numero().String())
 	corpo := montarCorpoEmail(os.Numero().String(), cliente.Nome(), orcamento)
 	if n.approvalLinks != nil {
-		links, err := n.approvalLinks.GerarLinksAprovacao(os.ID(), os.ClienteID())
-		if err != nil {
-			log.Printf("notificação de orçamento da OS %s: falha ao gerar links de aprovação: %v", os.Numero().String(), err)
+		approvalHistoryID, ok := os.IDHistoricoAprovacaoAtual()
+		if !ok {
+			log.Printf("notificação de orçamento da OS %s: histórico da aprovação pendente indisponível para gerar links", os.Numero().String())
 		} else {
-			corpo += montarTextoLinksAprovacao(links)
+			links, err := n.approvalLinks.GerarLinksAprovacao(os.ID(), os.ClienteID(), approvalHistoryID)
+			if err != nil {
+				log.Printf("notificação de orçamento da OS %s: falha ao gerar links de aprovação: %v", os.Numero().String(), err)
+			} else {
+				corpo += montarTextoLinksAprovacao(links)
+			}
 		}
 	}
 	if err := n.emails.Enviar(ctx, cliente.Email().String(), assunto, corpo); err != nil {

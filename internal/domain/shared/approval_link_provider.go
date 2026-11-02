@@ -6,7 +6,7 @@ type ApprovalEmailLinks struct {
 	RejeitarURL string
 }
 
-// ApprovalLinkProvider cria links públicos de decisão para uma OS e seu cliente.
+// ApprovalLinkProvider cria links públicos para um ciclo específico de aprovação.
 type ApprovalLinkProvider interface {
-	GerarLinksAprovacao(ordemServicoID, clienteID uint64) (ApprovalEmailLinks, error)
+	GerarLinksAprovacao(ordemServicoID, clienteID, approvalHistoryID uint64) (ApprovalEmailLinks, error)
 }

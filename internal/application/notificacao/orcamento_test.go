@@ -11,6 +11,7 @@ import (
 	domaincliente "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
 	clientemocks "github.com/muriloperosa/soat-architecture/internal/domain/cliente/mocks"
 	domainorcamento "github.com/muriloperosa/soat-architecture/internal/domain/orcamento"
+	domainordemservico "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	sharedmocks "github.com/muriloperosa/soat-architecture/internal/domain/shared/mocks"
 	"github.com/stretchr/testify/mock"
@@ -48,7 +49,7 @@ func TestNotificadorOrcamento_EnviaItensETotal(t *testing.T) {
 func TestNotificadorOrcamento_IncluiLinksDeAprovacaoNoEmail(t *testing.T) {
 	clientes := clientemocks.NewClienteRepository(t)
 	emails := sharedmocks.NewEmailSender(t)
-	os := ordemRecebida(t)
+	os := ordemAguardandoAprovacao(t)
 	os.AtribuirID(99)
 	cliente, err := domaincliente.NewCliente("52998224725", domaincliente.TipoPessoaFisica, "Maria Silva", "maria@email.com", "11999998888", "senha123", 1)
 	require.NoError(t, err)
@@ -134,6 +135,16 @@ type approvalLinkProviderStub struct {
 	links shared.ApprovalEmailLinks
 }
 
-func (s approvalLinkProviderStub) GerarLinksAprovacao(uint64, uint64) (shared.ApprovalEmailLinks, error) {
+func (s approvalLinkProviderStub) GerarLinksAprovacao(uint64, uint64, uint64) (shared.ApprovalEmailLinks, error) {
 	return s.links, nil
+}
+
+func ordemAguardandoAprovacao(t *testing.T) *domainordemservico.OrdemServico {
+	t.Helper()
+	os := ordemRecebida(t)
+	require.NoError(t, os.IniciarDiagnostico(2))
+	require.NoError(t, os.InformarDiagnostico("Diagnóstico realizado"))
+	require.NoError(t, os.EnviarParaAprovacao(2))
+	os.AtribuirIDsHistoricoPendente([]uint64{1, 2, 3})
+	return os
 }

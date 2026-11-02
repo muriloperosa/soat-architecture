@@ -324,3 +324,17 @@ func (o *OrdemServico) DataAtualizacao() time.Time { return o.dataAtualizacao }
 func (o *OrdemServico) HistoricoStatus() []HistoricoStatus {
 	return append([]HistoricoStatus(nil), o.historicoStatus...)
 }
+
+// IDHistoricoAprovacaoAtual devolve o identificador persistido da transição
+// atual para AGUARDANDO_APROVACAO. O ID vincula links de e-mail a um envio
+// específico e impede que um link anterior decida um orçamento reenviado.
+func (o *OrdemServico) IDHistoricoAprovacaoAtual() (uint64, bool) {
+	if o == nil || o.status != StatusAguardandoAprovacao || len(o.historicoStatus) == 0 {
+		return 0, false
+	}
+	ultimo := o.historicoStatus[len(o.historicoStatus)-1]
+	if ultimo.Status() != StatusAguardandoAprovacao || ultimo.ID() == 0 {
+		return 0, false
+	}
+	return ultimo.ID(), true
+}

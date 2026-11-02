@@ -25,6 +25,7 @@ func RegisterOrcamentoRoutes(rg *gin.RouterGroup, container *wiring.Container) {
 	if container.ApprovalToken != nil {
 		approvalLinkHandler := NewAprovacaoEmailHandler(
 			container.ApprovalToken,
+			container.ClienteStatusRepo,
 			container.Config.PublicBaseURL,
 			container.AprovarOrcamentoUC,
 			container.RejeitarOrcamentoUC,

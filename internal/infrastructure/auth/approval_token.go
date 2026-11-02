@@ -16,8 +16,9 @@ var (
 const approvalTokenSigningMethod = "HS256"
 
 type approvalTokenClaims struct {
-	OrdemServicoID uint64 `json:"ordem_servico_id"`
-	ClienteID      uint64 `json:"cliente_id"`
+	OrdemServicoID    uint64 `json:"ordem_servico_id"`
+	ClienteID         uint64 `json:"cliente_id"`
+	ApprovalHistoryID uint64 `json:"approval_history_id"`
 	jwt.RegisteredClaims
 }
 
@@ -37,15 +38,17 @@ func NewApprovalTokenJWT(secret string, ttl time.Duration) (*ApprovalTokenJWT, e
 	return &ApprovalTokenJWT{secret: []byte(secret), ttl: ttl}, nil
 }
 
-// GerarToken assina os identificadores da OS e do cliente com expiração.
-func (p *ApprovalTokenJWT) GerarToken(ordemServicoID, clienteID uint64) (string, error) {
-	if p == nil || len(p.secret) == 0 || p.ttl <= 0 || ordemServicoID == 0 || clienteID == 0 {
+// GerarToken assina os identificadores da OS, do cliente e do ciclo de
+// aprovação com expiração.
+func (p *ApprovalTokenJWT) GerarToken(ordemServicoID, clienteID, approvalHistoryID uint64) (string, error) {
+	if p == nil || len(p.secret) == 0 || p.ttl <= 0 || ordemServicoID == 0 || clienteID == 0 || approvalHistoryID == 0 {
 		return "", errApprovalTokenConfig
 	}
 
 	claims := approvalTokenClaims{
-		OrdemServicoID: ordemServicoID,
-		ClienteID:      clienteID,
+		OrdemServicoID:    ordemServicoID,
+		ClienteID:         clienteID,
+		ApprovalHistoryID: approvalHistoryID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(p.ttl)),
 		},
@@ -68,13 +71,14 @@ func (p *ApprovalTokenJWT) ValidarToken(raw string) (shared.ApprovalTokenClaims,
 		}
 		return p.secret, nil
 	})
-	if err != nil || token == nil || !token.Valid || claims.OrdemServicoID == 0 || claims.ClienteID == 0 || claims.ExpiresAt == nil {
+	if err != nil || token == nil || !token.Valid || claims.OrdemServicoID == 0 || claims.ClienteID == 0 || claims.ApprovalHistoryID == 0 || claims.ExpiresAt == nil {
 		return shared.ApprovalTokenClaims{}, errApprovalTokenInvalid
 	}
 
 	return shared.ApprovalTokenClaims{
-		OrdemServicoID: claims.OrdemServicoID,
-		ClienteID:      claims.ClienteID,
-		ExpiresAt:      claims.ExpiresAt.Time,
+		OrdemServicoID:    claims.OrdemServicoID,
+		ClienteID:         claims.ClienteID,
+		ApprovalHistoryID: claims.ApprovalHistoryID,
+		ExpiresAt:         claims.ExpiresAt.Time,
 	}, nil
 }

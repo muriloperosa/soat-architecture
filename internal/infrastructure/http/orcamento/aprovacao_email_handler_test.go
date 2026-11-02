@@ -1,6 +1,8 @@
 package orcamento_test
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -27,7 +29,7 @@ import (
 func TestAprovacaoEmailHandler_ConfirmarApenasExibeFormulario(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	tokens := &approvalTokenHandlerStub{}
-	handler := httporcamento.NewAprovacaoEmailHandler(tokens, "https://oficina.example", nil, nil)
+	handler := httporcamento.NewAprovacaoEmailHandler(tokens, statusClienteAtivoHTTP{ativo: true}, "https://oficina.example", nil, nil)
 	engine := gin.New()
 	engine.GET("/v1/orcamentos/aprovacao", handler.Confirmar)
 
@@ -46,7 +48,7 @@ func TestAprovacaoEmailHandler_ConfirmarApenasExibeFormulario(t *testing.T) {
 func TestAprovacaoEmailHandler_ConfirmarRejeitaTokenInvalido(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	tokens := &approvalTokenHandlerStub{err: shared.NewUnauthorizedError("invalid")}
-	handler := httporcamento.NewAprovacaoEmailHandler(tokens, "https://oficina.example", nil, nil)
+	handler := httporcamento.NewAprovacaoEmailHandler(tokens, statusClienteAtivoHTTP{ativo: true}, "https://oficina.example", nil, nil)
 	engine := gin.New()
 	engine.GET("/v1/orcamentos/aprovacao", handler.Confirmar)
 
@@ -60,7 +62,7 @@ func TestAprovacaoEmailHandler_ConfirmarRejeitaTokenInvalido(t *testing.T) {
 func TestAprovacaoEmailHandler_ConfirmarRejeitaAcaoInvalidaSemValidarToken(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	tokens := &approvalTokenHandlerStub{}
-	handler := httporcamento.NewAprovacaoEmailHandler(tokens, "https://oficina.example", nil, nil)
+	handler := httporcamento.NewAprovacaoEmailHandler(tokens, statusClienteAtivoHTTP{ativo: true}, "https://oficina.example", nil, nil)
 	engine := gin.New()
 	engine.GET("/v1/orcamentos/aprovacao", handler.Confirmar)
 
@@ -75,7 +77,7 @@ func TestAprovacaoEmailHandler_ConfirmarRejeitaAcaoInvalidaSemValidarToken(t *te
 func TestAprovacaoEmailHandler_DecidirRejeitaTokenInvalido(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	tokens := &approvalTokenHandlerStub{err: shared.NewUnauthorizedError("invalid")}
-	handler := httporcamento.NewAprovacaoEmailHandler(tokens, "https://oficina.example", nil, nil)
+	handler := httporcamento.NewAprovacaoEmailHandler(tokens, statusClienteAtivoHTTP{ativo: true}, "https://oficina.example", nil, nil)
 	engine := gin.New()
 	engine.POST("/v1/orcamentos/aprovacao/decisao", handler.Decidir)
 
@@ -85,10 +87,36 @@ func TestAprovacaoEmailHandler_DecidirRejeitaTokenInvalido(t *testing.T) {
 	require.Equal(t, 1, tokens.validations)
 }
 
+func TestAprovacaoEmailHandler_DecidirRejeitaClienteInativo(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	tokens := &approvalTokenHandlerStub{claims: shared.ApprovalTokenClaims{OrdemServicoID: 71, ClienteID: 92, ApprovalHistoryID: 103}}
+	status := statusClienteAtivoHTTP{ativo: false}
+	handler := httporcamento.NewAprovacaoEmailHandler(tokens, status, "https://oficina.example", nil, nil)
+	engine := gin.New()
+	engine.POST("/v1/orcamentos/aprovacao/decisao", handler.Decidir)
+
+	response := postApprovalDecision(t, engine, url.Values{"token": {"token-valido"}, "decisao": {"APROVAR"}})
+
+	require.Equal(t, http.StatusUnauthorized, response.Code)
+}
+
+func TestAprovacaoEmailHandler_DecidirFalhaAoConsultarStatusCliente(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	tokens := &approvalTokenHandlerStub{claims: shared.ApprovalTokenClaims{OrdemServicoID: 71, ClienteID: 92, ApprovalHistoryID: 103}}
+	status := statusClienteAtivoHTTP{err: errors.New("database unavailable")}
+	handler := httporcamento.NewAprovacaoEmailHandler(tokens, status, "https://oficina.example", nil, nil)
+	engine := gin.New()
+	engine.POST("/v1/orcamentos/aprovacao/decisao", handler.Decidir)
+
+	response := postApprovalDecision(t, engine, url.Values{"token": {"token-valido"}, "decisao": {"APROVAR"}})
+
+	require.Equal(t, http.StatusInternalServerError, response.Code)
+}
+
 func TestAprovacaoEmailHandler_DecidirRejeitaDecisaoInvalida(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	tokens := &approvalTokenHandlerStub{claims: shared.ApprovalTokenClaims{OrdemServicoID: 71, ClienteID: 92}}
-	handler := httporcamento.NewAprovacaoEmailHandler(tokens, "https://oficina.example", nil, nil)
+	tokens := &approvalTokenHandlerStub{claims: shared.ApprovalTokenClaims{OrdemServicoID: 71, ClienteID: 92, ApprovalHistoryID: 103}}
+	handler := httporcamento.NewAprovacaoEmailHandler(tokens, statusClienteAtivoHTTP{ativo: true}, "https://oficina.example", nil, nil)
 	engine := gin.New()
 	engine.POST("/v1/orcamentos/aprovacao/decisao", handler.Decidir)
 
@@ -100,12 +128,12 @@ func TestAprovacaoEmailHandler_DecidirRejeitaDecisaoInvalida(t *testing.T) {
 
 func TestAprovacaoEmailHandler_DecidirRejeicaoSemMotivoNaoAlteraOS(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	tokens := &approvalTokenHandlerStub{claims: shared.ApprovalTokenClaims{OrdemServicoID: 71, ClienteID: 92}}
+	tokens := &approvalTokenHandlerStub{claims: shared.ApprovalTokenClaims{OrdemServicoID: 71, ClienteID: 92, ApprovalHistoryID: 103}}
 	os := ordemAguardandoAprovacaoHTTP(t, 92)
 	osRepo := ordemservicomocks.NewOrdemServicoRepository(t)
 	osRepo.EXPECT().BuscarPorID(mock.Anything, uint64(71)).Return(os, nil)
 	rejeitar := app.NewRejeitarOrcamentoUseCase(osRepo, notificacao.NewStatus(nil, nil))
-	handler := httporcamento.NewAprovacaoEmailHandler(tokens, "https://oficina.example", nil, rejeitar)
+	handler := httporcamento.NewAprovacaoEmailHandler(tokens, statusClienteAtivoHTTP{ativo: true}, "https://oficina.example", nil, rejeitar)
 	engine := gin.New()
 	engine.POST("/v1/orcamentos/aprovacao/decisao", handler.Decidir)
 
@@ -117,7 +145,7 @@ func TestAprovacaoEmailHandler_DecidirRejeicaoSemMotivoNaoAlteraOS(t *testing.T)
 
 func TestAprovacaoEmailHandler_DecidirDerivaIdentificadoresDoToken(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	tokens := &approvalTokenHandlerStub{claims: shared.ApprovalTokenClaims{OrdemServicoID: 71, ClienteID: 92}}
+	tokens := &approvalTokenHandlerStub{claims: shared.ApprovalTokenClaims{OrdemServicoID: 71, ClienteID: 92, ApprovalHistoryID: 103}}
 	os := ordemAguardandoAprovacaoHTTP(t, 92)
 	osRepo := ordemservicomocks.NewOrdemServicoRepository(t)
 	orcamentoRepo := orcamentomocks.NewOrcamentoRepository(t)
@@ -137,7 +165,7 @@ func TestAprovacaoEmailHandler_DecidirDerivaIdentificadoresDoToken(t *testing.T)
 		&helpers.TransactionRunnerMock{},
 		notificacao.NewStatus(nil, nil),
 	)
-	handler := httporcamento.NewAprovacaoEmailHandler(tokens, "https://oficina.example", aprovar, nil)
+	handler := httporcamento.NewAprovacaoEmailHandler(tokens, statusClienteAtivoHTTP{ativo: true}, "https://oficina.example", aprovar, nil)
 	engine := gin.New()
 	engine.POST("/v1/orcamentos/aprovacao/decisao", handler.Decidir)
 
@@ -154,13 +182,13 @@ func TestAprovacaoEmailHandler_DecidirDerivaIdentificadoresDoToken(t *testing.T)
 
 func TestAprovacaoEmailHandler_DecidirPassaMotivoParaUseCaseDeRejeicao(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	tokens := &approvalTokenHandlerStub{claims: shared.ApprovalTokenClaims{OrdemServicoID: 71, ClienteID: 92}}
+	tokens := &approvalTokenHandlerStub{claims: shared.ApprovalTokenClaims{OrdemServicoID: 71, ClienteID: 92, ApprovalHistoryID: 103}}
 	os := ordemAguardandoAprovacaoHTTP(t, 92)
 	osRepo := ordemservicomocks.NewOrdemServicoRepository(t)
 	osRepo.EXPECT().BuscarPorID(mock.Anything, uint64(71)).Return(os, nil)
 	osRepo.EXPECT().Atualizar(mock.Anything, os).Return(nil)
 	rejeitar := app.NewRejeitarOrcamentoUseCase(osRepo, notificacao.NewStatus(nil, nil))
-	handler := httporcamento.NewAprovacaoEmailHandler(tokens, "https://oficina.example", nil, rejeitar)
+	handler := httporcamento.NewAprovacaoEmailHandler(tokens, statusClienteAtivoHTTP{ativo: true}, "https://oficina.example", nil, rejeitar)
 	engine := gin.New()
 	engine.POST("/v1/orcamentos/aprovacao/decisao", handler.Decidir)
 
@@ -183,6 +211,7 @@ func ordemAguardandoAprovacaoHTTP(t *testing.T, clienteID uint64) *domainordemse
 	require.NoError(t, os.IniciarDiagnostico(2))
 	require.NoError(t, os.InformarDiagnostico("Diagnóstico realizado"))
 	require.NoError(t, os.EnviarParaAprovacao(2))
+	os.AtribuirIDsHistoricoPendente([]uint64{101, 102, 103})
 	return os
 }
 
@@ -201,7 +230,16 @@ type approvalTokenHandlerStub struct {
 	validations int
 }
 
-func (s *approvalTokenHandlerStub) GerarToken(uint64, uint64) (string, error) { return "", nil }
+type statusClienteAtivoHTTP struct {
+	ativo bool
+	err   error
+}
+
+func (s statusClienteAtivoHTTP) EstaAtivo(_ context.Context, _ uint64) (bool, error) {
+	return s.ativo, s.err
+}
+
+func (s *approvalTokenHandlerStub) GerarToken(uint64, uint64, uint64) (string, error) { return "", nil }
 
 func (s *approvalTokenHandlerStub) ValidarToken(string) (shared.ApprovalTokenClaims, error) {
 	s.validations++

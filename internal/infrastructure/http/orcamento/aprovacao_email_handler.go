@@ -2,17 +2,20 @@ package orcamento
 
 import (
 	"html/template"
+	"log"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	app "github.com/muriloperosa/soat-architecture/internal/application/orcamento"
+	domainauth "github.com/muriloperosa/soat-architecture/internal/domain/auth"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 	"github.com/muriloperosa/soat-architecture/internal/infrastructure/http/httperror"
 )
 
 type AprovacaoEmailHandler struct {
 	tokens        shared.ApprovalTokenProvider
+	clienteStatus domainauth.UsuarioStatusRepository
 	publicBaseURL string
 	aprovar       *app.AprovarOrcamentoUseCase
 	rejeitar      *app.RejeitarOrcamentoUseCase
@@ -20,12 +23,14 @@ type AprovacaoEmailHandler struct {
 
 func NewAprovacaoEmailHandler(
 	tokens shared.ApprovalTokenProvider,
+	clienteStatus domainauth.UsuarioStatusRepository,
 	publicBaseURL string,
 	aprovar *app.AprovarOrcamentoUseCase,
 	rejeitar *app.RejeitarOrcamentoUseCase,
 ) *AprovacaoEmailHandler {
 	return &AprovacaoEmailHandler{
 		tokens:        tokens,
+		clienteStatus: clienteStatus,
 		publicBaseURL: strings.TrimRight(publicBaseURL, "/"),
 		aprovar:       aprovar,
 		rejeitar:      rejeitar,
@@ -48,6 +53,27 @@ var approvalConfirmationPage = template.Must(template.New("approval-confirmation
       {{end}}
       <button type="submit">Confirmar</button>
     </form>
+  </main>
+</body>
+</html>`))
+
+var approvalDecisionErrorPage = template.Must(template.New("approval-decision-error").Parse(`<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Não foi possível registrar a decisão</title></head>
+<body>
+  <main>
+    <h1>Não foi possível registrar a decisão</h1>
+    <p>{{.Message}}</p>
+  </main>
+</body>
+</html>`))
+
+var approvalDecisionSuccessPage = template.Must(template.New("approval-decision-success").Parse(`<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Decisão registrada</title></head>
+<body>
+  <main>
+    <h1>{{.Message}}</h1>
   </main>
 </body>
 </html>`))
@@ -87,6 +113,7 @@ func (h *AprovacaoEmailHandler) Confirmar(c *gin.Context) {
 		Token:    c.Query("token"),
 		PostURL:  h.publicBaseURL + "/v1/orcamentos/aprovacao/decisao",
 	}); err != nil {
+		log.Printf("falha ao renderizar confirmação de aprovação de orçamento: %v", err)
 		return
 	}
 }
@@ -117,30 +144,41 @@ func (h *AprovacaoEmailHandler) Decidir(c *gin.Context) {
 	}
 
 	claims, err := h.tokens.ValidarToken(request.Token)
-	if err != nil {
+	if err != nil || claims.OrdemServicoID == 0 || claims.ClienteID == 0 || claims.ApprovalHistoryID == 0 {
 		httperror.RespondUnauthorizedError(c, "Link inválido ou expirado.")
+		return
+	}
+	ativo, err := h.clienteStatus.EstaAtivo(c.Request.Context(), claims.ClienteID)
+	if err != nil {
+		httperror.RespondInternalError(c, "erro ao consultar status do cliente", err)
+		return
+	}
+	if !ativo {
+		httperror.RespondUnauthorizedError(c, "Requisição não autorizada.")
 		return
 	}
 
 	var output app.FluxoOrcamentoOutput
 	switch request.Decisao {
 	case "APROVAR":
-		output, err = h.aprovar.Executar(c.Request.Context(), app.AprovarOrcamentoInput{
-			OrdemServicoID: claims.OrdemServicoID,
-			ClienteID:      claims.ClienteID,
-		})
+		output, err = h.aprovar.Executar(c.Request.Context(), toAprovarOrcamentoInput(
+			claims.OrdemServicoID,
+			claims.ClienteID,
+			claims.ApprovalHistoryID,
+		))
 	case "REJEITAR":
-		output, err = h.rejeitar.Executar(c.Request.Context(), app.RejeitarOrcamentoInput{
-			OrdemServicoID: claims.OrdemServicoID,
-			ClienteID:      claims.ClienteID,
-			Motivo:         request.Motivo,
-		})
+		output, err = h.rejeitar.Executar(c.Request.Context(), toRejeitarOrcamentoInput(
+			claims.OrdemServicoID,
+			claims.ClienteID,
+			claims.ApprovalHistoryID,
+			request,
+		))
 	default:
 		httperror.RespondValidationError(c, "Decisão deve ser APROVAR ou REJEITAR.")
 		return
 	}
 	if err != nil {
-		httperror.RespondError(c, err)
+		respondDecisionError(c, err)
 		return
 	}
 
@@ -154,5 +192,24 @@ func (h *AprovacaoEmailHandler) Decidir(c *gin.Context) {
 	if request.Decisao == "REJEITAR" {
 		resultado = "Orçamento recusado com sucesso."
 	}
-	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte("<!doctype html><html lang=\"pt-BR\"><meta charset=\"utf-8\"><title>Decisão registrada</title><body><h1>"+resultado+"</h1></body></html>"))
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.Status(http.StatusOK)
+	if err := approvalDecisionSuccessPage.Execute(c.Writer, struct{ Message string }{Message: resultado}); err != nil {
+		log.Printf("falha ao renderizar resultado da decisão de orçamento: %v", err)
+	}
+}
+
+func respondDecisionError(c *gin.Context, err error) {
+	if strings.Contains(c.GetHeader("Accept"), "application/json") {
+		httperror.RespondError(c, err)
+		return
+	}
+
+	status, response := httperror.ErrorResponseFor(err)
+	c.Header("Cache-Control", "no-store")
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.Status(status)
+	if err := approvalDecisionErrorPage.Execute(c.Writer, response); err != nil {
+		log.Printf("falha ao renderizar erro da decisão de orçamento: %v", err)
+	}
 }

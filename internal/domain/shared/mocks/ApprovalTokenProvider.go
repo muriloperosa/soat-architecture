@@ -20,9 +20,9 @@ func (_m *ApprovalTokenProvider) EXPECT() *ApprovalTokenProvider_Expecter {
 	return &ApprovalTokenProvider_Expecter{mock: &_m.Mock}
 }
 
-// GerarToken provides a mock function with given fields: ordemServicoID, clienteID
-func (_m *ApprovalTokenProvider) GerarToken(ordemServicoID uint64, clienteID uint64) (string, error) {
-	ret := _m.Called(ordemServicoID, clienteID)
+// GerarToken provides a mock function with given fields: ordemServicoID, clienteID, approvalHistoryID
+func (_m *ApprovalTokenProvider) GerarToken(ordemServicoID uint64, clienteID uint64, approvalHistoryID uint64) (string, error) {
+	ret := _m.Called(ordemServicoID, clienteID, approvalHistoryID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GerarToken")
@@ -30,17 +30,17 @@ func (_m *ApprovalTokenProvider) GerarToken(ordemServicoID uint64, clienteID uin
 
 	var r0 string
 	var r1 error
-	if rf, ok := ret.Get(0).(func(uint64, uint64) (string, error)); ok {
-		return rf(ordemServicoID, clienteID)
+	if rf, ok := ret.Get(0).(func(uint64, uint64, uint64) (string, error)); ok {
+		return rf(ordemServicoID, clienteID, approvalHistoryID)
 	}
-	if rf, ok := ret.Get(0).(func(uint64, uint64) string); ok {
-		r0 = rf(ordemServicoID, clienteID)
+	if rf, ok := ret.Get(0).(func(uint64, uint64, uint64) string); ok {
+		r0 = rf(ordemServicoID, clienteID, approvalHistoryID)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
 
-	if rf, ok := ret.Get(1).(func(uint64, uint64) error); ok {
-		r1 = rf(ordemServicoID, clienteID)
+	if rf, ok := ret.Get(1).(func(uint64, uint64, uint64) error); ok {
+		r1 = rf(ordemServicoID, clienteID, approvalHistoryID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -56,13 +56,14 @@ type ApprovalTokenProvider_GerarToken_Call struct {
 // GerarToken is a helper method to define mock.On call
 //   - ordemServicoID uint64
 //   - clienteID uint64
-func (_e *ApprovalTokenProvider_Expecter) GerarToken(ordemServicoID interface{}, clienteID interface{}) *ApprovalTokenProvider_GerarToken_Call {
-	return &ApprovalTokenProvider_GerarToken_Call{Call: _e.mock.On("GerarToken", ordemServicoID, clienteID)}
+//   - approvalHistoryID uint64
+func (_e *ApprovalTokenProvider_Expecter) GerarToken(ordemServicoID interface{}, clienteID interface{}, approvalHistoryID interface{}) *ApprovalTokenProvider_GerarToken_Call {
+	return &ApprovalTokenProvider_GerarToken_Call{Call: _e.mock.On("GerarToken", ordemServicoID, clienteID, approvalHistoryID)}
 }
 
-func (_c *ApprovalTokenProvider_GerarToken_Call) Run(run func(ordemServicoID uint64, clienteID uint64)) *ApprovalTokenProvider_GerarToken_Call {
+func (_c *ApprovalTokenProvider_GerarToken_Call) Run(run func(ordemServicoID uint64, clienteID uint64, approvalHistoryID uint64)) *ApprovalTokenProvider_GerarToken_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uint64), args[1].(uint64))
+		run(args[0].(uint64), args[1].(uint64), args[2].(uint64))
 	})
 	return _c
 }
@@ -72,7 +73,7 @@ func (_c *ApprovalTokenProvider_GerarToken_Call) Return(_a0 string, _a1 error) *
 	return _c
 }
 
-func (_c *ApprovalTokenProvider_GerarToken_Call) RunAndReturn(run func(uint64, uint64) (string, error)) *ApprovalTokenProvider_GerarToken_Call {
+func (_c *ApprovalTokenProvider_GerarToken_Call) RunAndReturn(run func(uint64, uint64, uint64) (string, error)) *ApprovalTokenProvider_GerarToken_Call {
 	_c.Call.Return(run)
 	return _c
 }

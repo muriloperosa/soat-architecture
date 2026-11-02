@@ -33,6 +33,9 @@ func (uc *RejeitarOrcamentoUseCase) Executar(ctx context.Context, input Rejeitar
 	if input.ClienteID == 0 || os.ClienteID() != input.ClienteID {
 		return FluxoOrcamentoOutput{}, shared.NewForbiddenError("acesso à ordem de serviço não permitido")
 	}
+	if err := validarCicloAprovacao(os, input.ApprovalHistoryID); err != nil {
+		return FluxoOrcamentoOutput{}, err
+	}
 
 	statusAnterior := os.Status()
 	if err := os.RejeitarOrcamento(input.Motivo); err != nil {

@@ -24,7 +24,7 @@ func NewApprovalEmailLinkProvider(
 	publicBaseURL string,
 ) (*ApprovalEmailLinkProvider, error) {
 	parsedURL, err := url.Parse(strings.TrimRight(publicBaseURL, "/"))
-	if tokens == nil || err != nil || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") || parsedURL.Host == "" || parsedURL.User != nil || parsedURL.RawQuery != "" || parsedURL.Fragment != "" {
+	if tokens == nil || err != nil || !validPublicBaseURL(parsedURL) {
 		return nil, errApprovalLinkConfig
 	}
 	return &ApprovalEmailLinkProvider{
@@ -33,11 +33,20 @@ func NewApprovalEmailLinkProvider(
 	}, nil
 }
 
-func (p *ApprovalEmailLinkProvider) GerarLinksAprovacao(ordemServicoID, clienteID uint64) (shared.ApprovalEmailLinks, error) {
+func validPublicBaseURL(u *url.URL) bool {
+	return u != nil &&
+		(u.Scheme == "http" || u.Scheme == "https") &&
+		u.Host != "" &&
+		u.User == nil &&
+		u.RawQuery == "" &&
+		u.Fragment == ""
+}
+
+func (p *ApprovalEmailLinkProvider) GerarLinksAprovacao(ordemServicoID, clienteID, approvalHistoryID uint64) (shared.ApprovalEmailLinks, error) {
 	if p == nil || p.tokens == nil {
 		return shared.ApprovalEmailLinks{}, errApprovalLinkConfig
 	}
-	token, err := p.tokens.GerarToken(ordemServicoID, clienteID)
+	token, err := p.tokens.GerarToken(ordemServicoID, clienteID, approvalHistoryID)
 	if err != nil {
 		return shared.ApprovalEmailLinks{}, err
 	}
