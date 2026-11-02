@@ -22,6 +22,9 @@ configMapGenerator:
     literals:
       - DB_HOST=REPLACE_WITH_RDS_ENDPOINT
       - DB_USER=REPLACE_WITH_RDS_USERNAME
+      - EMAIL_PROVIDER=REPLACE_WITH_EMAIL_PROVIDER
+      - AWS_REGION=us-east-1
+      - SES_FROM_ADDRESS=REPLACE_WITH_SES_FROM_ADDRESS
 
 secretGenerator:
   - name: oficina-api-secrets

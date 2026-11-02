@@ -175,7 +175,7 @@ Nunca aponte esse scan para produção ou para o banco de desenvolvimento. A sta
 
 O workflow [`cd.yml`](../.github/workflows/cd.yml) leva uma versão da `main` para o cluster EKS na conta AWS do projeto. Ele cobre os itens de CI/CD do Tech Challenge: build, testes, imagem Docker, deploy do banco (migrations), aplicação dos manifestos e deploy no Kubernetes.
 
-Por enquanto o CD não provisiona infraestrutura. O job `infra` (`terraform apply` de `infra/`) já está no workflow, mas está desligado (`if: false`) e aparece como *skipped* em todo run. Enquanto isso, cluster EKS, RDS e rede são criados pelo Terraform de `infra/` rodado fora do pipeline, e o deploy parte do princípio de que eles já existem. Ver [Terraform no pipeline](#terraform-no-pipeline).
+Por enquanto o CD não provisiona infraestrutura. O job `infra` (`terraform apply` de `infra/`) já está no workflow, mas está desligado (`if: false`) e aparece como *skipped* em todo run. Enquanto isso, cluster EKS, RDS e o secret `oficina/api` são criados pelo Terraform de [`infra/`](../infra/README.md) rodado fora do pipeline, e o deploy parte do princípio de que eles já existem. Ver [Terraform no pipeline](#terraform-no-pipeline).
 
 ### Fluxo do deploy
 
@@ -302,8 +302,9 @@ ARN de role não é segredo, por isso vai em *variables* e não em *secrets*.
 | `DB_USER` | Usuário do banco |
 | `DB_PASSWORD` | Senha, só letras e números (entra na URL do Job de migration, ver ADR 0006). O pipeline recusa outro formato |
 | `JWT_SECRET` | Chave HS256, gere com `openssl rand -hex 32` |
+| `SES_FROM_ADDRESS` | Remetente verificado no SES. Vazio faz o deploy usar `EMAIL_PROVIDER=log` |
 
-O job `deploy` lê o secret e mascara os valores sensíveis no log (`::add-mask::`). `DB_PASSWORD` e `JWT_SECRET` vão para `k8s/overlays/eks/secrets.env` (permissão 600, apagado no fim do job mesmo se algo falhar), de onde o Kustomize gera o Secret `oficina-api-secrets`. `DB_HOST` e `DB_USER` substituem os placeholders `REPLACE_WITH_RDS_ENDPOINT` e `REPLACE_WITH_RDS_USERNAME` do overlay EKS, só na cópia do repositório dentro do runner.
+O job `deploy` lê o secret e mascara os valores sensíveis no log (`::add-mask::`). `DB_PASSWORD` e `JWT_SECRET` vão para `k8s/overlays/eks/secrets.env` (permissão 600, apagado no fim do job mesmo se algo falhar), de onde o Kustomize gera o Secret `oficina-api-secrets`. `DB_HOST`, `DB_USER`, `EMAIL_PROVIDER` e `SES_FROM_ADDRESS` substituem os placeholders do overlay EKS, só na cópia do repositório dentro do runner. O pod não recebe access key da AWS.
 
 ### Preparação da conta AWS (uma vez)
 
