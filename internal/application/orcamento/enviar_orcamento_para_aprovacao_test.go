@@ -75,7 +75,7 @@ func TestEnviarOrcamentoParaAprovacaoUseCase_ComSucesso(t *testing.T) {
 		orcamentoRepo,
 		osRepo,
 		notificacao.NewStatus(clienteRepo, emailSender),
-		notificacao.NewOrcamento(clienteRepo, emailSender),
+		notificacao.NewOrcamento(clienteRepo, emailSender, nil),
 	)
 	output, err := uc.Executar(context.Background(), app.EnviarOrcamentoParaAprovacaoInput{OrdemServicoID: 42, UsuarioID: 30})
 
@@ -102,7 +102,7 @@ func TestEnviarOrcamentoParaAprovacaoUseCase_OrcamentoInexistente(t *testing.T) 
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).
 		Return(nil, domainorcamento.ErrOrcamentoNaoEncontrado)
 
-	uc := app.NewEnviarOrcamentoParaAprovacaoUseCase(orcamentoRepo, osRepo, notificacao.NewStatus(clienteRepo, emailSender), notificacao.NewOrcamento(clienteRepo, emailSender))
+	uc := app.NewEnviarOrcamentoParaAprovacaoUseCase(orcamentoRepo, osRepo, notificacao.NewStatus(clienteRepo, emailSender), notificacao.NewOrcamento(clienteRepo, emailSender, nil))
 	_, err := uc.Executar(context.Background(), app.EnviarOrcamentoParaAprovacaoInput{OrdemServicoID: 42, UsuarioID: 30})
 
 	require.ErrorIs(t, err, domainorcamento.ErrOrcamentoNaoEncontrado)
@@ -123,7 +123,7 @@ func TestEnviarOrcamentoParaAprovacaoUseCase_TransicaoInvalida(t *testing.T) {
 	orcamentoRepo.EXPECT().BuscarPorOrdemServicoID(mock.Anything, uint64(42)).Return(orcamentoVazio(t, 42), nil)
 	osRepo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(osRecebida, nil)
 
-	uc := app.NewEnviarOrcamentoParaAprovacaoUseCase(orcamentoRepo, osRepo, notificacao.NewStatus(clienteRepo, emailSender), notificacao.NewOrcamento(clienteRepo, emailSender))
+	uc := app.NewEnviarOrcamentoParaAprovacaoUseCase(orcamentoRepo, osRepo, notificacao.NewStatus(clienteRepo, emailSender), notificacao.NewOrcamento(clienteRepo, emailSender, nil))
 	_, err = uc.Executar(context.Background(), app.EnviarOrcamentoParaAprovacaoInput{OrdemServicoID: 42, UsuarioID: 30})
 
 	require.ErrorIs(t, err, domainordemservico.ErrTransicaoStatusInvalida)
@@ -143,7 +143,7 @@ func TestEnviarOrcamentoParaAprovacaoUseCase_ClienteInexistenteNaoDesfazStatus(t
 	osRepo.EXPECT().Atualizar(mock.Anything, os).Return(nil)
 	clienteRepo.EXPECT().BuscarPorID(mock.Anything, uint64(10)).Return(nil, domaincliente.ErrClienteNaoEncontrado).Twice()
 
-	uc := app.NewEnviarOrcamentoParaAprovacaoUseCase(orcamentoRepo, osRepo, notificacao.NewStatus(clienteRepo, emailSender), notificacao.NewOrcamento(clienteRepo, emailSender))
+	uc := app.NewEnviarOrcamentoParaAprovacaoUseCase(orcamentoRepo, osRepo, notificacao.NewStatus(clienteRepo, emailSender), notificacao.NewOrcamento(clienteRepo, emailSender, nil))
 	_, err := uc.Executar(context.Background(), app.EnviarOrcamentoParaAprovacaoInput{OrdemServicoID: 42, UsuarioID: 30})
 
 	require.NoError(t, err)
@@ -175,7 +175,7 @@ func TestEnviarOrcamentoParaAprovacaoUseCase_FalhaDeEmailNaoDesfazStatus(t *test
 		}), mock.Anything).
 		Return(nil)
 
-	uc := app.NewEnviarOrcamentoParaAprovacaoUseCase(orcamentoRepo, osRepo, notificacao.NewStatus(clienteRepo, emailSender), notificacao.NewOrcamento(clienteRepo, emailSender))
+	uc := app.NewEnviarOrcamentoParaAprovacaoUseCase(orcamentoRepo, osRepo, notificacao.NewStatus(clienteRepo, emailSender), notificacao.NewOrcamento(clienteRepo, emailSender, nil))
 	_, err := uc.Executar(context.Background(), app.EnviarOrcamentoParaAprovacaoInput{OrdemServicoID: 42, UsuarioID: 30})
 
 	require.NoError(t, err)
@@ -207,7 +207,7 @@ func TestEnviarOrcamentoParaAprovacaoUseCase_FalhaDeEmailDoOrcamentoNaoDesfazSta
 		}), mock.Anything).
 		Return(errors.New("provedor indisponível"))
 
-	uc := app.NewEnviarOrcamentoParaAprovacaoUseCase(orcamentoRepo, osRepo, notificacao.NewStatus(clienteRepo, emailSender), notificacao.NewOrcamento(clienteRepo, emailSender))
+	uc := app.NewEnviarOrcamentoParaAprovacaoUseCase(orcamentoRepo, osRepo, notificacao.NewStatus(clienteRepo, emailSender), notificacao.NewOrcamento(clienteRepo, emailSender, nil))
 	_, err := uc.Executar(context.Background(), app.EnviarOrcamentoParaAprovacaoInput{OrdemServicoID: 42, UsuarioID: 30})
 
 	require.NoError(t, err)
@@ -224,7 +224,7 @@ func TestEnviarOrcamentoParaAprovacaoUseCase_OrcamentoVazioNaoPodeSerEnviado(t *
 	os := osEmDiagnosticoComDiagnostico(t, 42)
 	osRepo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 
-	uc := app.NewEnviarOrcamentoParaAprovacaoUseCase(orcamentoRepo, osRepo, notificacao.NewStatus(clienteRepo, emailSender), notificacao.NewOrcamento(clienteRepo, emailSender))
+	uc := app.NewEnviarOrcamentoParaAprovacaoUseCase(orcamentoRepo, osRepo, notificacao.NewStatus(clienteRepo, emailSender), notificacao.NewOrcamento(clienteRepo, emailSender, nil))
 	_, err := uc.Executar(context.Background(), app.EnviarOrcamentoParaAprovacaoInput{OrdemServicoID: 42, UsuarioID: 30})
 
 	require.ErrorIs(t, err, domainorcamento.ErrOrcamentoVazio)

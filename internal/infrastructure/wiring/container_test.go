@@ -46,10 +46,15 @@ func TestNewContainerComConfiguracao(t *testing.T) {
 		JWTSecret:                "test-secret",
 		JWTAccessTokenTTLMinutes: 15,
 		JWTRefreshTokenTTLHours:  24,
+		ApprovalTokenSecret:      "test-approval-secret",
+		ApprovalTokenTTLHours:    24,
+		PublicBaseURL:            "https://oficina.example",
 	}, db)
 	require.NoError(t, err)
 
 	require.NotNil(t, container.JWTAuth)
+	require.NotNil(t, container.ApprovalToken)
+	require.NotNil(t, container.ApprovalLinks)
 	require.NotNil(t, container.LoginInternoUC)
 	require.NotNil(t, container.LoginClienteUC)
 	require.NotNil(t, container.RefreshUC)

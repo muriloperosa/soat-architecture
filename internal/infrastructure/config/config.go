@@ -21,6 +21,11 @@ type Config struct {
 	JWTAccessTokenTTLMinutes int    `env:"JWT_ACCESS_TOKEN_TTL_MINUTES" envDefault:"60"`
 	JWTRefreshTokenTTLHours  int    `env:"JWT_REFRESH_TOKEN_TTL_HOURS" envDefault:"168"`
 
+	// Segredo próprio do link de aprovação, independente do JWT de login.
+	ApprovalTokenSecret   string `env:"APPROVAL_TOKEN_SECRET"`
+	ApprovalTokenTTLHours int    `env:"APPROVAL_TOKEN_TTL_HOURS" envDefault:"24"`
+	PublicBaseURL         string `env:"PUBLIC_BASE_URL"`
+
 	// EmailProvider padrão é log: o processo sobe sem AWS. ses exige SESFromAddress.
 	EmailProvider  string `env:"EMAIL_PROVIDER" envDefault:"log"`
 	AWSRegion      string `env:"AWS_REGION" envDefault:"us-east-1"`

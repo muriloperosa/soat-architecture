@@ -31,9 +31,23 @@ cp .env.example .env
 | `DB_MAX_OPEN_CONNS` | Máximo de conexões abertas no pool | `25` |
 | `DB_MAX_IDLE_CONNS` | Máximo de conexões ociosas mantidas no pool | `5` |
 | `DB_CONN_MAX_LIFETIME_MINUTES` | Tempo máximo, em minutos, que uma conexão pode ficar aberta antes de ser reciclada | `5` |
+| `EMAIL_PROVIDER` | Provedor de email: `log` simula; `ses` envia pela AWS | `log` |
+| `AWS_REGION` | Região do Amazon SES | `us-east-1` |
+| `SES_FROM_ADDRESS` | Remetente verificado; obrigatório com `EMAIL_PROVIDER=ses` | *(vazio)* |
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Credenciais AWS. No Docker Compose precisam estar no `.env` para chegar ao container | *(vazio)* |
+| `AWS_SESSION_TOKEN` | Token adicional para credenciais AWS temporárias, como AWS Academy/STS | *(vazio)* |
+| `APPROVAL_TOKEN_SECRET` | Segredo exclusivo dos links de aprovação, diferente de `JWT_SECRET` | *(vazio)* |
+| `APPROVAL_TOKEN_TTL_HOURS` | Validade dos links de aprovação por email | `24` |
+| `PUBLIC_BASE_URL` | URL pública da API usada nos links, por exemplo `http://localhost:8080` | *(vazio)* |
 | `SONAR_HOST_PORT` | Porta exposta no host para o SonarQube (só usada pelo `compose.tools.yml`) | `9000` |
 | `SONAR_TOKEN` | Token de autenticação do SonarQube, usado pelo serviço `sonar-scanner` (gerado na UI, ver seção SonarQube abaixo) | *(vazio)* |
 | `SONAR_HOST_URL` | URL do SonarQube usada pelo `sonar-scanner` (nome do serviço na rede docker; só muda se você apontar pra um SonarQube externo) | `http://sonarqube:9000` |
+
+### Aprovação de orçamento por email
+
+Quando a OS entra em `AGUARDANDO_APROVACAO`, a aplicação envia o orçamento por email com links temporários para aceitar ou recusar. Os links chamam endpoints da própria API, que validam o token e reutilizam os casos de uso existentes de aprovação e rejeição.
+
+O fluxo atual não precisa de webhook externo: não há outro sistema para notificar ou que participe da decisão. O Amazon SES apenas entrega o email; a decisão é iniciada pelo cliente ao abrir e confirmar o link. Se surgir uma integração com outro sistema, um webhook poderá ser adicionado como mecanismo separado.
 
 ## Comandos disponíveis
 

@@ -58,6 +58,8 @@ type Container struct {
 	ReservaPecaRepo   domainreservapeca.Repository
 	TransactionRunner shared.TransactionRunner
 	EmailSender       shared.EmailSender
+	ApprovalToken     shared.ApprovalTokenProvider
+	ApprovalLinks     shared.ApprovalLinkProvider
 	VeiculoRepo       domainveiculo.Repository
 	ServicoRepo       domainservico.ServicoRepository
 	OrdemServicoRepo  domainordemservico.OrdemServicoRepository
@@ -155,6 +157,26 @@ func NewContainer(cfg *config.Config, db *gorm.DB) (*Container, error) {
 		return nil, fmt.Errorf("configurar envio de e-mail: %w", err)
 	}
 	c.EmailSender = sender
+	if cfg != nil {
+		if cfg.ApprovalTokenSecret != "" || cfg.PublicBaseURL != "" {
+			if cfg.ApprovalTokenSecret == "" || cfg.PublicBaseURL == "" {
+				return nil, fmt.Errorf("APPROVAL_TOKEN_SECRET e PUBLIC_BASE_URL devem ser configurados juntos")
+			}
+			tokenProvider, err := infraauth.NewApprovalTokenJWT(
+				cfg.ApprovalTokenSecret,
+				time.Duration(cfg.ApprovalTokenTTLHours)*time.Hour,
+			)
+			if err != nil {
+				return nil, fmt.Errorf("configurar token de aprovação: %w", err)
+			}
+			c.ApprovalToken = tokenProvider
+			linkProvider, err := email.NewApprovalEmailLinkProvider(tokenProvider, cfg.PublicBaseURL)
+			if err != nil {
+				return nil, fmt.Errorf("configurar links de aprovação: %w", err)
+			}
+			c.ApprovalLinks = linkProvider
+		}
+	}
 	notificador := appnotificacao.NewStatus(c.ClienteRepository, c.EmailSender)
 
 	if cfg == nil {
@@ -240,6 +262,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB) (*Container, error) {
 	c.AdicionarPecaOrcamentoUC = apporcamento.NewAdicionarPecaOrcamentoUseCase(c.OrcamentoRepo, c.PecaRepo, c.OrdemServicoRepo)
 	c.RemoverServicoOrcamentoUC = apporcamento.NewRemoverServicoOrcamentoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo)
 	c.RemoverPecaOrcamentoUC = apporcamento.NewRemoverPecaOrcamentoUseCase(c.OrcamentoRepo, c.OrdemServicoRepo)
+	notificadorOrcamento := appnotificacao.NewOrcamento(c.ClienteRepository, c.EmailSender, c.ApprovalLinks)
 	c.AlterarQuantidadePecaOrcamentoUC = apporcamento.NewAlterarQuantidadePecaOrcamentoUseCase(
 		c.OrcamentoRepo,
 		c.OrdemServicoRepo,
@@ -247,13 +270,13 @@ func NewContainer(cfg *config.Config, db *gorm.DB) (*Container, error) {
 		c.PecaRepo,
 		c.TransactionRunner,
 		notificador,
-		appnotificacao.NewOrcamento(c.ClienteRepository, c.EmailSender),
+		notificadorOrcamento,
 	)
 	c.EnviarOrcamentoParaAprovacaoUC = apporcamento.NewEnviarOrcamentoParaAprovacaoUseCase(
 		c.OrcamentoRepo,
 		c.OrdemServicoRepo,
 		notificador,
-		appnotificacao.NewOrcamento(c.ClienteRepository, c.EmailSender),
+		notificadorOrcamento,
 	)
 	c.AprovarOrcamentoUC = apporcamento.NewAprovarOrcamentoUseCase(c.OrdemServicoRepo, c.OrcamentoRepo, c.PecaRepo, c.ReservaPecaRepo, c.TransactionRunner, notificador)
 	c.RejeitarOrcamentoUC = apporcamento.NewRejeitarOrcamentoUseCase(c.OrdemServicoRepo, notificador)

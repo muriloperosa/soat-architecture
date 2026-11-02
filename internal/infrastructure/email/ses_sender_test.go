@@ -55,6 +55,9 @@ func TestNewSender_PadraoLogNaoExigeAWS(t *testing.T) {
 }
 
 func TestNewSESSender_RegiaoVaziaUsaPadrao(t *testing.T) {
+	// A construcao do sender nao deve depender do perfil AWS configurado na
+	// maquina que executa os testes.
+	t.Setenv("AWS_PROFILE", "")
 	sender, err := email.NewSESSender(context.Background(), "  ", "oficina@exemplo.com")
 
 	require.NoError(t, err)

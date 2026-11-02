@@ -25,7 +25,7 @@ Onde encontrar cada requisito da fase no repositório:
 | --- | --- |
 | Clean Code, Clean Architecture e testes automatizados | Camadas em `internal/`, regra de dependência verificada em `test/architecture/`, testes unitários e de integração ([Qualidade](#qualidade)) |
 | Abertura, consulta de status e listagem priorizada de OS | `/v1/ordens-servico` ([APIs](#apis)) |
-| Aprovação ou recusa do orçamento pelo cliente | `/v1/ordens-servico/{id}/orcamento/aprovar` e `/rejeitar` |
+| Aprovação ou recusa do orçamento pelo cliente | Rotas autenticadas `/v1/ordens-servico/{id}/orcamento/aprovar` e `/rejeitar`; links por e-mail em `GET /v1/orcamentos/aprovacao` (confirmação) e `POST /v1/orcamentos/aprovacao/decisao` (decisão), que reutilizam os mesmos casos de uso |
 | Aviso de mudança de status por e-mail | Notificações via Amazon SES ([Componentes](#componentes-da-aplicação)) |
 | Dockerfile e docker-compose | [`Dockerfile`](Dockerfile), [`compose.yml`](compose.yml) |
 | Deployments, Services, ConfigMaps, Secrets e HPA | [`k8s/`](k8s/) |
@@ -92,6 +92,8 @@ Domínio (entidades e value objects), aplicação (casos de uso) e infraestrutur
 A persistência usa GORM, mas de forma isolada: os models do GORM nunca vazam para a camada de domínio, existe um mapeamento explícito entre entidade e model na fronteira do repositório. Autenticação é feita via JWT, com um middleware que reavalida se o usuário segue ativo a cada requisição, não só no login, e um segundo middleware que autoriza por tipo e papel de usuário. Situações que exigem consistência entre agregados diferentes, como reservar peça e verificar estoque, passam por um `TransactionRunner` que garante atomicidade e usa `SELECT ... FOR UPDATE` para serializar concorrência.
 
 Cada mudança de status da ordem de serviço dispara um e-mail ao cliente depois que a transição já foi persistida. Se o envio falhar, o erro fica no log e o status não é desfeito. No envio do orçamento vai um segundo e-mail, com serviços, peças, quantidades e valores. Localmente o provedor padrão é `log` (`EMAIL_PROVIDER`), que só registra a mensagem e não precisa de AWS. Com `ses`, a aplicação envia pelo Amazon SES e não sobe sem `SES_FROM_ADDRESS`. No SES em sandbox a mensagem só chega a identidades verificadas. No EKS o pod não recebe access key: usa a role do nó. Sem `SES_FROM_ADDRESS` no secret `oficina/api`, o CD sobe com `EMAIL_PROVIDER=log`.
+
+Quando a OS entra em `AGUARDANDO_APROVACAO`, o e-mail do orçamento inclui links temporários para aceitar ou recusar. A validade padrão é de 24 horas (`APPROVAL_TOKEN_TTL_HOURS`). Para habilitá-los, configure `APPROVAL_TOKEN_SECRET` com um segredo forte diferente de `JWT_SECRET` e `PUBLIC_BASE_URL` com uma URL alcançável pelo cliente. O link abre uma página de confirmação; somente o `POST` de decisão altera o orçamento. Os endpoints validam o token e reutilizam os mesmos casos de uso das rotas autenticadas. O `GET` não altera o estado, para evitar decisões causadas por scanners de e-mail. O fluxo usa a própria API e não exige webhook externo.
 
 O versionamento do schema do banco é feito com `golang-migrate`, migrations em `migrations/mysql/`. As decisões estruturais do projeto estão registradas como ADRs em [`docs/adr/`](docs/adr/), e o detalhamento das convenções internas está em [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md).
 

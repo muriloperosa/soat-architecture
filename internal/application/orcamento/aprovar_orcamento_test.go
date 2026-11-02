@@ -69,6 +69,44 @@ func TestAprovarOrcamentoUseCase_ClienteProprietarioAprova(t *testing.T) {
 	require.Equal(t, uint64(2), historico[len(historico)-1].AlteradoPor())
 }
 
+func TestAprovarOrcamentoUseCase_LinkDeCicloAnteriorRetornaConflict(t *testing.T) {
+	os := osComDoisCiclosAprovacao(t, 10)
+	osRepo := ordemservicomocks.NewOrdemServicoRepository(t)
+	osRepo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
+	runner := &helpers.TransactionRunnerMock{}
+	uc := app.NewAprovarOrcamentoUseCase(
+		osRepo,
+		orcamentomocks.NewOrcamentoRepository(t),
+		pecamocks.NewRepository(t),
+		reservamocks.NewRepository(t),
+		runner,
+		nil,
+	)
+
+	_, err := uc.Executar(context.Background(), app.AprovarOrcamentoInput{
+		OrdemServicoID:    42,
+		ClienteID:         10,
+		ApprovalHistoryID: 103,
+	})
+
+	var appErr *shared.AppError
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, shared.KindConflict, appErr.Kind)
+	require.Equal(t, domainordemservico.StatusAguardandoAprovacao, os.Status())
+	require.Equal(t, 1, runner.Calls)
+}
+
+func osComDoisCiclosAprovacao(t *testing.T, clienteID uint64) *domainordemservico.OrdemServico {
+	t.Helper()
+	os := osAguardandoAprovacao(t, clienteID)
+	os.AtribuirIDsHistoricoPendente([]uint64{101, 102, 103})
+	require.NoError(t, os.RejeitarOrcamento("Ajustar o orçamento"))
+	os.AtribuirIDsHistoricoPendente([]uint64{104})
+	require.NoError(t, os.EnviarParaAprovacao(2))
+	os.AtribuirIDsHistoricoPendente([]uint64{105})
+	return os
+}
+
 func TestAprovarOrcamentoUseCase_CriaReservaAPartirDoOrcamento(t *testing.T) {
 	osRepo := ordemservicomocks.NewOrdemServicoRepository(t)
 	orcamentoRepo := orcamentomocks.NewOrcamentoRepository(t)

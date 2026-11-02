@@ -46,14 +46,16 @@ type EnviarOrcamentoParaAprovacaoInput struct {
 }
 
 type AprovarOrcamentoInput struct {
-	OrdemServicoID uint64
-	ClienteID      uint64
+	OrdemServicoID    uint64
+	ClienteID         uint64
+	ApprovalHistoryID uint64
 }
 
 type RejeitarOrcamentoInput struct {
-	OrdemServicoID uint64
-	ClienteID      uint64
-	Motivo         string
+	OrdemServicoID    uint64
+	ClienteID         uint64
+	Motivo            string
+	ApprovalHistoryID uint64
 }
 
 type ItemServicoOutput struct {

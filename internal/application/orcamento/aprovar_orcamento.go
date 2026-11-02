@@ -53,6 +53,9 @@ func (uc *AprovarOrcamentoUseCase) Executar(ctx context.Context, input AprovarOr
 		if input.ClienteID == 0 || os.ClienteID() != input.ClienteID {
 			return shared.NewForbiddenError("acesso à ordem de serviço não permitido")
 		}
+		if err := validarCicloAprovacao(os, input.ApprovalHistoryID); err != nil {
+			return err
+		}
 		if err := os.ValidarTransicaoPara(domainordemservico.StatusAprovada); err != nil {
 			return err
 		}

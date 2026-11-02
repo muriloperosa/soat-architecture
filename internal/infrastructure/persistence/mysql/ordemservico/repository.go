@@ -197,7 +197,7 @@ func (r *Repository) Atualizar(ctx context.Context, os *domain.OrdemServico) err
 
 func (r *Repository) consultaComHistorico(ctx context.Context) *gorm.DB {
 	return mysql.DBFromContext(ctx, r.db).WithContext(ctx).Preload("Historicos", func(db *gorm.DB) *gorm.DB {
-		return db.Order("alterado_em ASC")
+		return db.Order("alterado_em ASC").Order("id ASC")
 	})
 }
 
