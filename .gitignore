@@ -33,6 +33,7 @@ security/reports/*
 .terraform/
 *.tfstate
 *.tfstate.*
+*.tfvars
 crash.log
 crash.*.log
 override.tf
