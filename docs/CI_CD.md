@@ -250,6 +250,18 @@ A imagem no ECR é **imutável**: uma tag publicada não pode ser sobrescrita. A
 
 Use [versionamento semântico](https://semver.org/lang/pt-BR/): `PATCH` para correções, `MINOR` para funcionalidades compatíveis, `MAJOR` para mudanças que quebram contrato da API. Tags com prefixo (`v1.0.1`) ou sufixo (`1.0.1-rc`) **não** disparam o deploy.
 
+### Popular o banco (seed)
+
+O banco do RDS começa vazio. O workflow [`seed.yml`](../.github/workflows/seed.yml) roda o `cmd/seed`, que cria os usuários admin, atendente, mecânico e cliente (senha `Senha@123`) e dados de exemplo. Ele não dispara sozinho:
+
+1. Depois do primeiro deploy, abra **Actions → Seed (EKS) → Run workflow**.
+2. Em "Use workflow from", escolha a tag implantada. Se o environment `aws-deploy` estiver restrito a tags, uma branch não lê os secrets.
+3. Digite `seed` no campo de confirmação. Qualquer outro valor pula o job.
+
+O RDS não é público e só aceita conexões do cluster. Por isso o job sobe um pod relay (`socat`) no namespace `oficina`, faz port-forward até ele e roda o seed no runner com as credenciais do secret `oficina/api`. O pod é removido no fim, mesmo se o seed falhar. O workflow usa o mesmo grupo de concorrência do CD, então nunca roda durante uma migration ou um rollout. As credenciais criadas aparecem no resumo do run.
+
+O seed não é idempotente: rode só com o banco vazio. Numa segunda execução ele para ao criar o admin, sem gravar nada.
+
 ### Rollback
 
 - **Voltar para a versão anterior:** em **Actions → CD (Continuous Deployment) → Run workflow**, escolha a tag anterior (ex.: `1.0.0`) em "Use workflow from". O pipeline confere a CI daquele commit, aplica o Terraform daquele commit, reaproveita a imagem que já está no ECR e faz o rollout. Se a versão anterior tiver um Terraform diferente, o rollback também volta a infraestrutura.

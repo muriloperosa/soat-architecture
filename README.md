@@ -196,6 +196,8 @@ A CI ([`ci.yml`](.github/workflows/ci.yml)) roda em todo PR e em todo push na `m
 
 Antes de atualizar a API, o deploy roda as migrations num Job ([ADR 0006](docs/adr/0006-migrations-em-job-kubernetes.md)). Se a migration falhar, a versão anterior continua no ar. O passo a passo, as credenciais, o rollback e os custos estão em [`docs/CI_CD.md`](docs/CI_CD.md).
 
+O banco do RDS começa vazio. Depois do primeiro deploy, rode o workflow manual [`seed.yml`](.github/workflows/seed.yml) em **Actions → Seed (EKS) → Run workflow**: escolha a tag implantada em "Use workflow from" e digite `seed` na confirmação. Ele cria os usuários de teste (admin, atendente, mecânico e cliente, senha `Senha@123`) e dados de exemplo. Detalhes em [Popular o banco](docs/CI_CD.md#popular-o-banco-seed).
+
 ## APIs
 
 A documentação da API é gerada com Swagger a partir das anotações dos handlers e fica em [`docs/swagger/`](docs/swagger/). Com a aplicação rodando, a UI abre em `/swagger/index.html` e faz as chamadas para o mesmo endereço em que foi aberta, seja localhost, Minikube ou EKS.
