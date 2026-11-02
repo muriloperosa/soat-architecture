@@ -51,10 +51,10 @@ help:
 	@echo "  $(GREEN)k8s-url$(RESET):       Print the API URL exposed by Minikube"
 	@echo "  $(GREEN)k8s-delete$(RESET):    Remove everything created by k8s-deploy, including the namespace and MySQL data"
 	@echo "  $(GREEN)load-test$(RESET):     Run the k6 load test (BASE_URL, K6_EMAIL, K6_SENHA)"
-	@echo "  $(GREEN)tf-init$(RESET):       terraform init em infra/ (AWS_PROFILE=oficina-temp)"
+	@echo "  $(GREEN)tf-init$(RESET):       bucket do state no S3 e terraform init (AWS_PROFILE=oficina-lab)"
 	@echo "  $(GREEN)tf-plan$(RESET):       terraform plan do cluster EKS e do RDS"
 	@echo "  $(GREEN)tf-apply$(RESET):      terraform apply. O control plane passa a cobrar por hora"
-	@echo "  $(GREEN)tf-destroy$(RESET):    Apaga o cluster e o RDS. Exige CONFIRM=yes"
+	@echo "  $(GREEN)tf-destroy$(RESET):    Apaga o cluster, o RDS e o ECR. Exige CONFIRM=yes"
 
 run:
 	go run ./cmd/api
@@ -323,14 +323,20 @@ load-test:
 	k6 run -e "BASE_URL=$(BASE_URL)" -e "K6_EMAIL=$(K6_EMAIL)" -e 'K6_SENHA=$(K6_SENHA)' test/load/ordens-servico.js
 
 # --- Terraform (infra/) -------------------------------------------------------
-# A tag da main não roda estes alvos. O job infra do CD está desligado até
-# existir backend S3. Antes do deploy por tag, suba o ambiente com tf-apply.
+# O CD roda o mesmo apply a cada tag da main. Estes alvos servem para subir,
+# inspecionar ou derrubar o ambiente à mão, com o mesmo state no S3.
 TF_DIR := infra
-AWS_PROFILE ?= oficina-temp
+AWS_PROFILE ?= oficina-lab
 AWS_REGION ?= us-east-1
+TF_STATE_KEY := oficina/terraform.tfstate
 
 tf-init:
-	AWS_PROFILE="$(AWS_PROFILE)" AWS_REGION="$(AWS_REGION)" terraform -chdir=$(TF_DIR) init -input=false
+	@bucket="$$(AWS_PROFILE="$(AWS_PROFILE)" AWS_REGION="$(AWS_REGION)" bash $(TF_DIR)/bootstrap-state.sh)" && \
+	AWS_PROFILE="$(AWS_PROFILE)" AWS_REGION="$(AWS_REGION)" terraform -chdir=$(TF_DIR) init -input=false -reconfigure \
+		-backend-config="bucket=$$bucket" \
+		-backend-config="key=$(TF_STATE_KEY)" \
+		-backend-config="region=$(AWS_REGION)" \
+		-backend-config="use_lockfile=true"
 
 tf-plan: tf-init
 	AWS_PROFILE="$(AWS_PROFILE)" AWS_REGION="$(AWS_REGION)" terraform -chdir=$(TF_DIR) plan -input=false
@@ -340,7 +346,8 @@ tf-apply: tf-init
 
 tf-destroy:
 	@if [ "$(CONFIRM)" != "yes" ]; then \
-		echo "Isto apaga o cluster EKS, o node group e o RDS. Para confirmar, rode de novo com CONFIRM=yes."; \
+		echo "Isto apaga o cluster EKS, o node group, o RDS e o ECR. Para confirmar, rode de novo com CONFIRM=yes."; \
 		exit 1; \
 	fi
+	$(MAKE) tf-init
 	AWS_PROFILE="$(AWS_PROFILE)" AWS_REGION="$(AWS_REGION)" terraform -chdir=$(TF_DIR) destroy

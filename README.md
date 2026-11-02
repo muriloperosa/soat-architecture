@@ -26,7 +26,7 @@ Onde encontrar cada requisito da fase no repositório:
 | Clean Code, Clean Architecture e testes automatizados | Camadas em `internal/`, regra de dependência verificada em `test/architecture/`, testes unitários e de integração ([Qualidade](#qualidade)) |
 | Abertura, consulta de status e listagem priorizada de OS | `/v1/ordens-servico` ([APIs](#apis)) |
 | Aprovação ou recusa do orçamento pelo cliente | Rotas autenticadas `/v1/ordens-servico/{id}/orcamento/aprovar` e `/rejeitar`; links por e-mail em `GET /v1/orcamentos/aprovacao` (confirmação) e `POST /v1/orcamentos/aprovacao/decisao` (decisão), que reutilizam os mesmos casos de uso |
-| Aviso de mudança de status por e-mail | Notificações via Amazon SES ([Componentes](#componentes-da-aplicação)) |
+| Aviso de mudança de status por e-mail | Provedor-alvo: Amazon SES. No AWS Academy o envio usa SMTP com STARTTLS, porque o Learner Lab não libera o SES ([Componentes](#componentes-da-aplicação)) |
 | Dockerfile e docker-compose | [`Dockerfile`](Dockerfile), [`compose.yml`](compose.yml) |
 | Deployments, Services, ConfigMaps, Secrets e HPA | [`k8s/`](k8s/) |
 | Terraform do cluster Kubernetes | [`infra/`](infra/) |
@@ -40,12 +40,12 @@ Onde encontrar cada requisito da fase no repositório:
 | Linguagem e HTTP | Go 1.26, Gin |
 | Persistência | MySQL 8, GORM, `golang-migrate` |
 | Autenticação | JWT HS256 com access e refresh token |
-| E-mail | Amazon SES (AWS SDK for Go v2), com provedor `log` para desenvolvimento |
+| E-mail | Amazon SES como provedor-alvo; SMTP com STARTTLS no AWS Academy, onde o SES não é liberado; provedor `log` para desenvolvimento |
 | Documentação da API | Swagger gerado com `swaggo`, collections Postman |
 | Contêiner | Docker multi-stage (`golang:1.26-alpine` → `alpine`, usuário sem privilégio) e Docker Compose |
 | Orquestração | Kubernetes com Kustomize: Minikube e Amazon EKS |
-| Infraestrutura como código | Terraform 1.5+ com o provider AWS 5.x |
-| CI/CD | GitHub Actions, com autenticação na AWS por OIDC |
+| Infraestrutura como código | Terraform 1.11+ com o provider AWS 5.x e state no S3 |
+| CI/CD | GitHub Actions, com Terraform no deploy e state no S3 (AWS Academy Learner Lab) |
 | Registry | Amazon ECR, com tags imutáveis |
 | Testes e análise | `testify`, `mockery`, `testcontainers`, k6, `govulncheck`, `gosec`, OWASP ZAP, SonarQube |
 
@@ -64,7 +64,7 @@ flowchart TB
         mw["Middlewares<br/>autenticação JWT<br/>autorização por papel"]
         handlers["Handlers<br/>DTOs e mappers"]
         persist["Repositórios GORM<br/>TransactionRunner"]
-        email["EmailSender<br/>log ou SES"]
+        email["EmailSender<br/>log, SMTP ou SES"]
         mw --> handlers
     end
 
@@ -84,14 +84,17 @@ flowchart TB
     persist -. implementa .-> ports
     email -. implementa .-> ports
     persist --> db[("MySQL 8")]
-    email --> ses[["Amazon SES"]]
+    email -->|alvo| ses[["Amazon SES"]]
+    email -.->|AWS Academy| smtp[["Servidor SMTP<br/>STARTTLS"]]
 ```
 
 Domínio (entidades e value objects), aplicação (casos de uso) e infraestrutura (adaptadores HTTP, de persistência e de e-mail, frameworks) são pacotes separados, e as dependências apontam só para dentro: infraestrutura conhece aplicação e domínio, aplicação conhece só domínio, e domínio não conhece nada do projeto. Os repositórios e serviços externos que o domínio usa são interfaces declaradas nele e implementadas na infraestrutura. Essa regra é verificada por um teste automático (`test/architecture/`). Cada agregado (ordem de serviço, cliente, veículo, peça, usuário) carrega suas próprias regras de negócio em Value Objects auto validáveis, como `Documento`, `Placa` e `Status`, que nascem válidos ou não nascem.
 
 A persistência usa GORM, mas de forma isolada: os models do GORM nunca vazam para a camada de domínio, existe um mapeamento explícito entre entidade e model na fronteira do repositório. Autenticação é feita via JWT, com um middleware que reavalida se o usuário segue ativo a cada requisição, não só no login, e um segundo middleware que autoriza por tipo e papel de usuário. Situações que exigem consistência entre agregados diferentes, como reservar peça e verificar estoque, passam por um `TransactionRunner` que garante atomicidade e usa `SELECT ... FOR UPDATE` para serializar concorrência.
 
-Cada mudança de status da ordem de serviço dispara um e-mail ao cliente depois que a transição já foi persistida. Se o envio falhar, o erro fica no log e o status não é desfeito. No envio do orçamento vai um segundo e-mail, com serviços, peças, quantidades e valores. Localmente o provedor padrão é `log` (`EMAIL_PROVIDER`), que só registra a mensagem e não precisa de AWS. Com `ses`, a aplicação envia pelo Amazon SES e não sobe sem `SES_FROM_ADDRESS`. No SES em sandbox a mensagem só chega a identidades verificadas. No EKS o pod não recebe access key: usa a role do nó. Sem `SES_FROM_ADDRESS` no secret `oficina/api`, o CD sobe com `EMAIL_PROVIDER=log`.
+Cada mudança de status da ordem de serviço dispara um e-mail ao cliente depois que a transição já foi persistida. Se o envio falhar, o erro fica no log e o status não é desfeito. No envio do orçamento vai um segundo e-mail, com serviços, peças, quantidades e valores. Localmente o provedor padrão é `log` (`EMAIL_PROVIDER`), que só registra a mensagem.
+
+O provedor-alvo é o **Amazon SES** (`EMAIL_PROVIDER=ses`), e o adapter está pronto e testado. Numa conta AWS comum, ele usa a role dos nós e exige só um remetente verificado em `SES_FROM_ADDRESS`. O AWS Academy Learner Lab, onde o projeto roda, nega `ses:VerifyEmailIdentity`, e sem identidade verificada o SES não envia nada. Por isso, no Academy, o envio usa o provedor `smtp`: SMTP autenticado com STARTTLS (Gmail: `smtp.gmail.com:587`, com senha de app). Fora do Academy, a aplicação volta ao SES trocando `EMAIL_PROVIDER` e configurando o remetente, sem mudança de código; o que muda no pipeline está na [ADR 0010](docs/adr/0010-smtp-no-lugar-do-ses-no-learner-lab.md). No SMTP, configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` e `SMTP_FROM_ADDRESS`; não versione a senha de app. No EKS, o Terraform grava a senha no Secrets Manager com um argumento write-only, sem persistir seu valor no state ou no plano.
 
 Quando a OS entra em `AGUARDANDO_APROVACAO`, o e-mail do orçamento inclui links temporários para aceitar ou recusar. A validade padrão é de 24 horas (`APPROVAL_TOKEN_TTL_HOURS`). Para habilitá-los, configure `APPROVAL_TOKEN_SECRET` com um segredo forte diferente de `JWT_SECRET` e `PUBLIC_BASE_URL` com uma URL alcançável pelo cliente. O link abre uma página de confirmação; somente o `POST` de decisão altera o orçamento. Os endpoints validam o token e reutilizam os mesmos casos de uso das rotas autenticadas. O `GET` não altera o estado, para evitar decisões causadas por scanners de e-mail. O fluxo usa a própria API e não exige webhook externo.
 
@@ -120,7 +123,7 @@ Quando o cliente aprova o orçamento, as peças ficam reservadas, e a baixa no e
 
 ### Infraestrutura provisionada
 
-Na AWS, a aplicação fica organizada assim. Em verde está o que o Terraform cria, em laranja o que é preparado uma vez por conta seguindo [`docs/AWS_SETUP.md`](docs/AWS_SETUP.md), e em azul o que os manifestos de [`k8s/`](k8s/) criam a cada deploy.
+Na AWS, a aplicação fica organizada assim. Em verde está o que o Terraform cria, em azul o que os manifestos de [`k8s/`](k8s/) criam a cada deploy e em cinza tracejado o Amazon SES, provedor-alvo de e-mail que o Learner Lab não libera. No AWS Academy, o e-mail sai por SMTP (Gmail).
 
 ```mermaid
 flowchart TB
@@ -129,8 +132,8 @@ flowchart TB
     subgraph aws["AWS · us-east-1"]
         lb["Load Balancer<br/>criado pelo Service"]
         ecr[("ECR<br/>oficina-api")]
-        sm["Secrets Manager<br/>oficina/api"]
-        ses[["Amazon SES"]]
+        sm["Secrets Manager<br/>oficina/api e oficina/smtp"]
+        ses[["Amazon SES<br/>provedor-alvo<br/>bloqueado no Learner Lab"]]
 
         subgraph vpc["VPC default · subnets públicas"]
             rds[("RDS MySQL")]
@@ -154,25 +157,26 @@ flowchart TB
     nodes -.->|executa| pods
     pods --> rds
     job -->|migrate up| rds
-    pods --> ses
+    pods -.->|fora do Academy| ses
+    pods -->|AWS Academy| smtp[["Gmail SMTP<br/>STARTTLS · porta 587"]]
     ecr -.->|imagem| pods
     sm -.->|segredos no deploy| ns
 
     classDef terraform fill:#dcfce7,stroke:#16a34a,color:#14532d
-    classDef manual fill:#ffedd5,stroke:#ea580c,color:#7c2d12
     classDef k8s fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
-    class nodes,rds,sm terraform
-    class ecr manual
+    classDef target fill:#f3f4f6,stroke:#6b7280,color:#374151,stroke-dasharray:4 3
+    class nodes,rds,sm,ecr terraform
+    class ses target
     class svc,pods,hpa,job k8s
     style eks fill:#f0fdf4,stroke:#16a34a,color:#14532d
 ```
 
 | Recurso | Como é criado |
 | --- | --- |
-| Cluster EKS, node group, roles do cluster e dos nós, RDS MySQL e secret `oficina/api` | Terraform em [`infra/`](infra/), na VPC default e nas subnets públicas que já existem na conta |
+| Cluster EKS, node group, RDS MySQL, repositório ECR e secrets `oficina/api` e `oficina/smtp` | Terraform em [`infra/`](infra/), na VPC default e nas subnets públicas que já existem na conta |
 | Deployment, Service, HPA, ConfigMap, Secret e Job de migration | Manifestos de [`k8s/`](k8s/), aplicados pelo deploy |
 | Load Balancer | Criado pela AWS a partir do Service `LoadBalancer` do overlay EKS |
-| Repositório ECR, provedor OIDC e role de deploy do GitHub | Uma vez por conta, seguindo [`docs/AWS_SETUP.md`](docs/AWS_SETUP.md) |
+| Credenciais da sessão do Learner Lab no environment `aws-deploy` do GitHub | A cada sessão do lab, seguindo [`docs/AWS_SETUP.md`](docs/AWS_SETUP.md) |
 
 No Minikube roda o mesmo conjunto, mas com o MySQL dentro do cluster (StatefulSet) e o Service como `NodePort`. Mais detalhes sobre cada recurso em [`docs/KUBERNETES.md`](docs/KUBERNETES.md).
 
@@ -183,11 +187,12 @@ flowchart TB
     pr(["Pull request"]) --> ci["CI<br/>lint, testes, cobertura,<br/>SCA, SAST e imagem"]
     ci -->|checks verdes + review| main["Merge na main"]
     main -->|git tag 1.0.1| guard["guard<br/>tag na main e CI verde?"]
-    guard --> img["image<br/>build e push no ECR"]
+    guard --> tf["infra<br/>terraform apply<br/>(state no S3)"]
+    tf --> img["image<br/>build e push no ECR"]
     img --> dep["deploy<br/>migrations e rollout no EKS"]
 ```
 
-A CI ([`ci.yml`](.github/workflows/ci.yml)) roda em todo PR e em todo push na `main`, e não tem acesso à AWS. O deploy ([`cd.yml`](.github/workflows/cd.yml)) só acontece quando alguém cria uma tag de versão, como `1.0.1`, num commit da `main` que passou na CI. O workflow se autentica na AWS via OIDC, então não existe chave de acesso salva no GitHub. O job `infra` do CD fica desligado: a infraestrutura sobe antes, com `make tf-apply`.
+A CI ([`ci.yml`](.github/workflows/ci.yml)) roda em todo PR e em todo push na `main`, e não tem acesso à AWS. O deploy ([`cd.yml`](.github/workflows/cd.yml)) só acontece quando alguém cria uma tag de versão, como `1.0.1`, num commit da `main` que passou na CI. O mesmo run aplica o Terraform de [`infra/`](infra/) antes de publicar a imagem, então não há `apply` manual. O workflow usa as credenciais da sessão do AWS Academy Learner Lab, guardadas no environment `aws-deploy`.
 
 Antes de atualizar a API, o deploy roda as migrations num Job ([ADR 0006](docs/adr/0006-migrations-em-job-kubernetes.md)). Se a migration falhar, a versão anterior continua no ar. O passo a passo, as credenciais, o rollback e os custos estão em [`docs/CI_CD.md`](docs/CI_CD.md).
 
@@ -225,11 +230,13 @@ A API fica em `http://localhost:8080` e o Swagger em `http://localhost:8080/swag
 
 ## Provisionar a infraestrutura com Terraform
 
-O Terraform fica em [`infra/`](infra/) e cria as roles do cluster e dos nós, o cluster EKS com um node group, o RDS MySQL e o secret `oficina/api` no Secrets Manager. Ele aproveita a VPC default e as subnets públicas que já existem na conta, sem NAT Gateway. O workflow de CD não cria esses recursos: ele publica a imagem no ECR e faz o deploy quando alguém envia uma tag `MAJOR.MINOR.PATCH` a partir da `main`.
+O Terraform fica em [`infra/`](infra/) e cria o cluster EKS com um node group, o RDS MySQL, o repositório ECR e os secrets `oficina/api` e `oficina/smtp` no Secrets Manager, numa conta do AWS Academy Learner Lab. Cluster e nós usam a `LabRole` do lab. O SES, provedor-alvo de e-mail, não é provisionado porque o Learner Lab nega a verificação de identidade (`ses:VerifyEmailIdentity`). No lugar dele, a pipeline recebe a senha SMTP pelo Environment Secret `SMTP_PASSWORD` no GitHub e grava-a com argumento write-only. O state fica num bucket S3, criado pelo próprio pipeline na primeira execução.
 
-Pré-requisitos: Terraform 1.5 ou mais novo, AWS CLI, `kubectl`, a role `oficina-github-deploy` já criada ([`docs/AWS_SETUP.md`](docs/AWS_SETUP.md), passos 1 e 2) e a credencial da conta no profile `oficina-temp`. Não grave a access key no repositório.
+Quem aplica é o CD: cada tag `MAJOR.MINOR.PATCH` na `main` roda o `terraform apply` antes de publicar a imagem e fazer o deploy. Antes da tag, atualize no GitHub as credenciais da sessão do lab ([`docs/AWS_SETUP.md`](docs/AWS_SETUP.md)).
 
-**1. Criar a infraestrutura.** Na raiz do repositório:
+Para rodar à mão (plan, ajuste ou destroy), os pré-requisitos são Terraform 1.11 ou mais novo, AWS CLI, `kubectl` e as credenciais da sessão do lab no profile `oficina-lab`. O plan/apply também precisa receber `TF_VAR_smtp_password` pelo ambiente. Não passe a senha como argumento de linha de comando nem grave a access key no repositório.
+
+**1. Ver o plano ou aplicar.** Na raiz do repositório, usando o mesmo state do pipeline:
 
 ```bash
 make tf-plan
@@ -239,16 +246,16 @@ make tf-apply
 **2. Apontar o `kubectl` para o cluster:**
 
 ```bash
-aws eks update-kubeconfig --region us-east-1 --name oficina --profile oficina-temp
+aws eks update-kubeconfig --region us-east-1 --name oficina --profile oficina-lab
 ```
 
-**3. Destruir no fim da sessão.** O control plane é cobrado por hora enquanto existir:
+**3. Destruir no fim da demonstração.** O control plane é cobrado por hora enquanto existir, mesmo com a sessão do lab encerrada:
 
 ```bash
 make tf-destroy CONFIRM=yes
 ```
 
-O que é criado, o que fica de fora e o roteiro completo de `plan`, `apply` e `destroy` estão em [`docs/TERRAFORM.md`](docs/TERRAFORM.md).
+O que é criado, o state no S3 e o roteiro completo de `plan`, `apply` e `destroy` estão em [`docs/TERRAFORM.md`](docs/TERRAFORM.md).
 
 ## Deploy em Kubernetes
 
@@ -365,8 +372,8 @@ Um hook de `pre-push` local, instalado via `make hooks-install`, roda mocks, lin
 - [Banco de dados](docs/database/DATABASE.md): modelo relacional e diagrama
 - [Segurança](docs/SECURITY.md): ferramentas de SCA, SAST e DAST usadas e a justificativa de cada uma
 - [Kubernetes](docs/KUBERNETES.md): manifestos em `k8s/`, requisitos da máquina, deploy no Minikube, comandos `kubectl` e demonstração do autoscaling
-- [Infraestrutura AWS](docs/TERRAFORM.md): Terraform do cluster EKS, do RDS e do secret que o deploy por tag espera encontrar
-- [Preparação da conta AWS](docs/AWS_SETUP.md): ECR, provedor OIDC e role de deploy, uma vez por conta
+- [Infraestrutura AWS](docs/TERRAFORM.md): Terraform do cluster EKS, do RDS, do ECR e do secret, aplicado pelo deploy por tag
+- [Preparação do Learner Lab](docs/AWS_SETUP.md): environment e credenciais da sessão do lab no GitHub
 - [CI/CD](docs/CI_CD.md): CI em GitHub Actions (testes, cobertura, segurança) e deploy no EKS por tag, com diagramas de cada etapa, credenciais e rollback
 - [Swagger](docs/swagger/): documentação da API gerada a partir dos handlers
 - [Collections Postman](.dev/postman/): todos os endpoints e o fluxo completo da demo

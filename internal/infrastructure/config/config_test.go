@@ -17,6 +17,9 @@ func TestLoad_UsaValoresDasEnvs(t *testing.T) {
 	t.Setenv("DB_PASSWORD", "pass")
 	t.Setenv("DB_NAME", "oficina_test")
 	t.Setenv("JWT_SECRET", "segredo-de-teste")
+	t.Setenv("EMAIL_PROVIDER", "")
+	t.Setenv("AWS_REGION", "")
+	t.Setenv("SES_FROM_ADDRESS", "")
 
 	cfg, err := config.Load()
 

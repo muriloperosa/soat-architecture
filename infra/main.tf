@@ -1,11 +1,11 @@
-# Conta própria do projeto (não é o Learner Lab). Não cria VPC, NAT Gateway,
-# repositório ECR nem a role oficina-github-deploy: esses dois últimos ficam
-# de pé no destroy porque a imagem e o OIDC sobrevivem ao cluster.
+# Conta do AWS Academy Learner Lab. O lab não deixa criar role IAM nem
+# provedor OIDC: cluster e nós usam a LabRole, e o GitHub Actions usa as
+# credenciais temporárias da sessão do lab. Não cria VPC nem NAT Gateway.
 #
-# O control plane cobra cerca de US$ 0,10/h mesmo parado. Antes do
-# terraform destroy, apague o namespace oficina. O Service LoadBalancer
-# cria um balanceador que o Terraform não gerencia; se ele sobrar, continua
-# cobrando e trava a remoção do security group.
+# O control plane cobra cerca de US$ 0,10/h mesmo com a sessão do lab parada.
+# Antes do terraform destroy, apague o namespace oficina. O Service
+# LoadBalancer cria um balanceador que o Terraform não gerencia; se ele sobrar,
+# continua cobrando e trava a remoção do security group.
 
 data "aws_vpc" "default" {
   count   = var.vpc_id == null ? 1 : 0
@@ -58,8 +58,10 @@ locals {
   }
 }
 
-data "aws_iam_role" "github_deploy" {
-  name = var.github_deploy_role_name
+# Já existe em toda conta do Learner Lab. Confia em eks.amazonaws.com e
+# ec2.amazonaws.com, então serve de role do cluster e dos nós.
+data "aws_iam_role" "lab" {
+  name = var.lab_role_name
 }
 
 data "aws_rds_engine_version" "mysql" {

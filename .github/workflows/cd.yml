@@ -1,6 +1,8 @@
 name: CD (Continuous Deployment)
 
-# Releases are triggered by a semver tag (e.g. 1.0.1) on a commit in main.
+# Releases are triggered by a semver tag (e.g. 1.0.1) on a commit in main. The
+# tag provisions the environment (terraform apply of infra/) and deploys that
+# version: no manual apply is needed before tagging.
 # workflow_dispatch is for redeploy or rollback: run it picking a tag in
 # "Use workflow from".
 on:
@@ -9,14 +11,14 @@ on:
       - '[0-9]+.[0-9]+.[0-9]+'
   workflow_dispatch:
 
-# AWS credentials via OIDC: every job that talks to AWS requests an id-token and
-# assumes the deploy role (no keys stored in GitHub). The role only trusts the
-# aws-deploy environment of this repository (docs/CI_CD.md).
+# AWS Academy Learner Lab: no OIDC provider or IAM role can be created, so the
+# jobs use the lab session credentials stored as secrets of the aws-deploy
+# environment. They expire with the lab session (docs/CI_CD.md).
 permissions:
   contents: read
 
-# One deploy at a time, never cancelled midway: interrupting a migration Job or
-# a rollout leaves the environment in an intermediate state.
+# One deploy at a time, never cancelled midway: interrupting a terraform apply,
+# a migration Job or a rollout leaves the environment in an intermediate state.
 concurrency:
   group: deploy-eks
   cancel-in-progress: false
@@ -26,6 +28,7 @@ env:
   EKS_CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME || 'oficina' }}
   ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY || 'oficina-api' }}
   APP_SECRET_ID: ${{ vars.APP_SECRET_ID || 'oficina/api' }}
+  SMTP_SECRET_ID: ${{ vars.SMTP_SECRET_ID || 'oficina/smtp' }}
 
 jobs:
   # Stage 0: GitHub's tag filter ignores the branch, so the tag's origin is
@@ -100,17 +103,88 @@ jobs:
           echo "::error::Timeout esperando o CI gate de ${GITHUB_SHA}."
           exit 1
 
-  # Stage 1: image tagged with the release version, pushed to ECR. ECR tags are
-  # immutable; redeploying the same version reuses the existing image.
+  # Stage 1: Terraform apply of infra/ (EKS cluster, RDS, ECR, app and SMTP secrets).
+  # The state lives in S3; the bucket is created on the first
+  # run of a new lab account. A failure here leaves the cluster untouched.
+  infra:
+    name: Terraform apply
+    needs: [guard]
+    runs-on: ubuntu-24.04
+    environment: aws-deploy
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: infra
+    env:
+      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+      TF_VAR_aws_region: ${{ vars.AWS_REGION || 'us-east-1' }}
+      TF_VAR_cluster_name: ${{ vars.EKS_CLUSTER_NAME || 'oficina' }}
+      TF_VAR_ecr_repository_name: ${{ vars.ECR_REPOSITORY || 'oficina-api' }}
+      TF_VAR_app_secret_name: ${{ vars.APP_SECRET_ID || 'oficina/api' }}
+      TF_VAR_smtp_secret_name: ${{ vars.SMTP_SECRET_ID || 'oficina/smtp' }}
+      TF_VAR_smtp_host: ${{ vars.SMTP_HOST || 'smtp.gmail.com' }}
+      TF_VAR_smtp_port: ${{ vars.SMTP_PORT || '587' }}
+      TF_VAR_smtp_username: ${{ vars.SMTP_USERNAME || 'soatoficinapos@gmail.com' }}
+      TF_VAR_smtp_password: ${{ secrets.SMTP_PASSWORD }}
+      TF_VAR_smtp_from_address: ${{ vars.SMTP_FROM_ADDRESS || 'soatoficinapos@gmail.com' }}
+      TF_VAR_smtp_secret_version: ${{ vars.SMTP_SECRET_VERSION || '1' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.17.1
+          terraform_wrapper: false
+
+      - name: Validate SMTP app password
+        shell: bash
+        run: |
+          if [[ -z "$TF_VAR_smtp_password" ]]; then
+            echo "::error::Cadastre SMTP_PASSWORD como secret no environment aws-deploy."
+            exit 1
+          fi
+          echo "::add-mask::${TF_VAR_smtp_password}"
+
+      - name: Terraform init
+        run: |
+          bucket="$(bash bootstrap-state.sh)"
+          terraform init -input=false \
+            -backend-config="bucket=${bucket}" \
+            -backend-config="key=oficina/terraform.tfstate" \
+            -backend-config="region=${AWS_REGION}" \
+            -backend-config="use_lockfile=true"
+
+      - name: Terraform plan
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Terraform apply
+        run: terraform apply -input=false tfplan
+
+  # Stage 2: image tagged with the release version, pushed to the ECR repository
+  # created by Terraform. ECR tags are immutable; redeploying the same version
+  # reuses the existing image.
   image:
     name: Build and push image to ECR
-    needs: [guard]
+    needs: [guard, infra]
     runs-on: ubuntu-24.04
     environment: aws-deploy
     timeout-minutes: 20
     permissions:
       contents: read
-      id-token: write
     outputs:
       image: ${{ steps.meta.outputs.image }}
     steps:
@@ -122,8 +196,9 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
-          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
-          role-session-name: image-${{ github.run_id }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
           # The account ID is part of the image URL, which is a job output. If
           # it were masked, GitHub would drop the output.
@@ -141,14 +216,14 @@ jobs:
         shell: bash
         run: |
           # Only "image not found" means a new version; any other error
-          # (missing repository, access denied) fails the job.
+          # (missing repository, expired lab credentials) fails the job.
           if err="$(aws ecr describe-images --repository-name "$ECR_REPOSITORY" --image-ids imageTag="$VERSION" 2>&1 >/dev/null)"; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           elif [[ "$err" == *ImageNotFoundException* ]]; then
             echo "exists=false" >> "$GITHUB_OUTPUT"
           else
             echo "$err" >&2
-            echo "::error::Falha ao consultar o ECR ${ECR_REPOSITORY}. Confira se o repositório existe e a permissão da role (docs/CI_CD.md, Preparação da conta AWS)."
+            echo "::error::Falha ao consultar o ECR ${ECR_REPOSITORY}. Confira se o Terraform criou o repositório e se as credenciais do lab não expiraram (docs/CI_CD.md)."
             exit 1
           fi
           echo "image=${REGISTRY}/${ECR_REPOSITORY}" >> "$GITHUB_OUTPUT"
@@ -172,71 +247,11 @@ jobs:
           VERSION: ${{ needs.guard.outputs.version }}
         run: echo "::notice::${IMAGE}:${VERSION} já existe no ECR; build e push pulados."
 
-  # Stage 2: Terraform apply of infra/ (EKS cluster, network, database).
-  # Always skipped for now: the Terraform code and its S3 state backend are
-  # not ready yet. Enabling it means removing the "if: false" below and
-  # setting up the AWS_TERRAFORM_ROLE_ARN and TF_STATE_BUCKET variables and
-  # the aws-infra environment (docs/CI_CD.md).
-  infra:
-    name: Terraform apply
-    needs: [image]
-    if: false
-    runs-on: ubuntu-24.04
-    environment: aws-infra
-    timeout-minutes: 45
-    permissions:
-      contents: read
-      id-token: write
-    defaults:
-      run:
-        working-directory: infra
-    env:
-      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
-        with:
-          role-to-assume: ${{ vars.AWS_TERRAFORM_ROLE_ARN }}
-          role-session-name: terraform-${{ github.run_id }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
-        with:
-          terraform_version: 1.17.1
-          terraform_wrapper: false
-
-      - name: Terraform init
-        run: |
-          if [[ -z "$TF_STATE_BUCKET" ]]; then
-            echo "::error::Variável TF_STATE_BUCKET não configurada (bucket S3 do state, ver docs/CI_CD.md)."
-            exit 1
-          fi
-          terraform init -input=false \
-            -backend-config="bucket=${TF_STATE_BUCKET}" \
-            -backend-config="key=oficina/terraform.tfstate" \
-            -backend-config="region=${AWS_REGION}" \
-            -backend-config="use_lockfile=true"
-
-      - name: Terraform plan
-        run: terraform plan -input=false -out=tfplan
-
-      - name: Terraform apply
-        run: terraform apply -input=false tfplan
-
   # Stage 3: ConfigMap and Secret, migration Job and API rollout, in the order
   # of make k8s-deploy (ADR 0006). Secrets come from AWS Secrets Manager.
   deploy:
     name: Deploy to EKS (migrations and rollout)
-    needs: [guard, image, infra]
-    # Runs when infra succeeded or was skipped; a skipped need would otherwise
-    # skip this job too. The infra job stays if: false until the S3 backend exists.
-    if: ${{ !cancelled() && needs.guard.result == 'success' && needs.image.result == 'success' && contains(fromJSON('["success", "skipped"]'), needs.infra.result) }}
+    needs: [guard, infra, image]
     runs-on: ubuntu-24.04
     environment:
       name: aws-deploy
@@ -244,7 +259,6 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
-      id-token: write
     env:
       TERM: dumb
       KUBE_CONTEXT: oficina-eks
@@ -259,8 +273,9 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
-          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
-          role-session-name: deploy-${{ github.run_id }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Configure kubectl
@@ -302,10 +317,30 @@ jobs:
             fi
           done
           ses_from="$(jq -r '.SES_FROM_ADDRESS // empty' <<<"$payload")"
-          if [[ -n "$ses_from" ]]; then
+          email_provider=log
+          if [[ -n "$SMTP_SECRET_ID" ]]; then
+            smtp_payload="$(aws secretsmanager get-secret-value --secret-id "$SMTP_SECRET_ID" --query SecretString --output text)"
+            for key in SMTP_HOST SMTP_PORT SMTP_USERNAME SMTP_PASSWORD SMTP_FROM_ADDRESS; do
+              if [[ -z "$(jq -r --arg k "$key" '.[$k] // empty' <<<"$smtp_payload")" ]]; then
+                echo "::error::Chave ${key} ausente no secret ${SMTP_SECRET_ID}."
+                exit 1
+              fi
+            done
+            smtp_host="$(jq -r .SMTP_HOST <<<"$smtp_payload")"
+            smtp_port="$(jq -r .SMTP_PORT <<<"$smtp_payload")"
+            smtp_username="$(jq -r .SMTP_USERNAME <<<"$smtp_payload")"
+            smtp_password="$(jq -r .SMTP_PASSWORD <<<"$smtp_payload")"
+            smtp_from="$(jq -r .SMTP_FROM_ADDRESS <<<"$smtp_payload")"
+            if [[ ! "$smtp_host" =~ ^[A-Za-z0-9.-]+$ || ! "$smtp_port" =~ ^[0-9]+$ ]]; then
+              echo "::error::SMTP_HOST ou SMTP_PORT inválido no secret ${SMTP_SECRET_ID}."
+              exit 1
+            fi
+            echo "::add-mask::${smtp_password}"
+            printf 'SMTP_HOST=%s\nSMTP_PORT=%s\nSMTP_USERNAME=%s\nSMTP_PASSWORD=%s\nSMTP_FROM_ADDRESS=%s\n' \
+              "$smtp_host" "$smtp_port" "$smtp_username" "$smtp_password" "$smtp_from" >> "$SECRETS_FILE"
+            email_provider=smtp
+          elif [[ -n "$ses_from" ]]; then
             email_provider=ses
-          else
-            email_provider=log
           fi
           sed -i \
             -e "s|REPLACE_WITH_RDS_ENDPOINT|${db_host}|" \

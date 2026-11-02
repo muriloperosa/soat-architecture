@@ -8,16 +8,25 @@ import (
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
 )
 
-// NewSender escolhe o provedor de e-mail. O padrão é log, para que testes e
-// o ambiente local não precisem de credencial AWS. ses só entra quando
-// EMAIL_PROVIDER=ses e SES_FROM_ADDRESS está definido.
-func NewSender(ctx context.Context, provider, region, from string) (shared.EmailSender, error) {
-	switch strings.ToLower(strings.TrimSpace(provider)) {
+// SenderConfig reúne as configurações dos adapters de e-mail.
+type SenderConfig struct {
+	Provider       string
+	AWSRegion      string
+	SESFromAddress string
+	SMTP           SMTPConfig
+}
+
+// NewSender escolhe o adapter de e-mail. O padrão é log, para que o processo
+// local e os testes não dependam de um serviço externo.
+func NewSender(ctx context.Context, config SenderConfig) (shared.EmailSender, error) {
+	switch strings.ToLower(strings.TrimSpace(config.Provider)) {
 	case "", "log":
 		return NewLogSender(), nil
 	case "ses":
-		return NewSESSender(ctx, region, from)
+		return NewSESSender(ctx, config.AWSRegion, config.SESFromAddress)
+	case "smtp":
+		return NewSMTPSender(config.SMTP)
 	default:
-		return nil, fmt.Errorf("EMAIL_PROVIDER inválido: %s", provider)
+		return nil, fmt.Errorf("EMAIL_PROVIDER inválido: %s", config.Provider)
 	}
 }

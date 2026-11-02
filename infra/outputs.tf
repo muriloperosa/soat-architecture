@@ -37,3 +37,8 @@ output "subnet_ids" {
   description = "Subnets públicas existentes usadas pelo cluster, pelos nós e pelo RDS."
   value       = local.subnet_ids
 }
+
+output "ecr_repository_url" {
+  description = "Repositório ECR onde o CD publica a imagem da API."
+  value       = aws_ecr_repository.api.repository_url
+}

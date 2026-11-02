@@ -58,16 +58,69 @@ variable "node_max_size" {
   default     = 2
 }
 
-variable "github_deploy_role_name" {
-  description = "Role criada à mão no AWS_SETUP.md. O CD assume essa role para o kubectl."
+variable "lab_role_name" {
+  description = "Role pronta do Learner Lab, usada pelo cluster e pelos nós. O lab não deixa criar role."
   type        = string
-  default     = "oficina-github-deploy"
+  default     = "LabRole"
+}
+
+variable "ecr_repository_name" {
+  description = "Repositório ECR da API. O CD usa oficina-api quando ECR_REPOSITORY não existe."
+  type        = string
+  default     = "oficina-api"
 }
 
 variable "app_secret_name" {
   description = "Secret do Secrets Manager lido pelo CD. O padrão do workflow é oficina/api."
   type        = string
   default     = "oficina/api"
+}
+
+variable "smtp_secret_name" {
+  description = "Secret do Secrets Manager com as credenciais SMTP. O padrão do workflow é oficina/smtp."
+  type        = string
+  default     = "oficina/smtp"
+}
+
+variable "smtp_host" {
+  description = "Hostname do servidor SMTP."
+  type        = string
+  default     = "smtp.gmail.com"
+}
+
+variable "smtp_port" {
+  description = "Porta SMTP com STARTTLS."
+  type        = number
+  default     = 587
+}
+
+variable "smtp_username" {
+  description = "Usuário da conta SMTP."
+  type        = string
+  default     = "soatoficinapos@gmail.com"
+}
+
+variable "smtp_password" {
+  description = "Senha de app SMTP fornecida pela pipeline. O provider grava o valor por argumento write-only."
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = length(trimspace(var.smtp_password)) > 0
+    error_message = "Configure SMTP_PASSWORD como secret do environment aws-deploy."
+  }
+}
+
+variable "smtp_from_address" {
+  description = "Endereço remetente SMTP."
+  type        = string
+  default     = "soatoficinapos@gmail.com"
+}
+
+variable "smtp_secret_version" {
+  description = "Incrementar para publicar uma nova versão do secret SMTP, por exemplo ao rotacionar a senha de app."
+  type        = number
+  default     = 1
 }
 
 variable "db_name" {
@@ -86,12 +139,6 @@ variable "db_instance_class" {
   description = "Classe da instância RDS."
   type        = string
   default     = "db.t3.micro"
-}
-
-variable "ses_from_address" {
-  description = "Remetente verificado no SES. Vazio faz o CD subir a API com EMAIL_PROVIDER=log."
-  type        = string
-  default     = ""
 }
 
 variable "db_allocated_storage" {

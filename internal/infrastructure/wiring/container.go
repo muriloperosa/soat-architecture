@@ -148,11 +148,20 @@ func NewContainer(cfg *config.Config, db *gorm.DB) (*Container, error) {
 	c.OrcamentoRepo = mysqlorcamento.NewOrcamentoRepository(db)
 	c.RelatorioRepo = mysqlrelatorio.NewRelatorioRepository(db)
 
-	provider, region, from := "log", "us-east-1", ""
+	senderConfig := email.SenderConfig{Provider: "log", AWSRegion: "us-east-1"}
 	if cfg != nil {
-		provider, region, from = cfg.EmailProvider, cfg.AWSRegion, cfg.SESFromAddress
+		senderConfig.Provider = cfg.EmailProvider
+		senderConfig.AWSRegion = cfg.AWSRegion
+		senderConfig.SESFromAddress = cfg.SESFromAddress
+		senderConfig.SMTP = email.SMTPConfig{
+			Host:     cfg.SMTPHost,
+			Port:     cfg.SMTPPort,
+			Username: cfg.SMTPUsername,
+			Password: cfg.SMTPPassword,
+			From:     cfg.SMTPFromAddress,
+		}
 	}
-	sender, err := email.NewSender(context.Background(), provider, region, from)
+	sender, err := email.NewSender(context.Background(), senderConfig)
 	if err != nil {
 		return nil, fmt.Errorf("configurar envio de e-mail: %w", err)
 	}

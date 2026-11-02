@@ -67,7 +67,8 @@ Recursos criados, todos com a tag `Project = soat-oficina`:
 | DB subnet group | `oficina-db` | Subnets onde o RDS pode ficar |
 | Security group | `oficina-rds` | Libera a porta 3306 só a partir do security group do cluster |
 | RDS | `oficina-mysql` | MySQL 8 (última 8.0), 20 GiB gp3 criptografado, uma zona, database `mecanica` |
-| Secrets Manager | `oficina/api` | `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET` e `SES_FROM_ADDRESS`, lidos pelo CD |
+| Secrets Manager | `oficina/api` | `DB_HOST`, `DB_USER`, `DB_PASSWORD` e `JWT_SECRET`, lidos pelo CD |
+| Secrets Manager | `oficina/smtp` | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` e `SMTP_FROM_ADDRESS`. Envio de e-mail no AWS Academy, no lugar do SES |
 
 Fica de fora, de propósito:
 
@@ -93,55 +94,7 @@ infra/
 └── .terraform.lock.hcl  # versões travadas dos providers (versionado)
 ```
 
-O state fica local, em `infra/terraform.tfstate`, e está no `.gitignore`.
-
-## Decisões de configuração
-
-| Ponto | Configuração | Motivo |
-|---|---|---|
-| Rede | VPC default e subnets com `map-public-ip-on-launch`, sem NAT Gateway | O NAT custa cerca de US$ 32/mês parado. Com IP público, os nós alcançam o ECR, o SES e a API do EKS direto pela internet |
-| Zonas do control plane | `eks_availability_zones` exclui `us-east-1e` | A VPC default tem subnet em `us-east-1e`, mas o EKS recusa o control plane nessa zona e o `apply` falha |
-| Autenticação do cluster | `API_AND_CONFIG_MAP`, com `bootstrap_cluster_creator_admin_permissions` | Quem roda o `apply` vira admin do cluster. A role do GitHub entra por access entry, sem editar o `aws-auth` à mão |
-| Permissão do deploy | `AmazonEKSClusterAdminPolicy` para `oficina-github-deploy` | O primeiro deploy cria o namespace `oficina`, o que uma policy restrita a namespace não permite |
-| IMDS | IMDSv2 obrigatório, hop limit 2 | Com hop limit 1 a resposta do IMDS não chega aos pods (há um salto a mais pela rede do container) e a API não consegue usar a role do nó para enviar e-mail pelo SES |
-| Credenciais da API na AWS | Role do nó, sem access key | Nenhuma chave fica em Secret, variável ou imagem. O SDK da AWS pega a credencial pelo IMDS |
-| Leitura do ECR | `AmazonEC2ContainerRegistryReadOnly` na role do nó | Sem ela os pods ficam em `ImagePullBackOff` |
-| `metrics-server` | Addon gerenciado do EKS | O EKS não traz o `metrics-server`. Sem ele o HPA fica com metas `<unknown>` |
-| Tamanho do node group | `t3.small`, 1 desejado, máximo 2 | Cabe a API com até 6 réplicas (100m de request cada) junto com os DaemonSets do sistema. O segundo nó só entra se o cluster precisar |
-| Acesso ao banco | `publicly_accessible = false`, security group aceitando só o cluster | O MySQL não fica exposto na internet. Só os pods (e o Job de migration) alcançam a porta 3306 |
-| Versão do MySQL | Última `8.0` disponível no RDS, lida no `plan` | Evita fixar uma minor que a AWS deixa de oferecer |
-| Durabilidade do RDS | Uma zona, sem backup, sem snapshot final, sem proteção contra exclusão | É um ambiente de demonstração, recriado a cada sessão. Em produção, todos esses valores mudariam |
-| Senhas | `random_password` com 24 (banco) e 64 (JWT) caracteres, só letras e números | A `DB_PASSWORD` entra na URL de conexão do Job de migration. Caracteres especiais quebrariam a URL |
-| Exclusão do secret | `recovery_window_in_days = 0` | Sem isso o nome `oficina/api` fica reservado por até 30 dias depois do `destroy`, e o próximo `apply` falha |
-| Valores padrão | Todas as variáveis têm padrão | `plan` e `apply` rodam sem `-var`, tanto local quanto no pipeline quando ele for ligado |
-
-## Variáveis e saídas
-
-As variáveis ficam em [`infra/variables.tf`](../infra/variables.tf). Todas têm valor padrão.
-
-| Variável | Padrão | Observação |
-|---|---|---|
-| `aws_region` | `us-east-1` | Precisa bater com a variable `AWS_REGION` do repositório, se existir |
-| `cluster_name` | `oficina` | Prefixo de quase todos os nomes. Precisa bater com `EKS_CLUSTER_NAME` do CD, se existir |
-| `kubernetes_version` | `1.34` | Use uma versão em suporte padrão. Fora dele, o EKS cobra suporte estendido |
-| `vpc_id` | `null` (VPC default) | Passe para usar outra VPC existente |
-| `subnet_ids` | `null` (descobre as públicas) | Subnets públicas em pelo menos duas zonas |
-| `eks_availability_zones` | `us-east-1a`, `b`, `c`, `d`, `f` | Só usada quando `subnet_ids` é `null` |
-| `node_instance_type` | `t3.small` | |
-| `node_desired_size` / `node_min_size` / `node_max_size` | `1` / `1` / `2` | |
-| `github_deploy_role_name` | `oficina-github-deploy` | A role precisa existir antes do `plan` |
-| `app_secret_name` | `oficina/api` | Nome que o CD lê |
-| `db_name` | `mecanica` | É o `DB_NAME` do ConfigMap base |
-| `db_username` | `oficina` | Só letras, números e `_`. O CD rejeita outro formato |
-| `db_instance_class` | `db.t3.micro` | |
-| `db_allocated_storage` | `20` | Em GiB |
-| `ses_from_address` | `""` | Remetente verificado no SES. Vazio faz o CD subir a API com `EMAIL_PROVIDER=log` |
-
-Os atalhos `make tf-*` não repassam `-var`. Para trocar um valor, crie `infra/terraform.tfvars`, que o Terraform lê sozinho:
-
-```hcl
-ses_from_address = "oficina@exemplo.com"
-```
+O Terraform de [`infra/`](../infra/) sobe tudo o que o deploy precisa numa conta do **AWS Academy Learner Lab**, região `us-east-1`. Quem roda o `apply` é o próprio CD: cada tag `MAJOR.MINOR.PATCH` na `main` executa o job `infra` ([`.github/workflows/cd.yml`](../.github/workflows/cd.yml)) antes de publicar a imagem e fazer o rollout. Não é preciso rodar `apply` à mão antes de criar a tag.
 
 Ou rode o Terraform direto: `terraform -chdir=infra apply -var ses_from_address=oficina@exemplo.com`.
 
@@ -184,7 +137,7 @@ Versões com que este guia foi testado: Terraform 1.17.1, provider `hashicorp/aw
 - Uma conta AWS com a região `us-east-1` habilitada. Pode ser outra região, desde que `aws_region`, `eks_availability_zones` e a variable `AWS_REGION` do repositório acompanhem.
 - VPC default com subnets públicas em pelo menos duas zonas. Contas novas já vêm assim. Se a VPC default foi apagada, recrie com `aws ec2 create-default-vpc` ou passe `vpc_id` e `subnet_ids`.
 - Os passos 1 a 3 do [AWS_SETUP.md](AWS_SETUP.md) feitos: provedor OIDC, role `oficina-github-deploy` e repositório ECR. Os passos 4 (secret) e 5 (access entry) **não** devem ser feitos à mão, o Terraform cria os dois.
-- Para enviar e-mail de verdade: um remetente verificado no SES (fora do sandbox, também o destinatário). Sem isso a API sobe com `EMAIL_PROVIDER=log`.
+- Para enviar e-mail de verdade: o provedor-alvo é o Amazon SES, que exige remetente verificado (e, no sandbox, destinatário verificado). O AWS Academy Learner Lab nega essa verificação, então lá o envio é por SMTP: o secret `SMTP_PASSWORD` no environment `aws-deploy` ([AWS_SETUP.md](AWS_SETUP.md)). Sem esse secret, o CD falha antes do `apply`.
 
 ### Credenciais
 
@@ -238,8 +191,10 @@ O Terraform mostra o plano de novo e pede `yes`. Leva cerca de 15 a 20 minutos: 
 ### 3. Apontar o kubectl para o cluster
 
 ```bash
-aws eks update-kubeconfig --region us-east-1 --name oficina --profile oficina-temp
+aws eks update-kubeconfig --region us-east-1 --name oficina --profile oficina-lab
 kubectl get nodes
+aws secretsmanager get-secret-value --secret-id oficina/api --query SecretString --output text --profile oficina-lab
+aws sesv2 get-email-identity --email-identity soatoficinapos@gmail.com --query VerifiedForSendingStatus --profile oficina-lab
 ```
 
 Os nós devem aparecer como `Ready`. Se ainda estiverem `NotReady`, espere um ou dois minutos.
@@ -394,7 +349,8 @@ O addon `metrics-server` ainda está subindo. Confira com `aws eks describe-addo
 
 ### API sem conseguir enviar e-mail
 
-- `EMAIL_PROVIDER=log` nos logs: `ses_from_address` estava vazio no `apply`. Rode o `apply` de novo com o remetente e faça um novo deploy.
+- Erro de autenticação SMTP: a senha de app está errada ou foi revogada. Atualize `SMTP_PASSWORD` e incremente `SMTP_SECRET_VERSION`.
+- Os itens abaixo valem só para o SES, provedor-alvo fora do AWS Academy.
 - `AccessDenied` ou erro de credencial: o pod não alcançou o IMDS. Confira se o launch template está com hop limit 2 (`aws ec2 describe-launch-template-versions --launch-template-name <nome> --query 'LaunchTemplateVersions[0].LaunchTemplateData.MetadataOptions'`).
 - `MessageRejected: Email address is not verified`: o SES está em sandbox e o destinatário não foi verificado.
 

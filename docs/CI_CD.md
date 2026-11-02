@@ -173,9 +173,9 @@ Nunca aponte esse scan para produção ou para o banco de desenvolvimento. A sta
 
 ## Parte 2: Deploy
 
-O workflow [`cd.yml`](../.github/workflows/cd.yml) leva uma versão da `main` para o cluster EKS na conta AWS do projeto. Ele cobre os itens de CI/CD do Tech Challenge: build, testes, imagem Docker, deploy do banco (migrations), aplicação dos manifestos e deploy no Kubernetes.
+O workflow [`cd.yml`](../.github/workflows/cd.yml) leva uma versão da `main` para o cluster EKS no AWS Academy Learner Lab. Ele cobre os itens de CI/CD do Tech Challenge: provisionamento da infraestrutura (Terraform), build, imagem Docker, deploy do banco (migrations), aplicação dos manifestos e deploy no Kubernetes.
 
-Por enquanto o CD não provisiona infraestrutura. O job `infra` (`terraform apply` de `infra/`) já está no workflow, mas está desligado (`if: false`) e aparece como *skipped* em todo run. Enquanto isso, cluster EKS, RDS e o secret `oficina/api` são criados pelo Terraform de [`infra/`](../infra/), documentado em [`TERRAFORM.md`](TERRAFORM.md), rodado fora do pipeline, e o deploy parte do princípio de que eles já existem. Ver [Terraform no pipeline](#terraform-no-pipeline).
+Uma tag é o único passo manual. O job `infra` roda `terraform apply` de [`infra/`](../infra/) a cada tag, com o state num bucket S3, e cria ou atualiza cluster EKS, RDS, ECR e o secret `oficina/api` ([`TERRAFORM.md`](TERRAFORM.md)). Não é preciso rodar `apply` à mão antes.
 
 ### Fluxo do deploy
 
@@ -183,16 +183,16 @@ Por enquanto o CD não provisiona infraestrutura. O job `infra` (`terraform appl
 flowchart TD
     TAG["git push origin 1.0.1"] --> GUARD["1. guard<br/>tag semver, commit na main<br/>e CI gate verde?"]
     GUARD -->|não| STOP1[Falha: AWS não é tocada]
-    GUARD -->|sim| IMG["2. image<br/>build e push oficina-api:1.0.1 no ECR"]
-    IMG --> TF["3. infra<br/>terraform apply<br/>(skipped por enquanto)"]
-    TF -->|sucesso ou skipped| DEP["4. deploy<br/>segredos, migrations e rollout"]
+    GUARD -->|sim| TF["2. infra<br/>terraform apply<br/>(state no S3)"]
     TF -->|falhou| STOP2[Falha: cluster não é tocado]
+    TF -->|sim| IMG["3. image<br/>build e push oficina-api:1.0.1 no ECR"]
+    IMG --> DEP["4. deploy<br/>segredos, migrations e rollout"]
     DEP --> OK["Resumo com versão, imagem e URL"]
 ```
 
 Os passos rodam em sequência, e cada um só começa se o anterior passou. A regra mais importante é que **a CI do commit precisa ter passado antes de qualquer coisa acontecer na AWS**.
 
-O CD não roda a CI de novo. O ruleset da `main` ([`.github/rulesets/main.json`](../.github/rulesets/main.json)) já exige PR com todos os checks verdes, branch atualizada e nenhum bypass, então todo commit da `main` foi validado. O `guard` só confere, pela API do GitHub, que o check **CI gate** do push na `main` terminou com sucesso para o commit da tag. Se a CI ainda estiver rodando (tag criada logo depois do merge), ele espera até 30 minutos. Se a CI falhou ou não existe, nenhuma imagem é publicada e o cluster não é tocado.
+O CD não roda a CI de novo. O ruleset da `main` ([`.github/rulesets/main.json`](../.github/rulesets/main.json)) já exige PR com todos os checks verdes, branch atualizada e nenhum bypass, então todo commit da `main` foi validado. O `guard` só confere, pela API do GitHub, que o check **CI gate** do push na `main` terminou com sucesso para o commit da tag. Se a CI ainda estiver rodando (tag criada logo depois do merge), ele espera até 30 minutos. Se a CI falhou ou não existe, nada é aplicado na AWS.
 
 O `guard` continua necessário mesmo com o ruleset: o ruleset protege a branch, não as tags. Sem a checagem, uma tag criada num commit de outra branch, que nunca passou por PR, iria para produção.
 
@@ -202,14 +202,13 @@ O que acontece dentro do passo de deploy, na ordem:
 sequenceDiagram
     autonumber
     participant GH as GitHub Actions
-    participant AWS as AWS (STS e Secrets Manager)
+    participant AWS as AWS (Secrets Manager)
     participant K as Cluster EKS
     participant J as Job oficina-migrate
     participant DB as Banco (RDS)
     participant API as Pods da API
 
-    GH->>AWS: assume a role de deploy (OIDC)
-    GH->>K: aws eks update-kubeconfig
+    GH->>K: aws eks update-kubeconfig (credenciais do lab)
     GH->>AWS: lê o secret oficina/api
     AWS-->>GH: DB_HOST, DB_USER, DB_PASSWORD, JWT_SECRET
     GH->>K: aplica ConfigMap e Secret
@@ -228,16 +227,17 @@ sequenceDiagram
 | Passo | O que faz | Por que existe | Se falhar |
 | --- | --- | --- | --- |
 | **guard** | Confere que o workflow rodou a partir de uma tag `MAJOR.MINOR.PATCH`, que o commit da tag está na `main` e que o check **CI gate** desse commit passou | O filtro de tags do GitHub não olha a branch, e só versões validadas pela CI podem ir para o ar | Nada roda. Tag no commit errado: apague e crie de novo. CI vermelha: corrija na `main` e lance uma nova versão |
-| **image** | Assume a role de deploy por OIDC, faz login no ECR, `docker build` com a tag da versão (ex.: `oficina-api:1.0.1`) e `docker push` | A imagem precisa estar num registry que o cluster alcance. A tag da versão deixa claro o que está rodando | Nada foi aplicado no cluster. Veja o log do build ou se o repositório ECR existe |
-| **infra** | Assume a role do Terraform por OIDC e roda `terraform init/plan/apply` em `infra/`, com state no S3 | Provisionamento automatizado e reproduzível do cluster e do banco | **Sempre pulado** por enquanto (`if: false`). Quando ativado, roda depois da imagem publicada; se falhar, o cluster não é tocado |
-| **deploy** | Assume a role de deploy, lê os segredos no Secrets Manager e roda `make k8s-deploy`: ConfigMap/Secret → Job de migration → rollout da API | Reaproveita o mesmo alvo usado manualmente, na ordem definida na [ADR 0006](adr/0006-migrations-em-job-kubernetes.md) | Se a migration falhar, a versão anterior da API continua no ar. O passo **Diagnostics** imprime pods, jobs, log da migration e eventos |
+| **infra** | Cria o bucket do state se ele não existir ([`bootstrap-state.sh`](../infra/bootstrap-state.sh)) e roda `terraform init/plan/apply` em `infra/` | Provisionamento automatizado e reproduzível do cluster, do banco, do ECR e do secret | Nada foi publicado nem aplicado no cluster. Veja o log do plan/apply. Um lock preso no S3 sai com `terraform force-unlock` |
+| **image** | Faz login no ECR, `docker build` com a tag da versão (ex.: `oficina-api:1.0.1`) e `docker push` | A imagem precisa estar num registry que o cluster alcance. A tag da versão deixa claro o que está rodando | Nada foi aplicado no cluster. Veja o log do build |
+| **deploy** | Lê os segredos no Secrets Manager e roda `make k8s-deploy`: ConfigMap/Secret → Job de migration → rollout da API | Reaproveita o mesmo alvo usado manualmente, na ordem definida na [ADR 0006](adr/0006-migrations-em-job-kubernetes.md) | Se a migration falhar, a versão anterior da API continua no ar. O passo **Diagnostics** imprime pods, jobs, log da migration e eventos |
 
-A imagem no ECR é **imutável**: uma tag publicada não pode ser sobrescrita. Ao rodar o deploy de novo para uma versão que já existe no ECR (redeploy ou rollback), o passo `image` reaproveita a imagem existente em vez de reconstruir.
+A imagem no ECR é **imutável**: uma tag publicada não pode ser sobrescrita. Ao rodar o deploy de novo para uma versão que já existe no ECR (redeploy ou rollback), o passo `image` reaproveita a imagem existente em vez de reconstruir. O `infra` roda em todo run, inclusive no rollback; sem mudança no Terraform, o `apply` não altera nada.
 
 ### Como lançar uma versão
 
-1. Confira que a CI do push na `main` terminou verde no commit que você quer lançar. Se a tag for criada antes, o `guard` espera a CI terminar.
-2. Crie e envie a tag:
+1. Confira que a sessão do Learner Lab está ativa e que os secrets de credencial estão atualizados ([`AWS_SETUP.md`](AWS_SETUP.md), passo 2).
+2. Confira que a CI do push na `main` terminou verde no commit que você quer lançar. Se a tag for criada antes, o `guard` espera a CI terminar.
+3. Crie e envie a tag:
 
    ```bash
    git switch main
@@ -246,198 +246,72 @@ A imagem no ECR é **imutável**: uma tag publicada não pode ser sobrescrita. A
    git push origin 1.0.1
    ```
 
-3. Acompanhe em **Actions → CD (Continuous Deployment)**. Ao final, o resumo do run mostra a versão, a imagem e a URL da API.
+4. Acompanhe em **Actions → CD (Continuous Deployment)**. Ao final, o resumo do run mostra a versão, a imagem e a URL da API.
 
 Use [versionamento semântico](https://semver.org/lang/pt-BR/): `PATCH` para correções, `MINOR` para funcionalidades compatíveis, `MAJOR` para mudanças que quebram contrato da API. Tags com prefixo (`v1.0.1`) ou sufixo (`1.0.1-rc`) **não** disparam o deploy.
 
 ### Rollback
 
-- **Voltar para a versão anterior:** em **Actions → CD (Continuous Deployment) → Run workflow**, escolha a tag anterior (ex.: `1.0.0`) em "Use workflow from". O pipeline confere a CI daquele commit, reaproveita a imagem que já está no ECR e faz o rollout.
+- **Voltar para a versão anterior:** em **Actions → CD (Continuous Deployment) → Run workflow**, escolha a tag anterior (ex.: `1.0.0`) em "Use workflow from". O pipeline confere a CI daquele commit, aplica o Terraform daquele commit, reaproveita a imagem que já está no ECR e faz o rollout. Se a versão anterior tiver um Terraform diferente, o rollback também volta a infraestrutura.
 - **Emergência:** `kubectl -n oficina rollout undo deployment/oficina-api` volta para o ReplicaSet anterior na hora, sem passar pelo pipeline. O próximo deploy por tag sobrescreve esse estado.
 - **Migrations não voltam sozinhas.** O rollback troca só a imagem da API. Por isso toda migration precisa ser compatível com a versão anterior: primeiro adiciona, a remoção fica para uma versão seguinte (padrão expandir/migrar/contrair, ADR 0006).
 
 ### Credenciais e segredos
 
-Nenhuma chave da AWS fica guardada no GitHub. Os jobs `image` e `deploy` se autenticam por **OIDC**: o job pede ao GitHub um token assinado que diz "sou um workflow do repositório X, rodando no environment Y", e a AWS troca esse token por credenciais temporárias de uma role IAM, válidas por até 1 hora.
+O Learner Lab não permite criar provedor OIDC nem role IAM, então o pipeline usa as credenciais temporárias da sessão do lab. Elas ficam como secrets do environment `aws-deploy`, e só os jobs `infra`, `image` e `deploy` declaram esse environment. A CI de pull request não tem environment e não recebe as credenciais.
 
-```mermaid
-sequenceDiagram
-    participant J as Job do GitHub Actions
-    participant GH as GitHub (emissor OIDC)
-    participant STS as AWS STS
-    participant AWS as ECR / EKS / Secrets Manager
+As credenciais da sessão valem por cerca de 4 horas. Elas são da role `voclabs`, que também cria o cluster: por isso o pipeline já é admin do EKS, sem access entry extra.
 
-    J->>GH: pede token (permissions: id-token: write)
-    GH-->>J: token com repo e environment
-    J->>STS: AssumeRoleWithWebIdentity(role, token)
-    STS->>STS: confere trust policy (repo + environment)
-    STS-->>J: credenciais temporárias (1h)
-    J->>AWS: chamadas com permissão da role
-```
-
-A role `oficina-github-deploy` só aceita tokens do environment `aws-deploy` deste repositório. Um job sem environment, como os da CI de pull request, não consegue assumi-la. Ela pode só:
-
-- publicar e ler imagens no repositório ECR `oficina-api`;
-- gerar o kubeconfig do cluster `oficina` (`eks:DescribeCluster`);
-- ler o secret `oficina/api`.
-
-O que ela pode fazer dentro do Kubernetes vem do access entry do EKS (ver [Preparação da conta AWS](#preparação-da-conta-aws-uma-vez)).
-
-Configuração no GitHub:
+Configuração no GitHub ([`AWS_SETUP.md`](AWS_SETUP.md)):
 
 | Onde | Nome | Valor |
 | --- | --- | --- |
-| Variables do repositório | `AWS_DEPLOY_ROLE_ARN` | ARN da role `oficina-github-deploy` |
-| Variables do repositório (opcionais) | `AWS_REGION`, `EKS_CLUSTER_NAME`, `ECR_REPOSITORY`, `APP_SECRET_ID` | Padrões: `us-east-1`, `oficina`, `oficina-api`, `oficina/api` |
+| Secrets do environment `aws-deploy` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`, `SMTP_PASSWORD` | Credenciais AWS do Learner Lab; senha de app Gmail em `SMTP_PASSWORD` |
+| Variables do repositório (opcionais) | `AWS_REGION`, `EKS_CLUSTER_NAME`, `ECR_REPOSITORY`, `APP_SECRET_ID`, `SMTP_SECRET_ID`, `SMTP_SECRET_VERSION`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_FROM_ADDRESS`, `TF_STATE_BUCKET` | Padrões: `us-east-1`, `oficina`, `oficina-api`, `oficina/api`, `oficina/smtp`, `1`, Gmail `smtp.gmail.com:587`, remetente `soatoficinapos@gmail.com`, `oficina-tfstate-<conta>` |
 | Environments | `aws-deploy` | Restrinja a **tags** com o padrão `[0-9]*.[0-9]*.[0-9]*` |
-| Para o job `infra` | `AWS_TERRAFORM_ROLE_ARN`, `TF_STATE_BUCKET` e o environment `aws-infra` | Só quando o Terraform for para o pipeline (ver [Terraform no pipeline](#terraform-no-pipeline)) |
 
-ARN de role não é segredo, por isso vai em *variables* e não em *secrets*.
+Os jobs de deploy declaram o environment `aws-deploy`. Eles também podem ler Repository secrets; quando o mesmo nome existe nos dois escopos, o Environment secret prevalece. Prefira guardar credenciais no environment para limitar o acesso aos jobs de deploy.
 
-**Segredos da aplicação** ficam no AWS Secrets Manager, no secret `oficina/api`:
+**Segredos da aplicação** ficam no AWS Secrets Manager, no secret `oficina/api`, criado pelo Terraform:
 
 | Chave | Conteúdo |
 | --- | --- |
 | `DB_HOST` | Endpoint do RDS |
 | `DB_USER` | Usuário do banco |
 | `DB_PASSWORD` | Senha, só letras e números (entra na URL do Job de migration, ver ADR 0006). O pipeline recusa outro formato |
-| `JWT_SECRET` | Chave HS256, gere com `openssl rand -hex 32` |
-| `SES_FROM_ADDRESS` | Remetente verificado no SES. Vazio faz o deploy usar `EMAIL_PROVIDER=log` |
+| `JWT_SECRET` | Chave HS256 gerada pelo Terraform |
+| `SES_FROM_ADDRESS` | Opcional, não criado pelo Terraform. Só faz sentido numa conta que libere o SES. Hoje o CD sempre prioriza o secret SMTP ([ADR 0010](adr/0010-smtp-no-lugar-do-ses-no-learner-lab.md)) |
 
-O job `deploy` lê o secret e mascara os valores sensíveis no log (`::add-mask::`). `DB_PASSWORD` e `JWT_SECRET` vão para `k8s/overlays/eks/secrets.env` (permissão 600, apagado no fim do job mesmo se algo falhar), de onde o Kustomize gera o Secret `oficina-api-secrets`. `DB_HOST`, `DB_USER`, `EMAIL_PROVIDER` e `SES_FROM_ADDRESS` substituem os placeholders do overlay EKS, só na cópia do repositório dentro do runner. O pod não recebe access key da AWS.
+O Terraform cria o secret SMTP indicado por `SMTP_SECRET_ID` (padrão `oficina/smtp`) e a versão inicial. A senha vem do Environment Secret `SMTP_PASSWORD`; `secret_string_wo` grava o valor sem persistir a senha no state ou no plano. O CD carrega o payload no Secret Kubernetes e seleciona `EMAIL_PROVIDER=smtp`. O host, porta, usuário e remetente usam os padrões Gmail descritos em [`AWS_SETUP.md`](AWS_SETUP.md); podem ser sobrescritos pelas variables `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME` e `SMTP_FROM_ADDRESS`. Ao trocar a senha, atualize o Environment Secret e incremente `SMTP_SECRET_VERSION` para que o Terraform publique outra versão. O provedor-alvo é o Amazon SES, mas o Learner Lab nega `ses:VerifyEmailIdentity`, e sem remetente verificado o SES não envia. Por isso, no AWS Academy, o CD usa SMTP; o adapter SES continua no código, e o que é preciso para voltar a ele está na [ADR 0010](adr/0010-smtp-no-lugar-do-ses-no-learner-lab.md).
 
-### Preparação da conta AWS (uma vez)
-
-> Roteiro completo em comandos, do zero até o primeiro deploy: [`AWS_SETUP.md`](AWS_SETUP.md).
-
-O pipeline precisa que estes recursos existam antes do primeiro deploy. Rode com um usuário administrador da conta (`aws configure` ou `aws sso login`), na região do cluster. Troque `<conta>` pelo ID da conta.
-
-**1. Provedor OIDC do GitHub**, uma vez por conta. Também pode ser feito em **IAM → Identity providers → Add provider** (OpenID Connect, URL `https://token.actions.githubusercontent.com`, audience `sts.amazonaws.com`).
-
-```bash
-aws iam create-open-id-connect-provider \
-  --url https://token.actions.githubusercontent.com \
-  --client-id-list sts.amazonaws.com
-```
-
-**2. Role de deploy**, que confia só no environment `aws-deploy` deste repositório. O repositório usa *immutable subject* no OIDC, então o `sub` do token carrega os IDs numéricos do owner e do repo (`repo:<owner>@<id>/<repo>@<id>:environment:<env>`). Um `sub` no formato antigo (`repo:<owner>/<repo>:...`) faz o AssumeRole falhar com `Not authorized to perform sts:AssumeRoleWithWebIdentity`. Para conferir o prefixo: `gh api repos/muriloperosa/soat-architecture/actions/oidc/customization/sub`.
-
-```bash
-cat > trust.json <<'JSON'
-{
-  "Version": "2012-10-17",
-  "Statement": [{
-    "Effect": "Allow",
-    "Principal": { "Federated": "arn:aws:iam::<conta>:oidc-provider/token.actions.githubusercontent.com" },
-    "Action": "sts:AssumeRoleWithWebIdentity",
-    "Condition": {
-      "StringEquals": {
-        "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-        "token.actions.githubusercontent.com:sub": "repo:muriloperosa@45050585/soat-architecture@1308980044:environment:aws-deploy"
-      }
-    }
-  }]
-}
-JSON
-
-cat > policy.json <<'JSON'
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    { "Sid": "EcrLogin", "Effect": "Allow", "Action": "ecr:GetAuthorizationToken", "Resource": "*" },
-    {
-      "Sid": "EcrPushPull",
-      "Effect": "Allow",
-      "Action": [
-        "ecr:BatchCheckLayerAvailability", "ecr:BatchGetImage", "ecr:CompleteLayerUpload",
-        "ecr:DescribeImages", "ecr:GetDownloadUrlForLayer",
-        "ecr:InitiateLayerUpload", "ecr:PutImage", "ecr:UploadLayerPart"
-      ],
-      "Resource": "arn:aws:ecr:us-east-1:<conta>:repository/oficina-api"
-    },
-    { "Sid": "EksKubeconfig", "Effect": "Allow", "Action": "eks:DescribeCluster", "Resource": "arn:aws:eks:us-east-1:<conta>:cluster/oficina" },
-    { "Sid": "AppSecret", "Effect": "Allow", "Action": "secretsmanager:GetSecretValue", "Resource": "arn:aws:secretsmanager:us-east-1:<conta>:secret:oficina/api-*" }
-  ]
-}
-JSON
-
-aws iam create-role --role-name oficina-github-deploy \
-  --assume-role-policy-document file://trust.json --max-session-duration 3600
-aws iam put-role-policy --role-name oficina-github-deploy \
-  --policy-name oficina-deploy --policy-document file://policy.json
-```
-
-**3. Repositório ECR** com tags imutáveis e scan a cada push:
-
-```bash
-aws ecr create-repository --repository-name oficina-api \
-  --image-tag-mutability IMMUTABLE \
-  --image-scanning-configuration scanOnPush=true
-```
-
-**4. Acesso da role ao cluster.** O cluster precisa estar com o modo de autenticação `API` ou `API_AND_CONFIG_MAP`. A role recebe admin do cluster porque o primeiro deploy cria o namespace `oficina`:
-
-```bash
-aws eks create-access-entry --cluster-name oficina \
-  --principal-arn arn:aws:iam::<conta>:role/oficina-github-deploy
-aws eks associate-access-policy --cluster-name oficina \
-  --principal-arn arn:aws:iam::<conta>:role/oficina-github-deploy \
-  --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy \
-  --access-scope type=cluster
-```
-
-**5. Secret da aplicação** (os valores do banco vêm do RDS):
-
-```bash
-aws secretsmanager create-secret --name oficina/api --secret-string '{
-  "DB_HOST": "<endpoint do RDS>",
-  "DB_USER": "<usuário do RDS>",
-  "DB_PASSWORD": "<senha só com letras e números>",
-  "JWT_SECRET": "<saída de openssl rand -hex 32>"
-}'
-```
-
-**6. No GitHub:** crie o environment `aws-deploy` (**Settings → Environments**) e a variable `AWS_DEPLOY_ROLE_ARN` com `arn:aws:iam::<conta>:role/oficina-github-deploy`.
-
-Para o deploy funcionar, o security group do RDS também precisa aceitar conexões na porta 3306 vindas dos nós do EKS, e o banco `mecanica` precisa existir.
-
-### Terraform no pipeline
-
-O job `infra` está pronto no `cd.yml`, mas fica **skipped** em todo run por causa do `if: false`. Ele roda depois do `image` e antes do `deploy`; o `deploy` roda do mesmo jeito com ele pulado. Se ele rodar e falhar, a imagem já está no ECR, mas o cluster não é tocado.
-
-Para ativar:
-
-1. O Terraform de `infra/` precisa declarar um backend S3 parcial (`terraform { backend "s3" {} }`). Sem isso, o state ficaria no runner e se perderia a cada execução.
-2. Crie um bucket S3 para o state, com versionamento, e cadastre o nome na variable `TF_STATE_BUCKET`. O lock usa um arquivo no próprio bucket (`use_lockfile`, Terraform 1.10 ou mais novo).
-3. Crie uma role `oficina-github-terraform`, igual à de deploy (passo 2 da preparação), mas com trust no environment `aws-infra` e permissão para criar os recursos do Terraform. Cadastre o ARN em `AWS_TERRAFORM_ROLE_ARN`.
-4. Crie o environment `aws-infra`, de preferência com revisores obrigatórios: cada release vai pedir aprovação antes do `apply`.
-5. Se a infraestrutura já tiver sido criada localmente, migre o state para o bucket (`terraform init -migrate-state` com os mesmos `-backend-config` do workflow) antes do primeiro run. Sem isso, o pipeline tenta criar tudo de novo.
-6. Remova o `if: false` do job `infra` no `cd.yml`.
+O job `deploy` lê os secrets e mascara os valores sensíveis no log (`::add-mask::`). `DB_PASSWORD`, `JWT_SECRET` e SMTP vão para `k8s/overlays/eks/secrets.env` (permissão 600, apagado no fim do job), de onde o Kustomize gera o Secret `oficina-api-secrets`. `DB_HOST`, `DB_USER`, `EMAIL_PROVIDER` e `SES_FROM_ADDRESS` substituem os placeholders do overlay EKS, só na cópia do repositório dentro do runner. O pod não recebe access key da AWS: ele usa a `LabRole` dos nós pelo IMDS. A role usada pelo GitHub Actions precisa de `secretsmanager:GetSecretValue` para o secret SMTP criado pelo Terraform.
 
 ### Custos
 
-O pipeline em si quase não gera custo na AWS: ECR e Secrets Manager ficam em centavos a poucos dólares por mês. O que pesa é o ambiente que ele usa, e a conta tem **US$ 110 de crédito**. Valores aproximados em `us-east-1` (confira a [página de preços](https://aws.amazon.com/pricing/)):
+O pipeline em si quase não gera custo: ECR, S3 do state e Secrets Manager ficam em centavos. O que pesa é o ambiente, e ele **continua cobrando com a sessão do lab encerrada**. Valores aproximados em `us-east-1` (confira a [página de preços](https://aws.amazon.com/pricing/)):
 
 | Recurso | Custo aproximado |
 | --- | --- |
 | Control plane do EKS | US$ 0,10/h, cerca de US$ 73/mês, mesmo sem tráfego |
 | Nó `t3.small` (on-demand) | cerca de US$ 15/mês por nó |
 | Load Balancer do Service | cerca de US$ 16–18/mês, mais tráfego |
-| RDS `db.t3.micro` | cerca de US$ 13–15/mês, se não entrar no free tier |
-| ECR, Secrets Manager | centavos a poucos dólares por mês |
+| RDS `db.t3.micro` | cerca de US$ 13–15/mês |
+| ECR, S3, Secrets Manager | centavos por mês |
 
-Com tudo ligado o mês inteiro, o ambiente gasta perto de US$ 110–120/mês, ou seja, o crédito cobre **menos de um mês**. Suba o cluster perto das demonstrações e derrube depois. O ECR, a role e o secret podem ficar: custam quase nada e o próximo deploy os reaproveita. Configure um alerta em **Billing → Budgets** para não ser pego de surpresa.
+Com tudo ligado, o ambiente gasta perto de US$ 4 por dia. Suba o cluster perto das demonstrações e derrube depois ([`TERRAFORM.md`](TERRAFORM.md#derrubar)). O bucket do state pode ficar: a próxima tag recria o ambiente a partir dele.
 
 ### Problemas comuns
 
-- **`Not authorized to perform sts:AssumeRoleWithWebIdentity`:** o trust da role não aceitou o token. Confira se o job usa o environment `aws-deploy`, se o `sub` no trust tem o nome certo do repositório e se o job tem `permissions: id-token: write`.
-- **`Credentials could not be loaded` ou role vazia:** falta a variable `AWS_DEPLOY_ROLE_ARN` no repositório.
-- **`Falha ao consultar o ECR oficina-api`:** o log mostra o erro da AWS. `RepositoryNotFoundException`: crie o repositório (passo 3 da preparação) na mesma região de `AWS_REGION`. `AccessDeniedException`: confira a policy da role (passo 2).
-- **`AccessDeniedException` no Secrets Manager:** o secret não se chama `oficina/api` ou está em outra região. A role só lê esse nome.
-- **`You must be logged in to the server (Unauthorized)` no kubectl:** a role não tem access entry no cluster (passo 4).
-- **`Chave X ausente no secret oficina/api`:** complete o JSON no Secrets Manager.
+- **`ExpiredToken`, `InvalidClientTokenId` ou `The security token included in the request is invalid`:** a sessão do lab acabou ou os secrets estão desatualizados. Inicie o lab, atualize os três secrets e rode o workflow de novo na tag.
+- **`Credentials could not be loaded`:** os secrets não existem no environment `aws-deploy`, ou o run não é de uma tag liberada pela regra do environment.
+- **`Error acquiring the state lock`:** outro `apply` (local ou de outro run) está com o lock, ou um run foi interrompido. Confirme que nada está rodando e use `terraform force-unlock <id>` em `infra/`.
+- **`AccessDenied` no apply:** o lab bloqueia algumas ações. Confira o recurso no log; o Terraform de `infra/` usa só serviços liberados no Learner Lab e não cria role IAM.
+- **`You must be logged in to the server (Unauthorized)` no kubectl:** o cluster foi criado por outra identidade (outra conta de lab ou um apply com credencial diferente). Destrua e recrie pelo pipeline.
+- **`Chave X ausente no secret oficina/api`:** o apply não terminou. Rode o workflow de novo.
+- **`SMTP_PASSWORD` ausente:** cadastre-o como Environment Secret no environment `aws-deploy`; o Terraform interrompe o apply se ele estiver vazio.
+- **Notificação por e-mail não chega:** confirme a senha de app e a saída de rede para o host/porta SMTP. O Learner Lab pode bloquear conexões de saída na porta 587.
 - **Migration falhou:** o passo Diagnostics mostra o log do Job. Se o golang-migrate marcou a versão como `dirty`, siga o procedimento de `force` em [`KUBERNETES.md`](KUBERNETES.md#problemas-comuns). A API anterior continua atendendo.
-- **`ImagePullBackOff`:** os nós não conseguem baixar do ECR. Confira se a imagem `oficina-api:<versão>` existe e se a role dos nós tem `AmazonEC2ContainerRegistryReadOnly`.
+- **`ImagePullBackOff`:** os nós não conseguem baixar do ECR. Confira se a imagem `oficina-api:<versão>` existe.
 - **Rollout parado em `rollout status`:** veja `kubectl -n oficina describe pod` e os eventos no passo Diagnostics. Probes falhando costumam indicar banco inacessível (security group do RDS).
 - **Tag criada no commit errado:** `git push --delete origin 1.0.1`, `git tag -d 1.0.1` e crie de novo. Se a imagem já foi para o ECR, use um novo número de versão: a tag no ECR é imutável.
 
@@ -449,7 +323,7 @@ Com tudo ligado o mês inteiro, o ambiente gasta perto de US$ 110–120/mês, ou
 - Fixe actions de terceiros por SHA completo revisado, em vez de tags mutáveis, e mantenha a versão correspondente em comentário para facilitar atualizações periódicas.
 - Use versões explícitas de Go e ferramentas; evite instalar ferramentas com `@latest` em cada execução.
 - Não faça upload de `.env`, tokens, dumps do banco ou relatórios que contenham dados sensíveis.
-- Separe permissões de deploy da CI. Só os jobs do CD que falam com a AWS pedem `id-token: write` e usam o environment `aws-deploy`; a role IAM só confia nesse environment, então a CI de PR não consegue assumi-la.
+- Separe permissões de deploy da CI. Só os jobs do CD que falam com a AWS usam o environment `aws-deploy`, onde ficam as credenciais do lab; a CI de PR não declara environment e não as recebe.
 
 ## Artefatos e relatórios
 
@@ -490,12 +364,11 @@ Definido:
 - SAST: bloquear achados críticos/altos com alta confiança;
 - exceções: justificadas, versionadas, revisadas e com responsável e prazo de revisão;
 - DAST: semanal e manual inicialmente, bloqueando alertas críticos/altos confirmados;
-- deploy: por tag semver num commit da `main`, com o CI gate desse commit verde antes de qualquer passo na AWS (sem rodar a CI de novo), imagem imutável no ECR com a versão da tag, migrations num Job antes do rollout ([ADR 0008](adr/0008-deploy-por-tag-no-eks.md));
-- credenciais: OIDC do GitHub com uma role IAM de deploy de permissão mínima, presa ao environment `aws-deploy`; segredos da aplicação no AWS Secrets Manager;
+- deploy: por tag semver num commit da `main`, com o CI gate desse commit verde antes de qualquer passo na AWS (sem rodar a CI de novo), `terraform apply` de `infra/` no mesmo run com state no S3, imagem imutável no ECR com a versão da tag, migrations num Job antes do rollout ([ADR 0008](adr/0008-deploy-por-tag-no-eks.md));
+- credenciais: as da sessão do AWS Academy Learner Lab, como secrets do environment `aws-deploy`, porque o lab não permite OIDC nem role IAM ([ADR 0009](adr/0009-terraform-no-cd-com-learner-lab.md)); segredos da aplicação no AWS Secrets Manager;
 - rollback: reimplantar a tag anterior pelo `workflow_dispatch`; migrations compatíveis pelo padrão expandir/migrar/contrair.
 
 Pendente:
 
-- cluster EKS e RDS provisionados pelo Terraform de `infra/` (fora do escopo do pipeline), com o secret `oficina/api` preenchido;
-- ativar o job `infra` (remover o `if: false`) quando o Terraform de `infra/` tiver backend S3 e a role do Terraform existir;
+- OIDC com role de permissão mínima no lugar das credenciais do lab, se o projeto passar para uma conta própria;
 - ambiente de staging e aprovação humana antes de produção, se o projeto passar a ter mais de um ambiente.

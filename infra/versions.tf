@@ -1,5 +1,10 @@
 terraform {
-  required_version = ">= 1.5.0"
+  # use_lockfile do backend S3 exige 1.10 ou mais novo.
+  required_version = ">= 1.11.0"
+
+  # Backend parcial: bucket, key e region vêm do -backend-config do
+  # make tf-init e do CD. O bucket é criado por bootstrap-state.sh.
+  backend "s3" {}
 
   required_providers {
     aws = {
