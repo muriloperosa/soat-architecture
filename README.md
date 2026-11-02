@@ -88,6 +88,8 @@ flowchart TB
     email -.->|AWS Academy| smtp[["Servidor SMTP<br/>STARTTLS"]]
 ```
 
+[Versão em SVG](docs/diagramas/1-componentes-da-aplicacao.svg)
+
 Domínio (entidades e value objects), aplicação (casos de uso) e infraestrutura (adaptadores HTTP, de persistência e de e-mail, frameworks) são pacotes separados, e as dependências apontam só para dentro: infraestrutura conhece aplicação e domínio, aplicação conhece só domínio, e domínio não conhece nada do projeto. Os repositórios e serviços externos que o domínio usa são interfaces declaradas nele e implementadas na infraestrutura. Essa regra é verificada por um teste automático (`test/architecture/`). Cada agregado (ordem de serviço, cliente, veículo, peça, usuário) carrega suas próprias regras de negócio em Value Objects auto validáveis, como `Documento`, `Placa` e `Status`, que nascem válidos ou não nascem.
 
 A persistência usa GORM, mas de forma isolada: os models do GORM nunca vazam para a camada de domínio, existe um mapeamento explícito entre entidade e model na fronteira do repositório. Autenticação é feita via JWT, com um middleware que reavalida se o usuário segue ativo a cada requisição, não só no login, e um segundo middleware que autoriza por tipo e papel de usuário. Situações que exigem consistência entre agregados diferentes, como reservar peça e verificar estoque, passam por um `TransactionRunner` que garante atomicidade e usa `SELECT ... FOR UPDATE` para serializar concorrência.
@@ -118,6 +120,8 @@ stateDiagram-v2
     FINALIZADA --> ENTREGUE: entregar
     ENTREGUE --> [*]
 ```
+
+[Versão em SVG](docs/diagramas/2-ciclo-de-vida-da-os.svg)
 
 Quando o cliente aprova o orçamento, as peças ficam reservadas, e a baixa no estoque só acontece na finalização. A listagem de ordens de serviço segue a ordem de prioridade da oficina: em execução, aprovadas, aguardando aprovação ou rejeitadas, em diagnóstico e recebidas, das mais antigas para as mais novas. As finalizadas e entregues saem da listagem, mas continuam disponíveis na consulta por id ou por número.
 
@@ -171,6 +175,8 @@ flowchart TB
     style eks fill:#f0fdf4,stroke:#16a34a,color:#14532d
 ```
 
+[Versão em SVG](docs/diagramas/3-infraestrutura-aws.svg)
+
 | Recurso | Como é criado |
 | --- | --- |
 | Cluster EKS, node group, RDS MySQL, repositório ECR e secrets `oficina/api` e `oficina/smtp` | Terraform em [`infra/`](infra/), na VPC default e nas subnets públicas que já existem na conta |
@@ -191,6 +197,8 @@ flowchart TB
     tf --> img["image<br/>build e push no ECR"]
     img --> dep["deploy<br/>migrations e rollout no EKS"]
 ```
+
+[Versão em SVG](docs/diagramas/4-fluxo-de-deploy.svg)
 
 A CI ([`ci.yml`](.github/workflows/ci.yml)) roda em todo PR e em todo push na `main`, e não tem acesso à AWS. O deploy ([`cd.yml`](.github/workflows/cd.yml)) só acontece quando alguém cria uma tag de versão, como `1.0.1`, num commit da `main` que passou na CI. O mesmo run aplica o Terraform de [`infra/`](infra/) antes de publicar a imagem, então não há `apply` manual. O workflow usa as credenciais da sessão do AWS Academy Learner Lab, guardadas no environment `aws-deploy`.
 

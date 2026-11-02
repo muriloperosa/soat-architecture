@@ -1,0 +1,184 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1720" height="975" viewBox="0 0 1720 975" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <marker id="arrow-strong" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#b45309"/>
+    </marker>
+    <marker id="arrow-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+    <style>
+      .title { font-size: 16px; font-weight: 600; }
+      .sub { font-size: 13px; }
+      .group { font-size: 14px; font-weight: 600; letter-spacing: 0.2px; }
+      .edge { fill: none; stroke: #475569; stroke-width: 1.6; }
+      .edge-dash { fill: none; stroke: #475569; stroke-width: 1.4; stroke-dasharray: 5 4; }
+      .edge-muted { fill: none; stroke: #94a3b8; stroke-width: 1.4; stroke-dasharray: 5 4; }
+      .edge-strong { fill: none; stroke: #b45309; stroke-width: 3; }
+      .label { font-size: 13px; fill: #334155; }
+      .label-bg { fill: #ffffff; }
+      .tf { fill: #dcfce7; stroke: #16a34a; }
+      .tf-t { fill: #14532d; }
+      .k8s { fill: #dbeafe; stroke: #2563eb; }
+      .k8s-t { fill: #1e3a8a; }
+      .ext { fill: #fef3c7; stroke: #d97706; }
+      .ext-t { fill: #78350f; }
+      .neutral { fill: #ffffff; stroke: #64748b; }
+      .neutral-t { fill: #0f172a; }
+      .off { fill: #f8fafc; stroke: #94a3b8; stroke-dasharray: 5 4; }
+      .off-t { fill: #475569; }
+      .node { stroke-width: 1.5; filter: url(#shadow); }
+    </style>
+  </defs>
+
+  <rect width="1720" height="975" fill="#ffffff"/>
+
+  <!-- ===== Grupos ===== -->
+  <!-- AWS -->
+  <rect x="20" y="100" width="1420" height="840" rx="14" fill="#fffaf3" stroke="#ff9900" stroke-width="2"/>
+  <rect x="36" y="114" width="150" height="28" rx="6" fill="#ff9900"/>
+  <text x="111" y="133" text-anchor="middle" class="group" fill="#ffffff">AWS · us-east-1</text>
+
+  <!-- Serviços gerenciados -->
+  <rect x="50" y="270" width="280" height="320" rx="10" fill="#ffffff" stroke="#fdba74" stroke-dasharray="5 4" stroke-width="1.5"/>
+  <text x="66" y="295" class="group" fill="#9a3412">Serviços gerenciados</text>
+
+  <!-- VPC -->
+  <rect x="380" y="230" width="880" height="690" rx="12" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="398" y="254" class="group" fill="#334155">VPC default · subnets públicas</text>
+
+  <!-- EKS -->
+  <rect x="410" y="268" width="820" height="482" rx="10" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="428" y="292" class="group" fill="#14532d">Cluster EKS oficina</text>
+
+  <!-- Namespace -->
+  <rect x="680" y="310" width="520" height="420" rx="10" fill="#eff6ff" stroke="#60a5fa" stroke-width="1.5"/>
+  <text x="698" y="334" class="group" fill="#1e3a8a">namespace oficina</text>
+
+  <!-- ===== Arestas (desenhadas antes dos nós) ===== -->
+  <!-- Usuários → Load Balancer -->
+  <path class="edge" d="M930,70 V148" marker-end="url(#arrow)"/>
+  <!-- Load Balancer → Service -->
+  <path class="edge" d="M930,215 V358" marker-end="url(#arrow)"/>
+  <!-- ECR → Node group -->
+  <path class="edge-dash" d="M285,352 H438" marker-end="url(#arrow)"/>
+  <rect class="label-bg" x="330" y="325" width="52" height="17" rx="3"/>
+  <text x="356" y="338" text-anchor="middle" class="label">imagem</text>
+  <!-- Secrets Manager → namespace -->
+  <path class="edge-dash" d="M305,440 H678" marker-end="url(#arrow)"/>
+  <rect class="label-bg" x="482" y="419" width="122" height="17" rx="3"/>
+  <text x="543" y="432" text-anchor="middle" class="label">segredos no deploy</text>
+  <!-- Node group → Pods -->
+  <path class="edge-dash" d="M640,352 H760 V495 H848" marker-end="url(#arrow)"/>
+  <text x="768" y="425" class="label">executa</text>
+  <!-- Service → Pods -->
+  <path class="edge" d="M930,425 V478" marker-end="url(#arrow)"/>
+  <!-- HPA → Pods -->
+  <path class="edge" d="M1117,425 V512 H1012" marker-end="url(#arrow)"/>
+  <text x="1125" y="472" class="label">escala</text>
+  <!-- Pods → SES (fora do Academy) -->
+  <path class="edge-muted" d="M850,530 H307" marker-end="url(#arrow-muted)"/>
+  <rect class="label-bg" x="510" y="509" width="104" height="17" rx="3"/>
+  <text x="562" y="522" text-anchor="middle" class="label" fill="#64748b">fora do Academy</text>
+  <!-- Pods → RDS -->
+  <path class="edge" d="M900,545 V788" marker-end="url(#arrow)"/>
+  <!-- Job → RDS -->
+  <path class="edge" d="M1117,705 V832 H1022" marker-end="url(#arrow)"/>
+  <rect class="label-bg" x="1124" y="762" width="78" height="17" rx="3"/>
+  <text x="1128" y="775" class="label">migrate up</text>
+  <!-- Pods → Gmail (AWS Academy) -->
+  <path class="edge-strong" d="M990,545 V600 H1484" marker-end="url(#arrow-strong)"/>
+  <rect class="label-bg" x="1296" y="574" width="96" height="18" rx="3"/>
+  <text x="1344" y="588" text-anchor="middle" class="label" font-weight="600" fill="#b45309">AWS Academy</text>
+
+  <!-- ===== Nós ===== -->
+  <!-- Usuários -->
+  <rect class="node ext" x="830" y="25" width="200" height="45" rx="22.5"/>
+  <text x="930" y="53" text-anchor="middle" class="title ext-t">Usuários da API</text>
+
+  <!-- Load Balancer -->
+  <rect class="node neutral" x="850" y="150" width="160" height="65" rx="8"/>
+  <text x="930" y="177" text-anchor="middle" class="title neutral-t">Load Balancer</text>
+  <text x="930" y="198" text-anchor="middle" class="sub" fill="#475569">criado pelo Service</text>
+
+  <!-- ECR (cilindro) -->
+  <g class="node">
+    <path class="tf" stroke-width="1.5" d="M95,322 v62 a95,10 0 0 0 190,0 v-62"/>
+    <ellipse class="tf" stroke-width="1.5" cx="190" cy="322" rx="95" ry="10"/>
+  </g>
+  <text x="190" y="356" text-anchor="middle" class="title tf-t">ECR</text>
+  <text x="190" y="376" text-anchor="middle" class="sub tf-t">oficina-api</text>
+
+  <!-- Secrets Manager -->
+  <rect class="node tf" x="75" y="410" width="230" height="60" rx="8"/>
+  <text x="190" y="435" text-anchor="middle" class="title tf-t">Secrets Manager</text>
+  <text x="190" y="456" text-anchor="middle" class="sub tf-t">oficina/api · oficina/smtp</text>
+
+  <!-- Amazon SES -->
+  <rect class="node off" x="75" y="500" width="230" height="64" rx="8"/>
+  <text x="190" y="525" text-anchor="middle" class="title off-t">Amazon SES</text>
+  <text x="190" y="546" text-anchor="middle" class="sub off-t">provedor-alvo · bloqueado no lab</text>
+
+  <!-- Node group -->
+  <rect class="node tf" x="440" y="320" width="200" height="65" rx="8"/>
+  <text x="540" y="347" text-anchor="middle" class="title tf-t">Node group</text>
+  <text x="540" y="368" text-anchor="middle" class="sub tf-t">t3.small · 1 a 2 nós</text>
+
+  <!-- Service -->
+  <rect class="node k8s" x="850" y="360" width="160" height="65" rx="8"/>
+  <text x="930" y="387" text-anchor="middle" class="title k8s-t">Service</text>
+  <text x="930" y="408" text-anchor="middle" class="sub k8s-t">LoadBalancer</text>
+
+  <!-- HPA -->
+  <rect class="node k8s" x="1050" y="360" width="135" height="65" rx="8"/>
+  <text x="1117" y="387" text-anchor="middle" class="title k8s-t">HPA</text>
+  <text x="1117" y="408" text-anchor="middle" class="sub k8s-t">2 a 6 réplicas</text>
+
+  <!-- Pods -->
+  <rect class="node k8s" x="850" y="480" width="160" height="65" rx="8"/>
+  <text x="930" y="507" text-anchor="middle" class="title k8s-t">Pods da API</text>
+  <text x="930" y="528" text-anchor="middle" class="sub k8s-t">Deployment</text>
+
+  <!-- Job -->
+  <rect class="node k8s" x="1050" y="640" width="135" height="65" rx="8"/>
+  <text x="1117" y="667" text-anchor="middle" class="title k8s-t">Job</text>
+  <text x="1117" y="688" text-anchor="middle" class="sub k8s-t">oficina-migrate</text>
+
+  <!-- RDS (cilindro) -->
+  <g class="node">
+    <path class="tf" stroke-width="1.5" d="M820,800 v62 a110,11 0 0 0 220,0 v-62"/>
+    <ellipse class="tf" stroke-width="1.5" cx="930" cy="800" rx="110" ry="11"/>
+  </g>
+  <text x="930" y="836" text-anchor="middle" class="title tf-t">RDS MySQL 8</text>
+  <text x="930" y="857" text-anchor="middle" class="sub tf-t">database mecanica</text>
+
+  <!-- Gmail SMTP -->
+  <rect class="node ext" x="1486" y="565" width="210" height="70" rx="8"/>
+  <text x="1591" y="594" text-anchor="middle" class="title ext-t">Gmail SMTP</text>
+  <text x="1591" y="616" text-anchor="middle" class="sub ext-t">STARTTLS · porta 587</text>
+
+  <!-- ===== Legenda ===== -->
+  <rect x="1476" y="658" width="226" height="292" rx="10" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="1494" y="686" class="group" fill="#334155">Legenda</text>
+  <rect x="1494" y="702" width="26" height="18" rx="4" class="tf" stroke-width="1.5"/>
+  <text x="1530" y="716" class="sub" fill="#334155">Criado pelo Terraform</text>
+  <rect x="1494" y="732" width="26" height="18" rx="4" class="k8s" stroke-width="1.5"/>
+  <text x="1530" y="746" class="sub" fill="#334155">Manifestos k8s/</text>
+  <rect x="1494" y="762" width="26" height="18" rx="4" class="ext" stroke-width="1.5"/>
+  <text x="1530" y="776" class="sub" fill="#334155">Externo à AWS</text>
+  <rect x="1494" y="792" width="26" height="18" rx="4" class="off" stroke-width="1.5"/>
+  <text x="1530" y="806" class="sub" fill="#334155">Fora do Learner Lab</text>
+  <line x1="1494" y1="838" x2="1520" y2="838" class="edge"/>
+  <text x="1530" y="843" class="sub" fill="#334155">Tráfego da aplicação</text>
+  <line x1="1494" y1="868" x2="1520" y2="868" class="edge-dash"/>
+  <text x="1530" y="873" class="sub" fill="#334155">Deploy / infraestrutura</text>
+  <line x1="1494" y1="898" x2="1520" y2="898" class="edge-strong"/>
+  <text x="1530" y="903" class="sub" fill="#334155">E-mail no AWS Academy</text>
+  <line x1="1494" y1="928" x2="1520" y2="928" class="edge-muted"/>
+  <text x="1530" y="933" class="sub" fill="#334155">E-mail fora do Academy</text>
+</svg>

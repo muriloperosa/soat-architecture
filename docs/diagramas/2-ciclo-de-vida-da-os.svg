@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1520" height="460" viewBox="0 0 1520 460" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+    <style>
+      .title { font-size: 15px; font-weight: 600; letter-spacing: 0.3px; }
+      .sub { font-size: 12.5px; }
+      .group { font-size: 14px; font-weight: 600; letter-spacing: 0.2px; }
+      .edge { fill: none; stroke: #475569; stroke-width: 1.6; }
+      .label { font-size: 13px; fill: #334155; }
+      .label-bg { fill: #ffffff; }
+      .atend { fill: #dbeafe; stroke: #2563eb; }
+      .atend-t { fill: #1e3a8a; }
+      .aprov { fill: #fef3c7; stroke: #d97706; }
+      .aprov-t { fill: #78350f; }
+      .exec { fill: #dcfce7; stroke: #16a34a; }
+      .exec-t { fill: #14532d; }
+      .rejeit { fill: #ffe4e6; stroke: #e11d48; }
+      .rejeit-t { fill: #881337; }
+      .node { stroke-width: 1.5; filter: url(#shadow); }
+    </style>
+  </defs>
+
+  <rect width="1520" height="460" fill="#ffffff"/>
+
+  <!-- ===== Arestas ===== -->
+  <!-- Linha 1: abertura até aguardando aprovação -->
+  <path class="edge" d="M52,110 H148" marker-end="url(#arrow)"/>
+  <text x="100" y="98" text-anchor="middle" class="label">abrir OS</text>
+  <path class="edge" d="M320,110 H478" marker-end="url(#arrow)"/>
+  <text x="399" y="98" text-anchor="middle" class="label">iniciar diagnóstico</text>
+  <path class="edge" d="M700,110 H858" marker-end="url(#arrow)"/>
+  <text x="779" y="98" text-anchor="middle" class="label">enviar orçamento</text>
+  <!-- Aguardando ⇄ Rejeitada -->
+  <path class="edge" d="M1160,98 H1298" marker-end="url(#arrow)"/>
+  <text x="1229" y="88" text-anchor="middle" class="label">cliente recusa</text>
+  <path class="edge" d="M1300,124 H1162" marker-end="url(#arrow)"/>
+  <text x="1231" y="143" text-anchor="middle" class="label">reenviar orçamento</text>
+  <!-- Aguardando ⇄ Aprovada -->
+  <path class="edge" d="M980,138 V298" marker-end="url(#arrow)"/>
+  <rect class="label-bg" x="874" y="207" width="98" height="17" rx="3"/>
+  <text x="970" y="220" text-anchor="end" class="label">cliente aprova</text>
+  <path class="edge" d="M1040,300 V140" marker-end="url(#arrow)"/>
+  <text x="1050" y="220" class="label">reenviar orçamento</text>
+  <!-- Linha 2: execução até entrega, da direita para a esquerda -->
+  <path class="edge" d="M920,330 H782" marker-end="url(#arrow)"/>
+  <text x="851" y="318" text-anchor="middle" class="label">iniciar execução</text>
+  <path class="edge" d="M580,330 H492" marker-end="url(#arrow)"/>
+  <text x="536" y="318" text-anchor="middle" class="label">finalizar</text>
+  <path class="edge" d="M320,330 H242" marker-end="url(#arrow)"/>
+  <text x="281" y="318" text-anchor="middle" class="label">entregar</text>
+  <path class="edge" d="M90,330 H60" marker-end="url(#arrow)"/>
+
+  <!-- ===== Estados ===== -->
+  <circle cx="40" cy="110" r="11" fill="#334155"/>
+
+  <rect class="node atend" x="150" y="82" width="170" height="56" rx="10"/>
+  <text x="235" y="115" text-anchor="middle" class="title atend-t">RECEBIDA</text>
+
+  <rect class="node atend" x="480" y="82" width="220" height="56" rx="10"/>
+  <text x="590" y="115" text-anchor="middle" class="title atend-t">EM_DIAGNOSTICO</text>
+
+  <rect class="node aprov" x="860" y="82" width="300" height="56" rx="10"/>
+  <text x="1010" y="104" text-anchor="middle" class="title aprov-t">AGUARDANDO_APROVACAO</text>
+  <text x="1010" y="124" text-anchor="middle" class="sub aprov-t">e-mail com links de aprovação</text>
+
+  <rect class="node rejeit" x="1300" y="82" width="180" height="56" rx="10"/>
+  <text x="1390" y="115" text-anchor="middle" class="title rejeit-t">REJEITADA</text>
+
+  <rect class="node aprov" x="920" y="302" width="180" height="56" rx="10"/>
+  <text x="1010" y="324" text-anchor="middle" class="title aprov-t">APROVADA</text>
+  <text x="1010" y="344" text-anchor="middle" class="sub aprov-t">peças reservadas</text>
+
+  <rect class="node exec" x="580" y="302" width="200" height="56" rx="10"/>
+  <text x="680" y="335" text-anchor="middle" class="title exec-t">EM_EXECUCAO</text>
+
+  <rect class="node exec" x="320" y="302" width="170" height="56" rx="10"/>
+  <text x="405" y="324" text-anchor="middle" class="title exec-t">FINALIZADA</text>
+  <text x="405" y="344" text-anchor="middle" class="sub exec-t">baixa no estoque</text>
+
+  <rect class="node exec" x="90" y="302" width="150" height="56" rx="10"/>
+  <text x="165" y="335" text-anchor="middle" class="title exec-t">ENTREGUE</text>
+
+  <circle cx="45" cy="330" r="13" fill="#ffffff" stroke="#334155" stroke-width="2"/>
+  <circle cx="45" cy="330" r="7" fill="#334155"/>
+
+  <!-- ===== Legenda ===== -->
+  <rect x="1180" y="250" width="300" height="180" rx="10" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="1198" y="276" class="group" fill="#334155">Legenda</text>
+  <rect x="1198" y="292" width="26" height="18" rx="4" class="atend" stroke-width="1.5"/>
+  <text x="1236" y="306" class="sub" font-size="13" fill="#334155">Atendimento e diagnóstico</text>
+  <rect x="1198" y="322" width="26" height="18" rx="4" class="aprov" stroke-width="1.5"/>
+  <text x="1236" y="336" class="sub" font-size="13" fill="#334155">Aprovação do orçamento</text>
+  <rect x="1198" y="352" width="26" height="18" rx="4" class="rejeit" stroke-width="1.5"/>
+  <text x="1236" y="366" class="sub" font-size="13" fill="#334155">Orçamento recusado</text>
+  <rect x="1198" y="382" width="26" height="18" rx="4" class="exec" stroke-width="1.5"/>
+  <text x="1236" y="396" class="sub" font-size="13" fill="#334155">Execução e entrega</text>
+  <text x="1198" y="420" class="sub" fill="#64748b">Outras transições são recusadas pela API</text>
+</svg>
