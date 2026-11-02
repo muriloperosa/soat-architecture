@@ -8,7 +8,7 @@ API de gestão de ordens de serviço de uma oficina mecânica, cobrindo o fluxo 
 Na Fase 2 a aplicação passou a rodar em Kubernetes, no Minikube para desenvolvimento e no Amazon EKS na nuvem, com o deploy feito pelo GitHub Actions.
 
 > [!IMPORTANT]
-> **Vídeo demonstrativo:** _link a publicar_ (YouTube ou Vimeo, até 15 minutos).
+> **Vídeo demonstrativo:** [youtube.com/watch?v=VIDEO_ID](https://www.youtube.com/watch?v=VIDEO_ID) (até 15 minutos).
 
 ## Objetivos da Fase 2
 
@@ -246,7 +246,7 @@ aws eks update-kubeconfig --region us-east-1 --name oficina --profile oficina-te
 make tf-destroy CONFIRM=yes
 ```
 
-O que é criado, o que fica de fora e o roteiro completo de `plan`, `apply` e `destroy` estão em [`infra/README.md`](infra/README.md).
+O que é criado, o que fica de fora e o roteiro completo de `plan`, `apply` e `destroy` estão em [`docs/TERRAFORM.md`](docs/TERRAFORM.md).
 
 ## Deploy em Kubernetes
 
@@ -363,7 +363,7 @@ Um hook de `pre-push` local, instalado via `make hooks-install`, roda mocks, lin
 - [Banco de dados](docs/database/DATABASE.md): modelo relacional e diagrama
 - [Segurança](docs/SECURITY.md): ferramentas de SCA, SAST e DAST usadas e a justificativa de cada uma
 - [Kubernetes](docs/KUBERNETES.md): manifestos em `k8s/`, requisitos da máquina, deploy no Minikube, comandos `kubectl` e demonstração do autoscaling
-- [Infraestrutura AWS](infra/README.md): Terraform do cluster EKS, do RDS e do secret que o deploy por tag espera encontrar
+- [Infraestrutura AWS](docs/TERRAFORM.md): Terraform do cluster EKS, do RDS e do secret que o deploy por tag espera encontrar
 - [Preparação da conta AWS](docs/AWS_SETUP.md): ECR, provedor OIDC e role de deploy, uma vez por conta
 - [CI/CD](docs/CI_CD.md): CI em GitHub Actions (testes, cobertura, segurança) e deploy no EKS por tag, com diagramas de cada etapa, credenciais e rollback
 - [Swagger](docs/swagger/): documentação da API gerada a partir dos handlers
