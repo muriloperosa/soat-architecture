@@ -95,6 +95,10 @@ Cada mudança de status da ordem de serviço dispara um e-mail ao cliente depois
 
 O versionamento do schema do banco é feito com `golang-migrate`, migrations em `migrations/mysql/`. As decisões estruturais do projeto estão registradas como ADRs em [`docs/adr/`](docs/adr/), e o detalhamento das convenções internas está em [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md).
 
+### Aprovação de orçamento por e-mail
+
+Quando a OS entra em `AGUARDANDO_APROVACAO`, o e-mail do orçamento inclui links temporários para aceitar ou recusar. A validade padrão é de 24 horas (`APPROVAL_TOKEN_TTL_HOURS`). Para habilitá-los, configure `APPROVAL_TOKEN_SECRET` com um segredo forte diferente de `JWT_SECRET` e `PUBLIC_BASE_URL` com uma URL alcançável pelo cliente. O link abre uma página de confirmação; somente o `POST` de confirmação altera o orçamento. Os endpoints validam o token e reutilizam os mesmos casos de uso das rotas autenticadas. O `GET` não altera o estado, para evitar decisões causadas por scanners de e-mail. O fluxo usa a própria API e não exige webhook externo.
+
 ### Ciclo de vida da ordem de serviço
 
 As transições de status são regras do domínio (`StatusOrdemServico.PermiteTransicaoPara`), e qualquer outra é recusada pela API.
