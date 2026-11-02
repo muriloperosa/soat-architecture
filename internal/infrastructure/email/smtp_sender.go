@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"mime"
@@ -37,6 +38,8 @@ type SMTPSender struct {
 	username string
 	password string
 	from     *mail.Address
+	// rootCAs nil usa as raízes do sistema; só os testes substituem.
+	rootCAs *x509.CertPool
 }
 
 func NewSMTPSender(config SMTPConfig) (*SMTPSender, error) {
@@ -116,6 +119,7 @@ func (s *SMTPSender) Enviar(ctx context.Context, destinatario, assunto, corpo st
 	if err := client.StartTLS(&tls.Config{
 		ServerName: s.host,
 		MinVersion: tls.VersionTLS12,
+		RootCAs:    s.rootCAs,
 	}); err != nil {
 		return fmt.Errorf("iniciar TLS no SMTP: %w", err)
 	}
