@@ -1,0 +1,133 @@
+name: Seed (EKS)
+
+# Populates the RDS database of the EKS environment with cmd/seed. Manual only:
+# run it once, right after the first deploy, while the database is empty. The
+# seed is not idempotent; on a second run it stops when creating the admin,
+# without writing anything.
+#
+# The RDS is not public and only accepts connections from the cluster, so the
+# job starts a socat relay pod in the namespace, port-forwards to it and runs
+# the seed on the runner. The relay pod is always removed at the end.
+#
+# If the aws-deploy environment is restricted to tags, pick a tag in
+# "Use workflow from" or the job cannot read the secrets.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "seed" to populate the EKS database'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# Shares the deploy group: never seed while a migration or rollout is running.
+concurrency:
+  group: deploy-eks
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  EKS_CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME || 'oficina' }}
+  APP_SECRET_ID: ${{ vars.APP_SECRET_ID || 'oficina/api' }}
+  K8S_NAMESPACE: oficina
+  RELAY_POD: rds-seed-tunnel
+  RELAY_IMAGE: alpine/socat:1.8.1.1
+  LOCAL_PORT: '3307'
+
+jobs:
+  seed:
+    name: Seed RDS through in-cluster relay
+    if: inputs.confirm == 'seed'
+    runs-on: ubuntu-24.04
+    environment: aws-deploy
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Configure kubectl
+        run: aws eks update-kubeconfig --region "$AWS_REGION" --name "$EKS_CLUSTER_NAME"
+
+      - name: Start relay pod to RDS
+        shell: bash
+        run: |
+          db_host="$(aws secretsmanager get-secret-value --secret-id "$APP_SECRET_ID" --query SecretString --output text | jq -r '.DB_HOST // empty')"
+          if [[ -z "$db_host" ]]; then
+            echo "::error::Chave DB_HOST ausente no secret ${APP_SECRET_ID}."
+            exit 1
+          fi
+          kubectl -n "$K8S_NAMESPACE" delete pod "$RELAY_POD" --ignore-not-found
+          kubectl -n "$K8S_NAMESPACE" run "$RELAY_POD" --image="$RELAY_IMAGE" --restart=Never \
+            --labels=app.kubernetes.io/component=seed-tunnel -- \
+            tcp-listen:3306,fork,reuseaddr "tcp-connect:${db_host}:3306"
+          kubectl -n "$K8S_NAMESPACE" wait --for=condition=Ready "pod/${RELAY_POD}" --timeout=120s
+
+      # Port-forward and seed share a step: the tunnel only lives while the
+      # step's shell is running. Secrets stay in this step and are masked.
+      - name: Run seed
+        shell: bash
+        run: |
+          payload="$(aws secretsmanager get-secret-value --secret-id "$APP_SECRET_ID" --query SecretString --output text)"
+          for key in DB_USER DB_PASSWORD JWT_SECRET; do
+            if [[ -z "$(jq -r --arg k "$key" '.[$k] // empty' <<<"$payload")" ]]; then
+              echo "::error::Chave ${key} ausente no secret ${APP_SECRET_ID}."
+              exit 1
+            fi
+          done
+          db_password="$(jq -r .DB_PASSWORD <<<"$payload")"
+          jwt_secret="$(jq -r .JWT_SECRET <<<"$payload")"
+          echo "::add-mask::${db_password}"
+          echo "::add-mask::${jwt_secret}"
+
+          kubectl -n "$K8S_NAMESPACE" port-forward "pod/${RELAY_POD}" "${LOCAL_PORT}:3306" &
+          pf_pid=$!
+          trap 'kill "$pf_pid" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 30); do
+            if (exec 3<>"/dev/tcp/127.0.0.1/${LOCAL_PORT}") 2>/dev/null; then
+              break
+            fi
+            if ! kill -0 "$pf_pid" 2>/dev/null; then
+              echo "::error::O port-forward até ${RELAY_POD} encerrou."
+              exit 1
+            fi
+            sleep 1
+          done
+
+          DB_HOST=127.0.0.1 \
+          DB_PORT="$LOCAL_PORT" \
+          DB_USER="$(jq -r .DB_USER <<<"$payload")" \
+          DB_PASSWORD="$db_password" \
+          JWT_SECRET="$jwt_secret" \
+          DB_NAME=mecanica \
+          EMAIL_PROVIDER=log \
+            go run ./cmd/seed | tee seed-output.txt
+
+          {
+            echo "### Seed concluído"
+            echo
+            echo '```'
+            cat seed-output.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove relay pod
+        if: always()
+        run: kubectl -n "$K8S_NAMESPACE" delete pod "$RELAY_POD" --ignore-not-found --wait=false
