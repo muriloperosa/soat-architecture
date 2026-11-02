@@ -8,7 +8,7 @@ API de gestão de ordens de serviço de uma oficina mecânica, cobrindo o fluxo 
 Na Fase 2 a aplicação passou a rodar em Kubernetes, no Minikube para desenvolvimento e no Amazon EKS na nuvem, com o deploy feito pelo GitHub Actions.
 
 > [!IMPORTANT]
-> **Vídeo demonstrativo:** _link a publicar_ (YouTube ou Vimeo, até 15 minutos).
+> **Vídeo demonstrativo:** [youtube.com/watch?v=VIDEO_ID](https://www.youtube.com/watch?v=VIDEO_ID) (até 15 minutos).
 
 ## Objetivos da Fase 2
 
