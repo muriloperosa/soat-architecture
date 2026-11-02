@@ -28,3 +28,14 @@ __debug_bin*
 # Relatórios de segurança (SCA/SAST/DAST)
 security/reports/*
 !security/reports/.gitkeep
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json

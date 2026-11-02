@@ -91,7 +91,7 @@ Domínio (entidades e value objects), aplicação (casos de uso) e infraestrutur
 
 A persistência usa GORM, mas de forma isolada: os models do GORM nunca vazam para a camada de domínio, existe um mapeamento explícito entre entidade e model na fronteira do repositório. Autenticação é feita via JWT, com um middleware que reavalida se o usuário segue ativo a cada requisição, não só no login, e um segundo middleware que autoriza por tipo e papel de usuário. Situações que exigem consistência entre agregados diferentes, como reservar peça e verificar estoque, passam por um `TransactionRunner` que garante atomicidade e usa `SELECT ... FOR UPDATE` para serializar concorrência.
 
-Cada mudança de status da ordem de serviço dispara um e-mail ao cliente depois que a transição já foi persistida. Se o envio falhar, o erro fica no log e o status não é desfeito. No envio do orçamento vai um segundo e-mail, com serviços, peças, quantidades e valores. Localmente o provedor padrão é `log` (`EMAIL_PROVIDER`), que só registra a mensagem e não precisa de AWS. Com `ses`, a aplicação envia pelo Amazon SES e não sobe sem `SES_FROM_ADDRESS`. No AWS Academy o SES fica em sandbox e só entrega para endereços verificados.
+Cada mudança de status da ordem de serviço dispara um e-mail ao cliente depois que a transição já foi persistida. Se o envio falhar, o erro fica no log e o status não é desfeito. No envio do orçamento vai um segundo e-mail, com serviços, peças, quantidades e valores. Localmente o provedor padrão é `log` (`EMAIL_PROVIDER`), que só registra a mensagem e não precisa de AWS. Com `ses`, a aplicação envia pelo Amazon SES e não sobe sem `SES_FROM_ADDRESS`. No SES em sandbox a mensagem só chega a identidades verificadas. No EKS o pod não recebe access key: usa a role do nó. Sem `SES_FROM_ADDRESS` no secret `oficina/api`, o CD sobe com `EMAIL_PROVIDER=log`.
 
 O versionamento do schema do banco é feito com `golang-migrate`, migrations em `migrations/mysql/`. As decisões estruturais do projeto estão registradas como ADRs em [`docs/adr/`](docs/adr/), e o detalhamento das convenções internas está em [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md).
 
@@ -159,18 +159,18 @@ flowchart TB
     classDef terraform fill:#dcfce7,stroke:#16a34a,color:#14532d
     classDef manual fill:#ffedd5,stroke:#ea580c,color:#7c2d12
     classDef k8s fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
-    class nodes terraform
-    class rds,ecr,sm manual
+    class nodes,rds,sm terraform
+    class ecr manual
     class svc,pods,hpa,job k8s
     style eks fill:#f0fdf4,stroke:#16a34a,color:#14532d
 ```
 
 | Recurso | Como é criado |
 | --- | --- |
-| Cluster EKS e node group | Terraform em [`infra/`](infra/), usando a `LabRole`, a VPC default e as subnets públicas que já existem na conta do AWS Academy |
+| Cluster EKS, node group, roles do cluster e dos nós, RDS MySQL e secret `oficina/api` | Terraform em [`infra/`](infra/), na VPC default e nas subnets públicas que já existem na conta |
 | Deployment, Service, HPA, ConfigMap, Secret e Job de migration | Manifestos de [`k8s/`](k8s/), aplicados pelo deploy |
 | Load Balancer | Criado pela AWS a partir do Service `LoadBalancer` do overlay EKS |
-| RDS MySQL, repositório ECR e secret `oficina/api` | Uma vez por conta, seguindo [`docs/AWS_SETUP.md`](docs/AWS_SETUP.md) |
+| Repositório ECR, provedor OIDC e role de deploy do GitHub | Uma vez por conta, seguindo [`docs/AWS_SETUP.md`](docs/AWS_SETUP.md) |
 
 No Minikube roda o mesmo conjunto, mas com o MySQL dentro do cluster (StatefulSet) e o Service como `NodePort`. Mais detalhes sobre cada recurso em [`docs/KUBERNETES.md`](docs/KUBERNETES.md).
 
@@ -182,11 +182,10 @@ flowchart TB
     ci -->|checks verdes + review| main["Merge na main"]
     main -->|git tag 1.0.1| guard["guard<br/>tag na main e CI verde?"]
     guard --> img["image<br/>build e push no ECR"]
-    img --> tf["infra<br/>terraform apply"]
-    tf --> dep["deploy<br/>migrations e rollout no EKS"]
+    img --> dep["deploy<br/>migrations e rollout no EKS"]
 ```
 
-A CI ([`ci.yml`](.github/workflows/ci.yml)) roda em todo PR e em todo push na `main`, e não tem acesso à AWS. O deploy ([`cd.yml`](.github/workflows/cd.yml)) só acontece quando alguém cria uma tag de versão, como `1.0.1`, num commit da `main` que passou na CI. O workflow se autentica na AWS via OIDC, então não existe chave de acesso salva no GitHub.
+A CI ([`ci.yml`](.github/workflows/ci.yml)) roda em todo PR e em todo push na `main`, e não tem acesso à AWS. O deploy ([`cd.yml`](.github/workflows/cd.yml)) só acontece quando alguém cria uma tag de versão, como `1.0.1`, num commit da `main` que passou na CI. O workflow se autentica na AWS via OIDC, então não existe chave de acesso salva no GitHub. O job `infra` do CD fica desligado: a infraestrutura sobe antes, com `make tf-apply`.
 
 Antes de atualizar a API, o deploy roda as migrations num Job ([ADR 0006](docs/adr/0006-migrations-em-job-kubernetes.md)). Se a migration falhar, a versão anterior continua no ar. O passo a passo, as credenciais, o rollback e os custos estão em [`docs/CI_CD.md`](docs/CI_CD.md).
 
@@ -224,40 +223,30 @@ A API fica em `http://localhost:8080` e o Swagger em `http://localhost:8080/swag
 
 ## Provisionar a infraestrutura com Terraform
 
-O Terraform fica em [`infra/`](infra/) e cria o cluster EKS e um node group na conta do AWS Academy. Como a Academy não deixa criar roles IAM, o cluster usa a `LabRole` e aproveita a VPC default e as subnets públicas que já existem na conta. Também não criamos NAT Gateway, que seria cobrado mesmo com o cluster parado.
+O Terraform fica em [`infra/`](infra/) e cria as roles do cluster e dos nós, o cluster EKS com um node group, o RDS MySQL e o secret `oficina/api` no Secrets Manager. Ele aproveita a VPC default e as subnets públicas que já existem na conta, sem NAT Gateway. O workflow de CD não cria esses recursos: ele publica a imagem no ECR e faz o deploy quando alguém envia uma tag `MAJOR.MINOR.PATCH` a partir da `main`.
 
-Pré-requisitos: Terraform 1.5 ou mais novo, AWS CLI e `kubectl`.
+Pré-requisitos: Terraform 1.5 ou mais novo, AWS CLI, `kubectl`, a role `oficina-github-deploy` já criada ([`docs/AWS_SETUP.md`](docs/AWS_SETUP.md), passos 1 e 2) e a credencial da conta no profile `oficina-temp`. Não grave a access key no repositório.
 
-**1. Exportar as credenciais do Learner Lab.** Elas expiram junto com a sessão, então pegue as atuais em **AWS Details**, no console do lab. Não salve esses valores no repositório.
-
-```bash
-export AWS_ACCESS_KEY_ID=...
-export AWS_SECRET_ACCESS_KEY=...
-export AWS_SESSION_TOKEN=...
-export AWS_DEFAULT_REGION=us-east-1
-```
-
-**2. Criar o cluster.** Dentro de `infra/`:
+**1. Criar a infraestrutura.** Na raiz do repositório:
 
 ```bash
-terraform init
-terraform plan
-terraform apply
+make tf-plan
+make tf-apply
 ```
 
-**3. Apontar o `kubectl` para o cluster.** O comando sai pronto no output `update_kubeconfig`:
+**2. Apontar o `kubectl` para o cluster:**
 
 ```bash
-aws eks update-kubeconfig --region us-east-1 --name oficina
+aws eks update-kubeconfig --region us-east-1 --name oficina --profile oficina-temp
 ```
 
-**4. Destruir no fim da sessão.** O control plane é cobrado por hora enquanto existir, inclusive depois que a sessão do lab acaba:
+**3. Destruir no fim da sessão.** O control plane é cobrado por hora enquanto existir:
 
 ```bash
-terraform destroy
+make tf-destroy CONFIRM=yes
 ```
 
-As variáveis (nome do cluster, versão do Kubernetes, tipo e quantidade de nós, VPC e subnets) estão explicadas em [`infra/README.md`](infra/README.md).
+O que é criado, o que fica de fora e o roteiro completo de `plan`, `apply` e `destroy` estão em [`infra/README.md`](infra/README.md).
 
 ## Deploy em Kubernetes
 
@@ -336,7 +325,7 @@ A explicação de cada recurso, a referência de comandos `kubectl` e a soluçã
 
 ### EKS
 
-Pré-requisitos: o cluster criado pelo [Terraform](#provisionar-a-infraestrutura-com-terraform) e a conta da AWS preparada seguindo [`docs/AWS_SETUP.md`](docs/AWS_SETUP.md). Isso só precisa ser feito uma vez e cria o RDS, o repositório no ECR, o secret `oficina/api` e a role que o GitHub Actions usa para fazer o deploy.
+Pré-requisitos: a conta da AWS preparada seguindo [`docs/AWS_SETUP.md`](docs/AWS_SETUP.md), uma vez por conta, para o repositório no ECR e a role que o GitHub Actions usa no deploy, e a infraestrutura criada pelo [Terraform](#provisionar-a-infraestrutura-com-terraform), com o nó já `Ready`.
 
 **1. Lançar uma versão.** Basta criar uma tag de versão num commit da `main`. Isso dispara o [`cd.yml`](.github/workflows/cd.yml), que confere se a CI do commit passou, publica a imagem no ECR, roda as migrations e atualiza a API.
 
@@ -374,8 +363,8 @@ Um hook de `pre-push` local, instalado via `make hooks-install`, roda mocks, lin
 - [Banco de dados](docs/database/DATABASE.md): modelo relacional e diagrama
 - [Segurança](docs/SECURITY.md): ferramentas de SCA, SAST e DAST usadas e a justificativa de cada uma
 - [Kubernetes](docs/KUBERNETES.md): manifestos em `k8s/`, requisitos da máquina, deploy no Minikube, comandos `kubectl` e demonstração do autoscaling
-- [Infraestrutura AWS](infra/README.md): Terraform do cluster EKS no Learner Lab, com credenciais, apply e destroy
-- [Preparação da conta AWS](docs/AWS_SETUP.md): RDS, ECR, secret da aplicação e role de deploy, uma vez por conta
+- [Infraestrutura AWS](infra/README.md): Terraform do cluster EKS, do RDS e do secret que o deploy por tag espera encontrar
+- [Preparação da conta AWS](docs/AWS_SETUP.md): ECR, provedor OIDC e role de deploy, uma vez por conta
 - [CI/CD](docs/CI_CD.md): CI em GitHub Actions (testes, cobertura, segurança) e deploy no EKS por tag, com diagramas de cada etapa, credenciais e rollback
 - [Swagger](docs/swagger/): documentação da API gerada a partir dos handlers
 - [Collections Postman](.dev/postman/): todos os endpoints e o fluxo completo da demo
