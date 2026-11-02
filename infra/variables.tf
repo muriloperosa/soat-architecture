@@ -76,6 +76,53 @@ variable "app_secret_name" {
   default     = "oficina/api"
 }
 
+variable "smtp_secret_name" {
+  description = "Secret do Secrets Manager com as credenciais SMTP. O padrão do workflow é oficina/smtp."
+  type        = string
+  default     = "oficina/smtp"
+}
+
+variable "smtp_host" {
+  description = "Hostname do servidor SMTP."
+  type        = string
+  default     = "smtp.gmail.com"
+}
+
+variable "smtp_port" {
+  description = "Porta SMTP com STARTTLS."
+  type        = number
+  default     = 587
+}
+
+variable "smtp_username" {
+  description = "Usuário da conta SMTP."
+  type        = string
+  default     = "soatoficinapos@gmail.com"
+}
+
+variable "smtp_password" {
+  description = "Senha de app SMTP fornecida pela pipeline. O provider grava o valor por argumento write-only."
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = length(trimspace(var.smtp_password)) > 0
+    error_message = "Configure SMTP_PASSWORD como secret do environment aws-deploy."
+  }
+}
+
+variable "smtp_from_address" {
+  description = "Endereço remetente SMTP."
+  type        = string
+  default     = "soatoficinapos@gmail.com"
+}
+
+variable "smtp_secret_version" {
+  description = "Incrementar para publicar uma nova versão do secret SMTP, por exemplo ao rotacionar a senha de app."
+  type        = number
+  default     = 1
+}
+
 variable "db_name" {
   description = "Database criado no RDS. É o DB_NAME do ConfigMap base."
   type        = string
@@ -98,10 +145,4 @@ variable "db_allocated_storage" {
   description = "Armazenamento inicial do RDS, em GiB."
   type        = number
   default     = 20
-}
-
-variable "ses_sender_email" {
-  description = "E-mail do grupo, verificado no SES. É o remetente (SES_FROM_ADDRESS) do secret."
-  type        = string
-  default     = "soatoficinapos@gmail.com"
 }

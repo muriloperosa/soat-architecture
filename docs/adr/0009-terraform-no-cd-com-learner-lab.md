@@ -14,7 +14,7 @@ Até aqui, o release tinha dois passos manuais: rodar `make tf-apply` com o stat
 - **LabRole:** cluster e nós usam a `LabRole` que já existe na conta, lida por `data "aws_iam_role"`. Nenhuma role IAM é criada.
 - **Credenciais da sessão do lab:** `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` e `AWS_SESSION_TOKEN` como secrets do environment `aws-deploy`. Pipeline e Terraform local usam a mesma role (`voclabs`), que vira admin do cluster ao criá-lo; não há access entry.
 - **ECR no Terraform:** o repositório `oficina-api` passa a ser criado pelo Terraform, com `force_delete`, porque a conta do lab pode ser reiniciada e não há mais preparação manual da conta.
-- **SES:** a identidade do e-mail do grupo é criada pelo Terraform, e o mesmo endereço vai para `SES_FROM_ADDRESS` no secret. Com isso o CD sobe a API com `EMAIL_PROVIDER=ses`.
+- **E-mail fora do Terraform:** a infraestrutura não cria nem SES nem SMTP. O Learner Lab negou `ses:VerifyEmailIdentity`, então SMTP via secret separado no Secrets Manager é o caminho usado no ambiente. O adapter SES permanece disponível para configuração manual. Sem provedor configurado, o CD usa `EMAIL_PROVIDER=log`.
 
 Alternativas descartadas:
 

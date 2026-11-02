@@ -175,7 +175,7 @@ Nunca aponte esse scan para produção ou para o banco de desenvolvimento. A sta
 
 O workflow [`cd.yml`](../.github/workflows/cd.yml) leva uma versão da `main` para o cluster EKS no AWS Academy Learner Lab. Ele cobre os itens de CI/CD do Tech Challenge: provisionamento da infraestrutura (Terraform), build, imagem Docker, deploy do banco (migrations), aplicação dos manifestos e deploy no Kubernetes.
 
-Uma tag é o único passo manual. O job `infra` roda `terraform apply` de [`infra/`](../infra/) a cada tag, com o state num bucket S3, e cria ou atualiza cluster EKS, RDS, ECR, identidade do SES e o secret `oficina/api` ([`TERRAFORM.md`](TERRAFORM.md)). Não é preciso rodar `apply` à mão antes.
+Uma tag é o único passo manual. O job `infra` roda `terraform apply` de [`infra/`](../infra/) a cada tag, com o state num bucket S3, e cria ou atualiza cluster EKS, RDS, ECR e o secret `oficina/api` ([`TERRAFORM.md`](TERRAFORM.md)). Não é preciso rodar `apply` à mão antes.
 
 ### Fluxo do deploy
 
@@ -210,7 +210,7 @@ sequenceDiagram
 
     GH->>K: aws eks update-kubeconfig (credenciais do lab)
     GH->>AWS: lê o secret oficina/api
-    AWS-->>GH: DB_HOST, DB_USER, DB_PASSWORD, JWT_SECRET, SES_FROM_ADDRESS
+    AWS-->>GH: DB_HOST, DB_USER, DB_PASSWORD, JWT_SECRET
     GH->>K: aplica ConfigMap e Secret
     GH->>K: recria ConfigMap com os .sql e o Job de migration
     K->>J: inicia o Job
@@ -227,7 +227,7 @@ sequenceDiagram
 | Passo | O que faz | Por que existe | Se falhar |
 | --- | --- | --- | --- |
 | **guard** | Confere que o workflow rodou a partir de uma tag `MAJOR.MINOR.PATCH`, que o commit da tag está na `main` e que o check **CI gate** desse commit passou | O filtro de tags do GitHub não olha a branch, e só versões validadas pela CI podem ir para o ar | Nada roda. Tag no commit errado: apague e crie de novo. CI vermelha: corrija na `main` e lance uma nova versão |
-| **infra** | Cria o bucket do state se ele não existir ([`bootstrap-state.sh`](../infra/bootstrap-state.sh)) e roda `terraform init/plan/apply` em `infra/` | Provisionamento automatizado e reproduzível do cluster, do banco, do ECR, do SES e do secret | Nada foi publicado nem aplicado no cluster. Veja o log do plan/apply. Um lock preso no S3 sai com `terraform force-unlock` |
+| **infra** | Cria o bucket do state se ele não existir ([`bootstrap-state.sh`](../infra/bootstrap-state.sh)) e roda `terraform init/plan/apply` em `infra/` | Provisionamento automatizado e reproduzível do cluster, do banco, do ECR e do secret | Nada foi publicado nem aplicado no cluster. Veja o log do plan/apply. Um lock preso no S3 sai com `terraform force-unlock` |
 | **image** | Faz login no ECR, `docker build` com a tag da versão (ex.: `oficina-api:1.0.1`) e `docker push` | A imagem precisa estar num registry que o cluster alcance. A tag da versão deixa claro o que está rodando | Nada foi aplicado no cluster. Veja o log do build |
 | **deploy** | Lê os segredos no Secrets Manager e roda `make k8s-deploy`: ConfigMap/Secret → Job de migration → rollout da API | Reaproveita o mesmo alvo usado manualmente, na ordem definida na [ADR 0006](adr/0006-migrations-em-job-kubernetes.md) | Se a migration falhar, a versão anterior da API continua no ar. O passo **Diagnostics** imprime pods, jobs, log da migration e eventos |
 
@@ -266,9 +266,11 @@ Configuração no GitHub ([`AWS_SETUP.md`](AWS_SETUP.md)):
 
 | Onde | Nome | Valor |
 | --- | --- | --- |
-| Secrets do environment `aws-deploy` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` | **AWS Details → AWS CLI** do Learner Lab, a cada sessão |
-| Variables do repositório (opcionais) | `AWS_REGION`, `EKS_CLUSTER_NAME`, `ECR_REPOSITORY`, `APP_SECRET_ID`, `TF_STATE_BUCKET` | Padrões: `us-east-1`, `oficina`, `oficina-api`, `oficina/api`, `oficina-tfstate-<conta>` |
+| Secrets do environment `aws-deploy` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`, `SMTP_PASSWORD` | Credenciais AWS do Learner Lab; senha de app Gmail em `SMTP_PASSWORD` |
+| Variables do repositório (opcionais) | `AWS_REGION`, `EKS_CLUSTER_NAME`, `ECR_REPOSITORY`, `APP_SECRET_ID`, `SMTP_SECRET_ID`, `SMTP_SECRET_VERSION`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_FROM_ADDRESS`, `TF_STATE_BUCKET` | Padrões: `us-east-1`, `oficina`, `oficina-api`, `oficina/api`, `oficina/smtp`, `1`, Gmail `smtp.gmail.com:587`, remetente `soatoficinapos@gmail.com`, `oficina-tfstate-<conta>` |
 | Environments | `aws-deploy` | Restrinja a **tags** com o padrão `[0-9]*.[0-9]*.[0-9]*` |
+
+Os jobs de deploy declaram o environment `aws-deploy`. Eles também podem ler Repository secrets; quando o mesmo nome existe nos dois escopos, o Environment secret prevalece. Prefira guardar credenciais no environment para limitar o acesso aos jobs de deploy.
 
 **Segredos da aplicação** ficam no AWS Secrets Manager, no secret `oficina/api`, criado pelo Terraform:
 
@@ -278,9 +280,11 @@ Configuração no GitHub ([`AWS_SETUP.md`](AWS_SETUP.md)):
 | `DB_USER` | Usuário do banco |
 | `DB_PASSWORD` | Senha, só letras e números (entra na URL do Job de migration, ver ADR 0006). O pipeline recusa outro formato |
 | `JWT_SECRET` | Chave HS256 gerada pelo Terraform |
-| `SES_FROM_ADDRESS` | E-mail do grupo, a identidade do SES. Preenchido, o deploy usa `EMAIL_PROVIDER=ses`; vazio, `EMAIL_PROVIDER=log` |
+| `SES_FROM_ADDRESS` | Campo legado opcional no secret `oficina/api`; o SES não é provisionado pelo Terraform do Learner Lab devido à falta de permissão para verificar identidade |
 
-O job `deploy` lê o secret e mascara os valores sensíveis no log (`::add-mask::`). `DB_PASSWORD` e `JWT_SECRET` vão para `k8s/overlays/eks/secrets.env` (permissão 600, apagado no fim do job mesmo se algo falhar), de onde o Kustomize gera o Secret `oficina-api-secrets`. `DB_HOST`, `DB_USER`, `EMAIL_PROVIDER` e `SES_FROM_ADDRESS` substituem os placeholders do overlay EKS, só na cópia do repositório dentro do runner. O pod não recebe access key da AWS: ele usa a `LabRole` dos nós pelo IMDS.
+O Terraform cria o secret SMTP indicado por `SMTP_SECRET_ID` (padrão `oficina/smtp`) e a versão inicial. A senha vem do Environment Secret `SMTP_PASSWORD`; `secret_string_wo` grava o valor sem persistir a senha no state ou no plano. O CD carrega o payload no Secret Kubernetes e seleciona `EMAIL_PROVIDER=smtp`. O host, porta, usuário e remetente usam os padrões Gmail descritos em [`AWS_SETUP.md`](AWS_SETUP.md); podem ser sobrescritos pelas variables `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME` e `SMTP_FROM_ADDRESS`. Ao trocar a senha, atualize o Environment Secret e incremente `SMTP_SECRET_VERSION` para que o Terraform publique outra versão. No AWS Academy, SMTP é o caminho recomendado porque o Learner Lab não autorizou `ses:VerifyEmailIdentity`.
+
+O job `deploy` lê os secrets e mascara os valores sensíveis no log (`::add-mask::`). `DB_PASSWORD`, `JWT_SECRET` e SMTP vão para `k8s/overlays/eks/secrets.env` (permissão 600, apagado no fim do job), de onde o Kustomize gera o Secret `oficina-api-secrets`. `DB_HOST`, `DB_USER`, `EMAIL_PROVIDER` e `SES_FROM_ADDRESS` substituem os placeholders do overlay EKS, só na cópia do repositório dentro do runner. O pod não recebe access key da AWS: ele usa a `LabRole` dos nós pelo IMDS. A role usada pelo GitHub Actions precisa de `secretsmanager:GetSecretValue` para o secret SMTP criado pelo Terraform.
 
 ### Custos
 
@@ -304,7 +308,8 @@ Com tudo ligado, o ambiente gasta perto de US$ 4 por dia. Suba o cluster perto d
 - **`AccessDenied` no apply:** o lab bloqueia algumas ações. Confira o recurso no log; o Terraform de `infra/` usa só serviços liberados no Learner Lab e não cria role IAM.
 - **`You must be logged in to the server (Unauthorized)` no kubectl:** o cluster foi criado por outra identidade (outra conta de lab ou um apply com credencial diferente). Destrua e recrie pelo pipeline.
 - **`Chave X ausente no secret oficina/api`:** o apply não terminou. Rode o workflow de novo.
-- **Notificação por e-mail não chega:** a identidade do SES ainda não foi verificada (link no e-mail do grupo) ou o destinatário não é verificado (sandbox). O erro aparece no log do pod; a mudança de status da OS não é desfeita.
+- **`SMTP_PASSWORD` ausente:** cadastre-o como Environment Secret no environment `aws-deploy`; o Terraform interrompe o apply se ele estiver vazio.
+- **Notificação por e-mail não chega:** confirme a senha de app e a saída de rede para o host/porta SMTP. O Learner Lab pode bloquear conexões de saída na porta 587.
 - **Migration falhou:** o passo Diagnostics mostra o log do Job. Se o golang-migrate marcou a versão como `dirty`, siga o procedimento de `force` em [`KUBERNETES.md`](KUBERNETES.md#problemas-comuns). A API anterior continua atendendo.
 - **`ImagePullBackOff`:** os nós não conseguem baixar do ECR. Confira se a imagem `oficina-api:<versão>` existe.
 - **Rollout parado em `rollout status`:** veja `kubectl -n oficina describe pod` e os eventos no passo Diagnostics. Probes falhando costumam indicar banco inacessível (security group do RDS).

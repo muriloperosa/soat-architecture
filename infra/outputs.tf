@@ -42,8 +42,3 @@ output "ecr_repository_url" {
   description = "Repositório ECR onde o CD publica a imagem da API."
   value       = aws_ecr_repository.api.repository_url
 }
-
-output "ses_sender_identity_arn" {
-  description = "ARN da identidade de e-mail do SES. Só envia depois do clique no e-mail de verificação."
-  value       = aws_ses_email_identity.sender.arn
-}

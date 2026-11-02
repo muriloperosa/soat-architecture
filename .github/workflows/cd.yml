@@ -28,6 +28,7 @@ env:
   EKS_CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME || 'oficina' }}
   ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY || 'oficina-api' }}
   APP_SECRET_ID: ${{ vars.APP_SECRET_ID || 'oficina/api' }}
+  SMTP_SECRET_ID: ${{ vars.SMTP_SECRET_ID || 'oficina/smtp' }}
 
 jobs:
   # Stage 0: GitHub's tag filter ignores the branch, so the tag's origin is
@@ -102,8 +103,8 @@ jobs:
           echo "::error::Timeout esperando o CI gate de ${GITHUB_SHA}."
           exit 1
 
-  # Stage 1: Terraform apply of infra/ (EKS cluster, RDS, ECR, SES identity and
-  # the app secret). The state lives in S3; the bucket is created on the first
+  # Stage 1: Terraform apply of infra/ (EKS cluster, RDS, ECR, app and SMTP secrets).
+  # The state lives in S3; the bucket is created on the first
   # run of a new lab account. A failure here leaves the cluster untouched.
   infra:
     name: Terraform apply
@@ -122,6 +123,13 @@ jobs:
       TF_VAR_cluster_name: ${{ vars.EKS_CLUSTER_NAME || 'oficina' }}
       TF_VAR_ecr_repository_name: ${{ vars.ECR_REPOSITORY || 'oficina-api' }}
       TF_VAR_app_secret_name: ${{ vars.APP_SECRET_ID || 'oficina/api' }}
+      TF_VAR_smtp_secret_name: ${{ vars.SMTP_SECRET_ID || 'oficina/smtp' }}
+      TF_VAR_smtp_host: ${{ vars.SMTP_HOST || 'smtp.gmail.com' }}
+      TF_VAR_smtp_port: ${{ vars.SMTP_PORT || '587' }}
+      TF_VAR_smtp_username: ${{ vars.SMTP_USERNAME || 'soatoficinapos@gmail.com' }}
+      TF_VAR_smtp_password: ${{ secrets.SMTP_PASSWORD }}
+      TF_VAR_smtp_from_address: ${{ vars.SMTP_FROM_ADDRESS || 'soatoficinapos@gmail.com' }}
+      TF_VAR_smtp_secret_version: ${{ vars.SMTP_SECRET_VERSION || '1' }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -141,6 +149,15 @@ jobs:
         with:
           terraform_version: 1.17.1
           terraform_wrapper: false
+
+      - name: Validate SMTP app password
+        shell: bash
+        run: |
+          if [[ -z "$TF_VAR_smtp_password" ]]; then
+            echo "::error::Cadastre SMTP_PASSWORD como secret no environment aws-deploy."
+            exit 1
+          fi
+          echo "::add-mask::${TF_VAR_smtp_password}"
 
       - name: Terraform init
         run: |
@@ -300,10 +317,30 @@ jobs:
             fi
           done
           ses_from="$(jq -r '.SES_FROM_ADDRESS // empty' <<<"$payload")"
-          if [[ -n "$ses_from" ]]; then
+          email_provider=log
+          if [[ -n "$SMTP_SECRET_ID" ]]; then
+            smtp_payload="$(aws secretsmanager get-secret-value --secret-id "$SMTP_SECRET_ID" --query SecretString --output text)"
+            for key in SMTP_HOST SMTP_PORT SMTP_USERNAME SMTP_PASSWORD SMTP_FROM_ADDRESS; do
+              if [[ -z "$(jq -r --arg k "$key" '.[$k] // empty' <<<"$smtp_payload")" ]]; then
+                echo "::error::Chave ${key} ausente no secret ${SMTP_SECRET_ID}."
+                exit 1
+              fi
+            done
+            smtp_host="$(jq -r .SMTP_HOST <<<"$smtp_payload")"
+            smtp_port="$(jq -r .SMTP_PORT <<<"$smtp_payload")"
+            smtp_username="$(jq -r .SMTP_USERNAME <<<"$smtp_payload")"
+            smtp_password="$(jq -r .SMTP_PASSWORD <<<"$smtp_payload")"
+            smtp_from="$(jq -r .SMTP_FROM_ADDRESS <<<"$smtp_payload")"
+            if [[ ! "$smtp_host" =~ ^[A-Za-z0-9.-]+$ || ! "$smtp_port" =~ ^[0-9]+$ ]]; then
+              echo "::error::SMTP_HOST ou SMTP_PORT inválido no secret ${SMTP_SECRET_ID}."
+              exit 1
+            fi
+            echo "::add-mask::${smtp_password}"
+            printf 'SMTP_HOST=%s\nSMTP_PORT=%s\nSMTP_USERNAME=%s\nSMTP_PASSWORD=%s\nSMTP_FROM_ADDRESS=%s\n' \
+              "$smtp_host" "$smtp_port" "$smtp_username" "$smtp_password" "$smtp_from" >> "$SECRETS_FILE"
+            email_provider=smtp
+          elif [[ -n "$ses_from" ]]; then
             email_provider=ses
-          else
-            email_provider=log
           fi
           sed -i \
             -e "s|REPLACE_WITH_RDS_ENDPOINT|${db_host}|" \

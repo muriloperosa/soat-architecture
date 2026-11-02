@@ -26,7 +26,7 @@ Onde encontrar cada requisito da fase no repositório:
 | Clean Code, Clean Architecture e testes automatizados | Camadas em `internal/`, regra de dependência verificada em `test/architecture/`, testes unitários e de integração ([Qualidade](#qualidade)) |
 | Abertura, consulta de status e listagem priorizada de OS | `/v1/ordens-servico` ([APIs](#apis)) |
 | Aprovação ou recusa do orçamento pelo cliente | `/v1/ordens-servico/{id}/orcamento/aprovar` e `/rejeitar` |
-| Aviso de mudança de status por e-mail | Notificações via Amazon SES ([Componentes](#componentes-da-aplicação)) |
+| Aviso de mudança de status por e-mail | Notificações via SMTP com STARTTLS; adapter SES também disponível no código ([Componentes](#componentes-da-aplicação)) |
 | Dockerfile e docker-compose | [`Dockerfile`](Dockerfile), [`compose.yml`](compose.yml) |
 | Deployments, Services, ConfigMaps, Secrets e HPA | [`k8s/`](k8s/) |
 | Terraform do cluster Kubernetes | [`infra/`](infra/) |
@@ -40,11 +40,11 @@ Onde encontrar cada requisito da fase no repositório:
 | Linguagem e HTTP | Go 1.26, Gin |
 | Persistência | MySQL 8, GORM, `golang-migrate` |
 | Autenticação | JWT HS256 com access e refresh token |
-| E-mail | Amazon SES (AWS SDK for Go v2), com provedor `log` para desenvolvimento |
+| E-mail | SMTP com STARTTLS (usado no AWS Academy), adapter Amazon SES e provedor `log` para desenvolvimento |
 | Documentação da API | Swagger gerado com `swaggo`, collections Postman |
 | Contêiner | Docker multi-stage (`golang:1.26-alpine` → `alpine`, usuário sem privilégio) e Docker Compose |
 | Orquestração | Kubernetes com Kustomize: Minikube e Amazon EKS |
-| Infraestrutura como código | Terraform 1.10+ com o provider AWS 5.x e state no S3 |
+| Infraestrutura como código | Terraform 1.11+ com o provider AWS 5.x e state no S3 |
 | CI/CD | GitHub Actions, com Terraform no deploy e state no S3 (AWS Academy Learner Lab) |
 | Registry | Amazon ECR, com tags imutáveis |
 | Testes e análise | `testify`, `mockery`, `testcontainers`, k6, `govulncheck`, `gosec`, OWASP ZAP, SonarQube |
@@ -64,7 +64,7 @@ flowchart TB
         mw["Middlewares<br/>autenticação JWT<br/>autorização por papel"]
         handlers["Handlers<br/>DTOs e mappers"]
         persist["Repositórios GORM<br/>TransactionRunner"]
-        email["EmailSender<br/>log ou SES"]
+        email["EmailSender<br/>log, SMTP ou SES"]
         mw --> handlers
     end
 
@@ -84,6 +84,7 @@ flowchart TB
     persist -. implementa .-> ports
     email -. implementa .-> ports
     persist --> db[("MySQL 8")]
+    email --> smtp[["Servidor SMTP"]]
     email --> ses[["Amazon SES"]]
 ```
 
@@ -91,7 +92,7 @@ Domínio (entidades e value objects), aplicação (casos de uso) e infraestrutur
 
 A persistência usa GORM, mas de forma isolada: os models do GORM nunca vazam para a camada de domínio, existe um mapeamento explícito entre entidade e model na fronteira do repositório. Autenticação é feita via JWT, com um middleware que reavalida se o usuário segue ativo a cada requisição, não só no login, e um segundo middleware que autoriza por tipo e papel de usuário. Situações que exigem consistência entre agregados diferentes, como reservar peça e verificar estoque, passam por um `TransactionRunner` que garante atomicidade e usa `SELECT ... FOR UPDATE` para serializar concorrência.
 
-Cada mudança de status da ordem de serviço dispara um e-mail ao cliente depois que a transição já foi persistida. Se o envio falhar, o erro fica no log e o status não é desfeito. No envio do orçamento vai um segundo e-mail, com serviços, peças, quantidades e valores. Localmente o provedor padrão é `log` (`EMAIL_PROVIDER`), que só registra a mensagem e não precisa de AWS. Com `ses`, a aplicação envia pelo Amazon SES e não sobe sem `SES_FROM_ADDRESS`. No SES em sandbox a mensagem só chega a identidades verificadas. No EKS o pod não recebe access key: usa a role do nó. Sem `SES_FROM_ADDRESS` no secret `oficina/api`, o CD sobe com `EMAIL_PROVIDER=log`.
+Cada mudança de status da ordem de serviço dispara um e-mail ao cliente depois que a transição já foi persistida. Se o envio falhar, o erro fica no log e o status não é desfeito. No envio do orçamento vai um segundo e-mail, com serviços, peças, quantidades e valores. Localmente o provedor padrão é `log` (`EMAIL_PROVIDER`), que registra a mensagem. `smtp` envia por SMTP autenticado com STARTTLS (Gmail: `smtp.gmail.com:587`); o adapter `ses` continua disponível no código. A infraestrutura do AWS Academy deixou de provisionar SES porque o Learner Lab negou a permissão `ses:VerifyEmailIdentity`; por isso o ambiente usa SMTP. Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` e `SMTP_FROM_ADDRESS`; não versione a senha de app. No EKS, o Terraform grava a senha no Secrets Manager com um argumento write-only, sem persistir seu valor no state ou no plano.
 
 O versionamento do schema do banco é feito com `golang-migrate`, migrations em `migrations/mysql/`. As decisões estruturais do projeto estão registradas como ADRs em [`docs/adr/`](docs/adr/), e o detalhamento das convenções internas está em [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md).
 
@@ -128,7 +129,8 @@ flowchart TB
         lb["Load Balancer<br/>criado pelo Service"]
         ecr[("ECR<br/>oficina-api")]
         sm["Secrets Manager<br/>oficina/api"]
-        ses[["Amazon SES"]]
+        smtp[["SMTP com STARTTLS<br/>usado no Learner Lab"]]
+        ses[["Amazon SES<br/>adapter não provisionado no Learner Lab"]]
 
         subgraph vpc["VPC default · subnets públicas"]
             rds[("RDS MySQL")]
@@ -167,7 +169,7 @@ flowchart TB
 
 | Recurso | Como é criado |
 | --- | --- |
-| Cluster EKS, node group, RDS MySQL, repositório ECR, identidade do SES e secret `oficina/api` | Terraform em [`infra/`](infra/), na VPC default e nas subnets públicas que já existem na conta |
+| Cluster EKS, node group, RDS MySQL, repositório ECR e secret `oficina/api` | Terraform em [`infra/`](infra/), na VPC default e nas subnets públicas que já existem na conta |
 | Deployment, Service, HPA, ConfigMap, Secret e Job de migration | Manifestos de [`k8s/`](k8s/), aplicados pelo deploy |
 | Load Balancer | Criado pela AWS a partir do Service `LoadBalancer` do overlay EKS |
 | Credenciais da sessão do Learner Lab no environment `aws-deploy` do GitHub | A cada sessão do lab, seguindo [`docs/AWS_SETUP.md`](docs/AWS_SETUP.md) |
@@ -224,11 +226,11 @@ A API fica em `http://localhost:8080` e o Swagger em `http://localhost:8080/swag
 
 ## Provisionar a infraestrutura com Terraform
 
-O Terraform fica em [`infra/`](infra/) e cria o cluster EKS com um node group, o RDS MySQL, o repositório ECR, a identidade do SES e o secret `oficina/api` no Secrets Manager, numa conta do AWS Academy Learner Lab. Cluster e nós usam a `LabRole` do lab. Ele aproveita a VPC default e as subnets públicas que já existem na conta, sem NAT Gateway. O state fica num bucket S3, criado pelo próprio pipeline na primeira execução.
+O Terraform fica em [`infra/`](infra/) e cria o cluster EKS com um node group, o RDS MySQL, o repositório ECR e os secrets `oficina/api` e `oficina/smtp` no Secrets Manager, numa conta do AWS Academy Learner Lab. Cluster e nós usam a `LabRole` do lab. O SES não é provisionado por causa da limitação de permissão do Learner Lab; a pipeline recebe a senha SMTP pelo Environment Secret `SMTP_PASSWORD` no GitHub e grava-a com argumento write-only. O state fica num bucket S3, criado pelo próprio pipeline na primeira execução.
 
 Quem aplica é o CD: cada tag `MAJOR.MINOR.PATCH` na `main` roda o `terraform apply` antes de publicar a imagem e fazer o deploy. Antes da tag, atualize no GitHub as credenciais da sessão do lab ([`docs/AWS_SETUP.md`](docs/AWS_SETUP.md)).
 
-Para rodar à mão (plan, ajuste ou destroy), os pré-requisitos são Terraform 1.10 ou mais novo, AWS CLI, `kubectl` e as credenciais da sessão do lab no profile `oficina-lab`. Não grave a access key no repositório.
+Para rodar à mão (plan, ajuste ou destroy), os pré-requisitos são Terraform 1.11 ou mais novo, AWS CLI, `kubectl` e as credenciais da sessão do lab no profile `oficina-lab`. O plan/apply também precisa receber `TF_VAR_smtp_password` pelo ambiente. Não passe a senha como argumento de linha de comando nem grave a access key no repositório.
 
 **1. Ver o plano ou aplicar.** Na raiz do repositório, usando o mesmo state do pipeline:
 
@@ -366,7 +368,7 @@ Um hook de `pre-push` local, instalado via `make hooks-install`, roda mocks, lin
 - [Banco de dados](docs/database/DATABASE.md): modelo relacional e diagrama
 - [Segurança](docs/SECURITY.md): ferramentas de SCA, SAST e DAST usadas e a justificativa de cada uma
 - [Kubernetes](docs/KUBERNETES.md): manifestos em `k8s/`, requisitos da máquina, deploy no Minikube, comandos `kubectl` e demonstração do autoscaling
-- [Infraestrutura AWS](docs/TERRAFORM.md): Terraform do cluster EKS, do RDS, do ECR, do SES e do secret, aplicado pelo deploy por tag
+- [Infraestrutura AWS](docs/TERRAFORM.md): Terraform do cluster EKS, do RDS, do ECR e do secret, aplicado pelo deploy por tag
 - [Preparação do Learner Lab](docs/AWS_SETUP.md): environment e credenciais da sessão do lab no GitHub
 - [CI/CD](docs/CI_CD.md): CI em GitHub Actions (testes, cobertura, segurança) e deploy no EKS por tag, com diagramas de cada etapa, credenciais e rollback
 - [Swagger](docs/swagger/): documentação da API gerada a partir dos handlers

@@ -21,10 +21,15 @@ type Config struct {
 	JWTAccessTokenTTLMinutes int    `env:"JWT_ACCESS_TOKEN_TTL_MINUTES" envDefault:"60"`
 	JWTRefreshTokenTTLHours  int    `env:"JWT_REFRESH_TOKEN_TTL_HOURS" envDefault:"168"`
 
-	// EmailProvider padrão é log: o processo sobe sem AWS. ses exige SESFromAddress.
-	EmailProvider  string `env:"EMAIL_PROVIDER" envDefault:"log"`
-	AWSRegion      string `env:"AWS_REGION" envDefault:"us-east-1"`
-	SESFromAddress string `env:"SES_FROM_ADDRESS"`
+	// EmailProvider padrão é log: o processo sobe sem depender de um provedor externo.
+	EmailProvider   string `env:"EMAIL_PROVIDER" envDefault:"log"`
+	AWSRegion       string `env:"AWS_REGION" envDefault:"us-east-1"`
+	SESFromAddress  string `env:"SES_FROM_ADDRESS"`
+	SMTPHost        string `env:"SMTP_HOST" envDefault:"smtp.gmail.com"`
+	SMTPPort        int    `env:"SMTP_PORT" envDefault:"587"`
+	SMTPUsername    string `env:"SMTP_USERNAME"`
+	SMTPPassword    string `env:"SMTP_PASSWORD"`
+	SMTPFromAddress string `env:"SMTP_FROM_ADDRESS"`
 }
 
 // Load lê as variáveis de ambiente do processo e retorna um Config validado.

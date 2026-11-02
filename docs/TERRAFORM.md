@@ -10,17 +10,16 @@ Não há NAT Gateway. A VPC e as subnets públicas já existem (a default da con
 - **As credenciais expiram com a sessão** (cerca de 4 horas). A cada sessão nova, atualize os três secrets no GitHub antes de criar a tag.
 - **Quem aplica vira admin do cluster.** Pipeline e quem roda o Terraform localmente usam a mesma role da sessão (`voclabs`), então não existe access entry extra.
 - **O control plane continua cobrando com a sessão encerrada.** O lab desliga as instâncias EC2 no fim da sessão, mas o EKS, o RDS e o Load Balancer seguem consumindo o crédito.
-- **SES em sandbox.** Remetente e destinatário precisam ser identidades verificadas.
+- **E-mail:** a infraestrutura não cria SES. O SES foi retirado porque o Learner Lab negou `ses:VerifyEmailIdentity`; o Terraform cria o secret SMTP e sua versão usando `secret_string_wo`, sem persistir a senha no state ou no plano. A senha chega pelo Environment Secret `SMTP_PASSWORD` do GitHub; incremente `SMTP_SECRET_VERSION` ao rotacioná-la. O CD ainda aceita SES configurado manualmente via `SES_FROM_ADDRESS`; sem provedor, usa `log`.
 
 ## O que é criado
 
 - Cluster EKS `oficina`, Kubernetes 1.34, endpoint público, autenticação `API_AND_CONFIG_MAP`, com a `LabRole` como role do cluster.
-- Node group `oficina-nodes`: `t3.small`, AMI `AL2023_x86_64_STANDARD`, `desired = 1`, `min = 1`, `max = 2`, com a `LabRole` como role dos nós. O hop limit do IMDS fica em 2 para o pod conseguir usar essa role (ECR e SES). Não há access key no cluster.
+- Node group `oficina-nodes`: `t3.small`, AMI `AL2023_x86_64_STANDARD`, `desired = 1`, `min = 1`, `max = 2`, com a `LabRole` como role dos nós. O hop limit do IMDS fica em 2 para o pod conseguir usar essa role. Não há access key no cluster.
 - Addon `metrics-server`. Sem ele o HPA fica com CPU `<unknown>`.
 - Repositório ECR `oficina-api`, com tags imutáveis e scan a cada push. `force_delete` deixa o `destroy` apagar as imagens.
 - RDS MySQL 8, instância `db.t3.micro`, 20 GiB, uma zona, sem backup e sem snapshot final. O database é `mecanica` e o usuário é `oficina`. A instância não é pública. O security group só aceita a porta 3306 vinda do security group do cluster.
-- Identidade de e-mail do SES para `ses_sender_email` (o e-mail do grupo). O `apply` dispara um e-mail de verificação da AWS para esse endereço; o envio só funciona depois do clique no link.
-- Secret `oficina/api` no Secrets Manager, com `DB_HOST` (hostname, sem `:3306`), `DB_USER`, `DB_PASSWORD`, `JWT_SECRET` e `SES_FROM_ADDRESS` (o mesmo e-mail da identidade do SES). Com `SES_FROM_ADDRESS` preenchido, o CD sobe a API com `EMAIL_PROVIDER=ses`. As senhas são só letras e números. `recovery_window_in_days = 0` apaga o secret no destroy; sem isso o nome fica reservado e o próximo apply falha.
+- Secrets `oficina/api` e `oficina/smtp` no Secrets Manager. O segundo contém as configurações SMTP e a senha de app; o valor é escrito pelo Terraform por argumento write-only. O nome é configurável pela variable `SMTP_SECRET_ID`. O Environment Secret `SMTP_PASSWORD` é necessário no CD. As senhas do banco são só letras e números. `recovery_window_in_days = 0` apaga os secrets no destroy; sem isso o nome fica reservado e o próximo apply falha.
 
 ## State no S3
 
@@ -80,4 +79,4 @@ Espere o Load Balancer sumir e só então, na raiz do repositório:
 make tf-destroy CONFIRM=yes
 ```
 
-O destroy apaga também o ECR e a identidade do SES. O bucket do state fica: a próxima tag recria o ambiente a partir dele.
+O destroy apaga também o ECR e os secrets da aplicação. O bucket do state fica: a próxima tag recria o ambiente a partir dele.

@@ -48,7 +48,7 @@ func TestSESSender_EnviarPropagaErroDoCliente(t *testing.T) {
 }
 
 func TestNewSender_PadraoLogNaoExigeAWS(t *testing.T) {
-	sender, err := email.NewSender(context.Background(), "", "", "")
+	sender, err := email.NewSender(context.Background(), email.SenderConfig{})
 
 	require.NoError(t, err)
 	require.NoError(t, sender.Enviar(context.Background(), "a@b.com", "s", "c"))
@@ -62,14 +62,18 @@ func TestNewSESSender_RegiaoVaziaUsaPadrao(t *testing.T) {
 }
 
 func TestNewSender_SESSemRemetenteFalha(t *testing.T) {
-	sender, err := email.NewSender(context.Background(), "ses", "us-east-1", "  ")
+	sender, err := email.NewSender(context.Background(), email.SenderConfig{
+		Provider:       "ses",
+		AWSRegion:      "us-east-1",
+		SESFromAddress: "  ",
+	})
 
 	require.Nil(t, sender)
 	require.ErrorContains(t, err, "SES_FROM_ADDRESS")
 }
 
 func TestNewSender_ProvedorDesconhecido(t *testing.T) {
-	sender, err := email.NewSender(context.Background(), "smtp", "us-east-1", "a@b.com")
+	sender, err := email.NewSender(context.Background(), email.SenderConfig{Provider: "desconhecido"})
 
 	require.Nil(t, sender)
 	require.ErrorContains(t, err, "EMAIL_PROVIDER inválido")
