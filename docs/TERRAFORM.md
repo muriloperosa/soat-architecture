@@ -1,6 +1,6 @@
 # Infraestrutura AWS
 
-Terraform deste diretório sobe o que o deploy por tag espera encontrar na conta `081473213177`, região `us-east-1`. O workflow [`.github/workflows/cd.yml`](../.github/workflows/cd.yml) não cria esses recursos: o job `infra` continua desligado até existir um backend S3. Quem sobe e derruba o ambiente é este diretório, fora do pipeline.
+O Terraform de [`infra/`](../infra/) sobe o que o deploy por tag espera encontrar na conta `081473213177`, região `us-east-1`. O workflow [`.github/workflows/cd.yml`](../.github/workflows/cd.yml) não cria esses recursos: o job `infra` continua desligado até existir um backend S3. Quem sobe e derruba o ambiente é esse Terraform, rodado fora do pipeline.
 
 Não há NAT Gateway. A VPC e as subnets públicas já existem (a default da conta, salvo `vpc_id` e `subnet_ids`). Os nós recebem IP público por causa de `map-public-ip-on-launch` e alcançam o ECR sem NAT.
 
@@ -21,7 +21,7 @@ Não há NAT Gateway. A VPC e as subnets públicas já existem (a default da con
 - Repositório ECR `oficina-api`.
 - Provedor OIDC do GitHub e a role `oficina-github-deploy`.
 
-Esses três ficam de fora para sobreviver ao `terraform destroy`. O ECR guarda as imagens. A role e o OIDC são o acesso do GitHub Actions. O roteiro deles está em [`docs/AWS_SETUP.md`](../docs/AWS_SETUP.md), passos 1 a 3. Não crie o secret nem o access entry por aquele roteiro: o Terraform faz os dois. Se o secret `oficina/api` já existir, importe antes do apply:
+Esses três ficam de fora para sobreviver ao `terraform destroy`. O ECR guarda as imagens. A role e o OIDC são o acesso do GitHub Actions. O roteiro deles está em [`docs/AWS_SETUP.md`](AWS_SETUP.md), passos 1 a 3. Não crie o secret nem o access entry por aquele roteiro: o Terraform faz os dois. Se o secret `oficina/api` já existir, importe antes do apply, dentro de `infra/`:
 
 ```bash
 terraform import aws_secretsmanager_secret.app oficina/api
@@ -74,7 +74,7 @@ O state local (`terraform.tfstate`) contém a senha do banco e o `JWT_SECRET`. E
 
 ## Deploy da aplicação
 
-O deploy não sai deste diretório. Com o apply concluído, a CI da `main` verde e a variable `AWS_DEPLOY_ROLE_ARN` configurada, uma tag `MAJOR.MINOR.PATCH` no commit da `main` publica a imagem e faz o rollout. Para um teste, `0.0.1` serve:
+O deploy não sai do diretório `infra/`. Com o apply concluído, a CI da `main` verde e a variable `AWS_DEPLOY_ROLE_ARN` configurada, uma tag `MAJOR.MINOR.PATCH` no commit da `main` publica a imagem e faz o rollout. Para um teste, `0.0.1` serve:
 
 ```bash
 git switch main && git pull

@@ -1,11 +1,12 @@
 {
   "info": {
     "name": "SOAT — Demo Fluxo Completo OS",
-    "description": "Fluxo sequencial para apresentação: login (admin + cliente), cadastro de dependências, abertura de OS, diagnóstico, orçamento, aprovação do cliente, execução, finalização e entrega. Todos os tokens e IDs são setados automaticamente nas variáveis da collection (aba Tests de cada request); basta rodar com o Collection Runner, na ordem em que aparecem.",
+    "description": "Fluxo sequencial para apresentação: login (admin + cliente), cadastro de dependências, abertura de OS, diagnóstico, orçamento, aprovação do cliente, execução, finalização e entrega. Todos os tokens e IDs são setados automaticamente nas variáveis da collection (aba Tests de cada request); basta rodar com o Collection Runner, na ordem em que aparecem.\n\nbase_url aponta para o LoadBalancer do EKS: troque o placeholder pelo hostname exibido em \"URL da API\" no resumo do workflow de CD (ou em `kubectl get svc oficina-api -n oficina`). Para rodar localmente, use o valor de local_url.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "base_url", "value": "http://localhost:8080" },
+    { "key": "base_url", "value": "http://REPLACE_WITH_EKS_LOADBALANCER_HOSTNAME" },
+    { "key": "local_url", "value": "http://localhost:8080" },
     { "key": "access_token", "value": "" },
     { "key": "refresh_token", "value": "" },
     { "key": "cliente_access_token", "value": "" },
@@ -14,7 +15,21 @@
     { "key": "veiculo_id", "value": "" },
     { "key": "peca_id", "value": "" },
     { "key": "servico_id", "value": "" },
-    { "key": "ordem_servico_id", "value": "" }
+    { "key": "ordem_servico_id", "value": "" },
+    { "key": "hoje", "value": "" }
+  ],
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "exec": [
+          "// Fluxo feliz: qualquer passo fora de 2xx quebra a demo.",
+          "pm.test(`${pm.info.requestName} responde 2xx`, function () {",
+          "    pm.expect(pm.response.code).to.be.within(200, 299);",
+          "});"
+        ]
+      }
+    }
   ],
   "item": [
     {
@@ -464,16 +479,27 @@
     },
     {
       "name": "21 - Relatório de transição de status das OS",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// A API recusa final_date no futuro; usa a data de hoje (UTC).",
+              "pm.collectionVariables.set('hoje', new Date().toISOString().slice(0, 10));"
+            ]
+          }
+        }
+      ],
       "request": {
         "method": "GET",
         "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
         "url": {
-          "raw": "{{base_url}}/v1/relatorios/ordens-servico/transicao-status?start_date=2020-01-01&final_date=2030-12-31&from_status=RECEBIDA&to_status=ENTREGUE&unit=h",
+          "raw": "{{base_url}}/v1/relatorios/ordens-servico/transicao-status?start_date=2026-01-01&final_date={{hoje}}&from_status=RECEBIDA&to_status=ENTREGUE&unit=h",
           "host": ["{{base_url}}"],
           "path": ["v1", "relatorios", "ordens-servico", "transicao-status"],
           "query": [
-            { "key": "start_date", "value": "2020-01-01" },
-            { "key": "final_date", "value": "2030-12-31" },
+            { "key": "start_date", "value": "2026-01-01" },
+            { "key": "final_date", "value": "{{hoje}}" },
             { "key": "from_status", "value": "RECEBIDA" },
             { "key": "to_status", "value": "ENTREGUE" },
             { "key": "unit", "value": "h" }
