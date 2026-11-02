@@ -22,6 +22,6 @@ resource "aws_secretsmanager_secret_version" "app" {
     DB_USER          = aws_db_instance.this.username
     DB_PASSWORD      = random_password.db.result
     JWT_SECRET       = random_password.jwt.result
-    SES_FROM_ADDRESS = var.ses_from_address
+    SES_FROM_ADDRESS = aws_ses_email_identity.sender.email
   })
 }

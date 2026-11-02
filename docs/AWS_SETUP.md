@@ -1,196 +1,50 @@
-# Preparação da conta AWS para o CD (via CLI)
+# Preparação do AWS Learner Lab para o CD
 
-Roteiro único para deixar a conta AWS pronta para o workflow [`cd.yml`](../.github/workflows/cd.yml). O contexto de cada recurso está em [`CI_CD.md`](CI_CD.md#parte-2-deploy).
+Roteiro para deixar o GitHub pronto para o workflow [`cd.yml`](../.github/workflows/cd.yml) numa conta do AWS Academy Learner Lab. A infraestrutura (EKS, RDS, ECR, SES e o secret da aplicação) é criada pelo próprio CD, pelo Terraform de [`infra/`](../infra/) ([`TERRAFORM.md`](TERRAFORM.md)). Aqui só entram as credenciais.
+
+O Learner Lab não deixa criar provedor OIDC nem role IAM. Por isso o pipeline não usa OIDC: ele usa as credenciais temporárias da sessão do lab, guardadas como secrets do environment `aws-deploy`.
+
+Cada integrante do grupo tem a própria conta de Learner Lab. Escolham **uma** conta para o ambiente e usem sempre as credenciais dela no GitHub: o state, o cluster e o bucket ficam nessa conta, e credenciais de outra conta não enxergam nada disso.
 
 Pré-requisitos:
 
-- AWS CLI v2 autenticada como administrador da conta (`aws configure` ou `aws sso login`)
-- GitHub CLI autenticada (`gh auth login`)
-- Rodar todos os passos no mesmo terminal, porque as variáveis do passo 0 são reaproveitadas
+- Sessão do Learner Lab iniciada (**Start Lab**, indicador verde)
+- GitHub CLI autenticada (`gh auth login`), com permissão de admin no repositório
 
-## 0. Variáveis
+## 1. Environment `aws-deploy` (uma vez)
 
 ```bash
-export AWS_REGION=us-east-1
-export ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
 export REPO=muriloperosa/soat-architecture
-export ROLE_NAME=oficina-github-deploy
-export ECR_REPO=oficina-api
-export CLUSTER=oficina
-export APP_SECRET=oficina/api
-# Prefixo do claim `sub` do token OIDC. Com "immutable subject" ligado no repo,
-# o GitHub inclui os IDs numéricos: repo:<owner>@<id>/<repo>@<id>.
-export SUB_PREFIX=$(gh api "repos/${REPO}/actions/oidc/customization/sub" --jq '.sub_claim_prefix // empty')
-export SUB_PREFIX=${SUB_PREFIX:-repo:${REPO}}
-echo "Conta: $ACCOUNT"
-echo "Sub:   ${SUB_PREFIX}:environment:aws-deploy"
-```
-
-## 1. Provedor OIDC do GitHub (uma vez por conta)
-
-```bash
-aws iam create-open-id-connect-provider \
-  --url https://token.actions.githubusercontent.com \
-  --client-id-list sts.amazonaws.com
-```
-
-> Se aparecer `EntityAlreadyExists`, o provedor já existe. Siga para o passo 2.
-
-## 2. Role de deploy
-
-### 2.1 Trust policy (quem pode assumir a role)
-
-Só jobs do environment `aws-deploy` deste repositório. O `sub` precisa ser idêntico ao que o GitHub manda no token (a condição é `StringEquals`); por isso vem de `SUB_PREFIX`, e não do nome do repo escrito à mão:
-
-```bash
-cat > trust.json <<JSON
-{
-  "Version": "2012-10-17",
-  "Statement": [{
-    "Effect": "Allow",
-    "Principal": { "Federated": "arn:aws:iam::${ACCOUNT}:oidc-provider/token.actions.githubusercontent.com" },
-    "Action": "sts:AssumeRoleWithWebIdentity",
-    "Condition": {
-      "StringEquals": {
-        "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-        "token.actions.githubusercontent.com:sub": "${SUB_PREFIX}:environment:aws-deploy"
-      }
-    }
-  }]
-}
-JSON
-
-aws iam create-role --role-name "$ROLE_NAME" \
-  --assume-role-policy-document file://trust.json \
-  --max-session-duration 3600 \
-  --query Role.Arn --output text
-```
-
-A saída é o ARN da role. Ele vai para o GitHub no passo 6.
-
-### 2.2 Permissões (o que a role pode fazer)
-
-```bash
-cat > policy.json <<JSON
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    { "Sid": "EcrLogin", "Effect": "Allow", "Action": "ecr:GetAuthorizationToken", "Resource": "*" },
-    {
-      "Sid": "EcrPushPull",
-      "Effect": "Allow",
-      "Action": [
-        "ecr:BatchCheckLayerAvailability", "ecr:BatchGetImage", "ecr:CompleteLayerUpload",
-        "ecr:DescribeImages", "ecr:GetDownloadUrlForLayer", "ecr:InitiateLayerUpload",
-        "ecr:PutImage", "ecr:UploadLayerPart"
-      ],
-      "Resource": "arn:aws:ecr:${AWS_REGION}:${ACCOUNT}:repository/${ECR_REPO}"
-    },
-    {
-      "Sid": "EksKubeconfig",
-      "Effect": "Allow",
-      "Action": "eks:DescribeCluster",
-      "Resource": "arn:aws:eks:${AWS_REGION}:${ACCOUNT}:cluster/${CLUSTER}"
-    },
-    {
-      "Sid": "AppSecret",
-      "Effect": "Allow",
-      "Action": "secretsmanager:GetSecretValue",
-      "Resource": "arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT}:secret:${APP_SECRET}-*"
-    }
-  ]
-}
-JSON
-
-aws iam put-role-policy --role-name "$ROLE_NAME" \
-  --policy-name oficina-deploy \
-  --policy-document file://policy.json
-```
-
-## 3. Repositório ECR
-
-Tags imutáveis: uma versão publicada (ex.: `1.0.1`) nunca é sobrescrita.
-
-```bash
-aws ecr create-repository --repository-name "$ECR_REPO" \
-  --region "$AWS_REGION" \
-  --image-tag-mutability IMMUTABLE \
-  --image-scanning-configuration scanOnPush=true
-```
-
-## 4. Secret da aplicação
-
-Os valores do banco vêm do RDS. `DB_PASSWORD` só pode ter letras e números, porque entra na URL do Job de migration ([ADR 0006](adr/0006-migrations-em-job-kubernetes.md)).
-
-```bash
-JWT=$(openssl rand -hex 32)
-
-aws secretsmanager create-secret --name "$APP_SECRET" --region "$AWS_REGION" \
-  --secret-string "{
-    \"DB_HOST\": \"<endpoint do RDS>\",
-    \"DB_USER\": \"<usuário do RDS>\",
-    \"DB_PASSWORD\": \"<senha só com letras e números>\",
-    \"JWT_SECRET\": \"${JWT}\"
-  }"
-```
-
-Para trocar valores depois:
-
-```bash
-aws secretsmanager put-secret-value --secret-id "$APP_SECRET" --secret-string '{...}'
-```
-
-## 5. Acesso da role ao cluster EKS (quando o cluster existir)
-
-O cluster precisa estar com autenticação `API` ou `API_AND_CONFIG_MAP`:
-
-```bash
-aws eks describe-cluster --name "$CLUSTER" \
-  --query cluster.accessConfig.authenticationMode --output text
-
-# Se a saída for CONFIG_MAP:
-aws eks update-cluster-config --name "$CLUSTER" \
-  --access-config authenticationMode=API_AND_CONFIG_MAP
-```
-
-Crie o access entry. A role recebe admin do cluster porque o primeiro deploy cria o namespace `oficina`:
-
-```bash
-aws eks create-access-entry --cluster-name "$CLUSTER" \
-  --principal-arn "arn:aws:iam::${ACCOUNT}:role/${ROLE_NAME}"
-
-aws eks associate-access-policy --cluster-name "$CLUSTER" \
-  --principal-arn "arn:aws:iam::${ACCOUNT}:role/${ROLE_NAME}" \
-  --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy \
-  --access-scope type=cluster
-```
-
-O security group do RDS também precisa aceitar conexões na porta 3306 vindas dos nós do EKS, e o banco `mecanica` precisa existir.
-
-## 6. GitHub: variable e environment
-
-```bash
-gh variable set AWS_DEPLOY_ROLE_ARN --repo "$REPO" \
-  --body "arn:aws:iam::${ACCOUNT}:role/${ROLE_NAME}"
-
 gh api -X PUT "repos/${REPO}/environments/aws-deploy"
 ```
 
-Recomendado: em **Settings → Environments → aws-deploy → Deployment branches and tags**, escolha **Selected** e adicione a regra de tag `[0-9]*.[0-9]*.[0-9]*`.
+Recomendado: em **Settings → Environments → aws-deploy → Deployment branches and tags**, escolha **Selected** e adicione a regra de tag `[0-9]*.[0-9]*.[0-9]*`. Só os runs de tag passam a ler os secrets.
 
-Nenhum secret precisa ser criado no GitHub: a autenticação é por OIDC.
+## 2. Credenciais da sessão (a cada sessão do lab)
 
-## 7. Conferência
+No Learner Lab, abra **AWS Details → AWS CLI → Show**. Copie os três valores e grave no environment:
 
 ```bash
-aws iam get-role --role-name "$ROLE_NAME" --query Role.Arn --output text
-aws ecr describe-repositories --repository-names "$ECR_REPO" --query 'repositories[0].repositoryUri' --output text
-aws secretsmanager describe-secret --secret-id "$APP_SECRET" --query ARN --output text
-aws eks list-access-entries --cluster-name "$CLUSTER"
-gh variable list --repo "$REPO"
+gh secret set AWS_ACCESS_KEY_ID     --repo "$REPO" --env aws-deploy --body '<aws_access_key_id>'
+gh secret set AWS_SECRET_ACCESS_KEY --repo "$REPO" --env aws-deploy --body '<aws_secret_access_key>'
+gh secret set AWS_SESSION_TOKEN     --repo "$REPO" --env aws-deploy --body '<aws_session_token>'
 ```
 
-## 8. Primeiro deploy
+As credenciais expiram quando a sessão acaba (cerca de 4 horas). Um run com credencial vencida falha no primeiro passo da AWS com `ExpiredToken` ou `InvalidClientTokenId`: atualize os três secrets e rode de novo (**Actions → CD → Run workflow**, escolhendo a tag).
+
+## 3. Variables opcionais
+
+Todas têm padrão no workflow:
+
+| Variable | Padrão |
+| --- | --- |
+| `AWS_REGION` | `us-east-1` |
+| `EKS_CLUSTER_NAME` | `oficina` |
+| `ECR_REPOSITORY` | `oficina-api` |
+| `APP_SECRET_ID` | `oficina/api` |
+| `TF_STATE_BUCKET` | `oficina-tfstate-<conta>` |
+
+## 4. Primeiro deploy
 
 ```bash
 git switch main && git pull
@@ -198,10 +52,18 @@ git tag 1.0.0
 git push origin 1.0.0
 ```
 
-Acompanhe em **Actions → CD (Continuous Deployment)**.
+Acompanhe em **Actions → CD (Continuous Deployment)**. O primeiro run cria o bucket do state e todo o ambiente, e leva por volta de 20 minutos (cluster EKS e RDS).
 
-## Limpeza
+## 5. Verificar o e-mail do SES
+
+O primeiro `apply` cria a identidade do SES e a AWS manda um e-mail de verificação para o endereço do grupo (`ses_sender_email` em [`variables.tf`](../infra/variables.tf)). Clique no link. Até lá, a API sobe normalmente, mas o envio das notificações falha e só aparece no log do pod.
+
+Em sandbox, o destinatário também precisa estar verificado. Para a demonstração, use como e-mail do cliente o próprio e-mail do grupo ou verifique o destinatário:
 
 ```bash
-rm -f trust.json policy.json
+aws sesv2 create-email-identity --email-identity <destinatario> --region us-east-1
 ```
+
+## Conta nova do lab
+
+Se o lab for reiniciado (**Reset**) ou trocado, a conta volta vazia. Atualize os secrets (passo 2) e crie uma tag: o CD recria o bucket do state e o ambiente do zero. A verificação do SES precisa ser feita de novo.

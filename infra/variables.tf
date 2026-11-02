@@ -58,10 +58,16 @@ variable "node_max_size" {
   default     = 2
 }
 
-variable "github_deploy_role_name" {
-  description = "Role criada à mão no AWS_SETUP.md. O CD assume essa role para o kubectl."
+variable "lab_role_name" {
+  description = "Role pronta do Learner Lab, usada pelo cluster e pelos nós. O lab não deixa criar role."
   type        = string
-  default     = "oficina-github-deploy"
+  default     = "LabRole"
+}
+
+variable "ecr_repository_name" {
+  description = "Repositório ECR da API. O CD usa oficina-api quando ECR_REPOSITORY não existe."
+  type        = string
+  default     = "oficina-api"
 }
 
 variable "app_secret_name" {
@@ -88,12 +94,6 @@ variable "db_instance_class" {
   default     = "db.t3.micro"
 }
 
-variable "ses_from_address" {
-  description = "Remetente verificado no SES. Vazio faz o CD subir a API com EMAIL_PROVIDER=log."
-  type        = string
-  default     = ""
-}
-
 variable "db_allocated_storage" {
   description = "Armazenamento inicial do RDS, em GiB."
   type        = number
@@ -101,7 +101,7 @@ variable "db_allocated_storage" {
 }
 
 variable "ses_sender_email" {
-  description = "Domínio utilizado para envio de e-mails"
+  description = "E-mail do grupo, verificado no SES. É o remetente (SES_FROM_ADDRESS) do secret."
   type        = string
   default     = "soatoficinapos@gmail.com"
 }

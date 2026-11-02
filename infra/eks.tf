@@ -4,9 +4,12 @@ locals {
 
 resource "aws_eks_cluster" "this" {
   name     = var.cluster_name
-  role_arn = aws_iam_role.cluster.arn
+  role_arn = data.aws_iam_role.lab.arn
   version  = var.kubernetes_version
 
+  # Quem aplica vira admin do cluster. No lab, o pipeline e quem roda o
+  # Terraform localmente usam a mesma role da sessão (voclabs), então não há
+  # access entry extra para o GitHub Actions.
   access_config {
     authentication_mode                         = "API_AND_CONFIG_MAP"
     bootstrap_cluster_creator_admin_permissions = true
@@ -19,25 +22,6 @@ resource "aws_eks_cluster" "this" {
   }
 
   tags = local.tags
-
-  depends_on = [aws_iam_role_policy_attachment.cluster]
-}
-
-resource "aws_eks_access_entry" "github_deploy" {
-  cluster_name  = aws_eks_cluster.this.name
-  principal_arn = data.aws_iam_role.github_deploy.arn
-}
-
-resource "aws_eks_access_policy_association" "github_deploy" {
-  cluster_name  = aws_eks_cluster.this.name
-  principal_arn = data.aws_iam_role.github_deploy.arn
-  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-
-  access_scope {
-    type = "cluster"
-  }
-
-  depends_on = [aws_eks_access_entry.github_deploy]
 }
 
 resource "aws_launch_template" "node" {
@@ -58,7 +42,7 @@ resource "aws_launch_template" "node" {
 resource "aws_eks_node_group" "this" {
   cluster_name    = aws_eks_cluster.this.name
   node_group_name = "${var.cluster_name}-nodes"
-  node_role_arn   = aws_iam_role.node.arn
+  node_role_arn   = data.aws_iam_role.lab.arn
   subnet_ids      = local.eks_subnet_ids
 
   instance_types = [var.node_instance_type]
@@ -77,13 +61,6 @@ resource "aws_eks_node_group" "this" {
   }
 
   tags = local.tags
-
-  depends_on = [
-    aws_iam_role_policy_attachment.node_worker,
-    aws_iam_role_policy_attachment.node_cni,
-    aws_iam_role_policy_attachment.node_ecr,
-    aws_iam_role_policy.node_ses,
-  ]
 }
 
 resource "aws_eks_addon" "metrics_server" {

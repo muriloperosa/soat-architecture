@@ -44,8 +44,8 @@ Onde encontrar cada requisito da fase no repositório:
 | Documentação da API | Swagger gerado com `swaggo`, collections Postman |
 | Contêiner | Docker multi-stage (`golang:1.26-alpine` → `alpine`, usuário sem privilégio) e Docker Compose |
 | Orquestração | Kubernetes com Kustomize: Minikube e Amazon EKS |
-| Infraestrutura como código | Terraform 1.5+ com o provider AWS 5.x |
-| CI/CD | GitHub Actions, com autenticação na AWS por OIDC |
+| Infraestrutura como código | Terraform 1.10+ com o provider AWS 5.x e state no S3 |
+| CI/CD | GitHub Actions, com Terraform no deploy e state no S3 (AWS Academy Learner Lab) |
 | Registry | Amazon ECR, com tags imutáveis |
 | Testes e análise | `testify`, `mockery`, `testcontainers`, k6, `govulncheck`, `gosec`, OWASP ZAP, SonarQube |
 
@@ -167,10 +167,10 @@ flowchart TB
 
 | Recurso | Como é criado |
 | --- | --- |
-| Cluster EKS, node group, roles do cluster e dos nós, RDS MySQL e secret `oficina/api` | Terraform em [`infra/`](infra/), na VPC default e nas subnets públicas que já existem na conta |
+| Cluster EKS, node group, RDS MySQL, repositório ECR, identidade do SES e secret `oficina/api` | Terraform em [`infra/`](infra/), na VPC default e nas subnets públicas que já existem na conta |
 | Deployment, Service, HPA, ConfigMap, Secret e Job de migration | Manifestos de [`k8s/`](k8s/), aplicados pelo deploy |
 | Load Balancer | Criado pela AWS a partir do Service `LoadBalancer` do overlay EKS |
-| Repositório ECR, provedor OIDC e role de deploy do GitHub | Uma vez por conta, seguindo [`docs/AWS_SETUP.md`](docs/AWS_SETUP.md) |
+| Credenciais da sessão do Learner Lab no environment `aws-deploy` do GitHub | A cada sessão do lab, seguindo [`docs/AWS_SETUP.md`](docs/AWS_SETUP.md) |
 
 No Minikube roda o mesmo conjunto, mas com o MySQL dentro do cluster (StatefulSet) e o Service como `NodePort`. Mais detalhes sobre cada recurso em [`docs/KUBERNETES.md`](docs/KUBERNETES.md).
 
@@ -181,11 +181,12 @@ flowchart TB
     pr(["Pull request"]) --> ci["CI<br/>lint, testes, cobertura,<br/>SCA, SAST e imagem"]
     ci -->|checks verdes + review| main["Merge na main"]
     main -->|git tag 1.0.1| guard["guard<br/>tag na main e CI verde?"]
-    guard --> img["image<br/>build e push no ECR"]
+    guard --> tf["infra<br/>terraform apply<br/>(state no S3)"]
+    tf --> img["image<br/>build e push no ECR"]
     img --> dep["deploy<br/>migrations e rollout no EKS"]
 ```
 
-A CI ([`ci.yml`](.github/workflows/ci.yml)) roda em todo PR e em todo push na `main`, e não tem acesso à AWS. O deploy ([`cd.yml`](.github/workflows/cd.yml)) só acontece quando alguém cria uma tag de versão, como `1.0.1`, num commit da `main` que passou na CI. O workflow se autentica na AWS via OIDC, então não existe chave de acesso salva no GitHub. O job `infra` do CD fica desligado: a infraestrutura sobe antes, com `make tf-apply`.
+A CI ([`ci.yml`](.github/workflows/ci.yml)) roda em todo PR e em todo push na `main`, e não tem acesso à AWS. O deploy ([`cd.yml`](.github/workflows/cd.yml)) só acontece quando alguém cria uma tag de versão, como `1.0.1`, num commit da `main` que passou na CI. O mesmo run aplica o Terraform de [`infra/`](infra/) antes de publicar a imagem, então não há `apply` manual. O workflow usa as credenciais da sessão do AWS Academy Learner Lab, guardadas no environment `aws-deploy`.
 
 Antes de atualizar a API, o deploy roda as migrations num Job ([ADR 0006](docs/adr/0006-migrations-em-job-kubernetes.md)). Se a migration falhar, a versão anterior continua no ar. O passo a passo, as credenciais, o rollback e os custos estão em [`docs/CI_CD.md`](docs/CI_CD.md).
 
@@ -223,11 +224,13 @@ A API fica em `http://localhost:8080` e o Swagger em `http://localhost:8080/swag
 
 ## Provisionar a infraestrutura com Terraform
 
-O Terraform fica em [`infra/`](infra/) e cria as roles do cluster e dos nós, o cluster EKS com um node group, o RDS MySQL e o secret `oficina/api` no Secrets Manager. Ele aproveita a VPC default e as subnets públicas que já existem na conta, sem NAT Gateway. O workflow de CD não cria esses recursos: ele publica a imagem no ECR e faz o deploy quando alguém envia uma tag `MAJOR.MINOR.PATCH` a partir da `main`.
+O Terraform fica em [`infra/`](infra/) e cria o cluster EKS com um node group, o RDS MySQL, o repositório ECR, a identidade do SES e o secret `oficina/api` no Secrets Manager, numa conta do AWS Academy Learner Lab. Cluster e nós usam a `LabRole` do lab. Ele aproveita a VPC default e as subnets públicas que já existem na conta, sem NAT Gateway. O state fica num bucket S3, criado pelo próprio pipeline na primeira execução.
 
-Pré-requisitos: Terraform 1.5 ou mais novo, AWS CLI, `kubectl`, a role `oficina-github-deploy` já criada ([`docs/AWS_SETUP.md`](docs/AWS_SETUP.md), passos 1 e 2) e a credencial da conta no profile `oficina-temp`. Não grave a access key no repositório.
+Quem aplica é o CD: cada tag `MAJOR.MINOR.PATCH` na `main` roda o `terraform apply` antes de publicar a imagem e fazer o deploy. Antes da tag, atualize no GitHub as credenciais da sessão do lab ([`docs/AWS_SETUP.md`](docs/AWS_SETUP.md)).
 
-**1. Criar a infraestrutura.** Na raiz do repositório:
+Para rodar à mão (plan, ajuste ou destroy), os pré-requisitos são Terraform 1.10 ou mais novo, AWS CLI, `kubectl` e as credenciais da sessão do lab no profile `oficina-lab`. Não grave a access key no repositório.
+
+**1. Ver o plano ou aplicar.** Na raiz do repositório, usando o mesmo state do pipeline:
 
 ```bash
 make tf-plan
@@ -237,16 +240,16 @@ make tf-apply
 **2. Apontar o `kubectl` para o cluster:**
 
 ```bash
-aws eks update-kubeconfig --region us-east-1 --name oficina --profile oficina-temp
+aws eks update-kubeconfig --region us-east-1 --name oficina --profile oficina-lab
 ```
 
-**3. Destruir no fim da sessão.** O control plane é cobrado por hora enquanto existir:
+**3. Destruir no fim da demonstração.** O control plane é cobrado por hora enquanto existir, mesmo com a sessão do lab encerrada:
 
 ```bash
 make tf-destroy CONFIRM=yes
 ```
 
-O que é criado, o que fica de fora e o roteiro completo de `plan`, `apply` e `destroy` estão em [`docs/TERRAFORM.md`](docs/TERRAFORM.md).
+O que é criado, o state no S3 e o roteiro completo de `plan`, `apply` e `destroy` estão em [`docs/TERRAFORM.md`](docs/TERRAFORM.md).
 
 ## Deploy em Kubernetes
 
@@ -363,8 +366,8 @@ Um hook de `pre-push` local, instalado via `make hooks-install`, roda mocks, lin
 - [Banco de dados](docs/database/DATABASE.md): modelo relacional e diagrama
 - [Segurança](docs/SECURITY.md): ferramentas de SCA, SAST e DAST usadas e a justificativa de cada uma
 - [Kubernetes](docs/KUBERNETES.md): manifestos em `k8s/`, requisitos da máquina, deploy no Minikube, comandos `kubectl` e demonstração do autoscaling
-- [Infraestrutura AWS](docs/TERRAFORM.md): Terraform do cluster EKS, do RDS e do secret que o deploy por tag espera encontrar
-- [Preparação da conta AWS](docs/AWS_SETUP.md): ECR, provedor OIDC e role de deploy, uma vez por conta
+- [Infraestrutura AWS](docs/TERRAFORM.md): Terraform do cluster EKS, do RDS, do ECR, do SES e do secret, aplicado pelo deploy por tag
+- [Preparação do Learner Lab](docs/AWS_SETUP.md): environment e credenciais da sessão do lab no GitHub
 - [CI/CD](docs/CI_CD.md): CI em GitHub Actions (testes, cobertura, segurança) e deploy no EKS por tag, com diagramas de cada etapa, credenciais e rollback
 - [Swagger](docs/swagger/): documentação da API gerada a partir dos handlers
 - [Collections Postman](.dev/postman/): todos os endpoints e o fluxo completo da demo

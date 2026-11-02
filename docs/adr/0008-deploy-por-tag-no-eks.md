@@ -1,7 +1,7 @@
 # 0008. Deploy no EKS por tag semver, com a CI como etapa obrigatória e credenciais por OIDC
 
 ## Status
-Aceita
+Aceita. Credenciais por OIDC e Terraform fora do pipeline foram substituídos pela [ADR 0009](0009-terraform-no-cd-com-learner-lab.md).
 
 ## Contexto
 A CI (`.github/workflows/ci.yml`) valida pull requests e a `main`, mas não publica nada. A Fase 2 pede um pipeline que também construa e publique a imagem, aplique os manifestos, rode as migrations e faça o deploy no cluster Kubernetes. O cluster é um EKS numa conta AWS própria do projeto.
