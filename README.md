@@ -19,6 +19,7 @@ O versionamento do schema do banco é feito com `golang-migrate`, migrations em 
 - [Segurança](docs/SECURITY.md): ferramentas de SCA, SAST e DAST usadas e a justificativa de cada uma
 - [Kubernetes](docs/KUBERNETES.md): manifestos em `k8s/`, requisitos da máquina, deploy no Minikube, comandos `kubectl` e demonstração do autoscaling
 - [CI/CD](docs/CI_CD.md): CI em GitHub Actions (testes, cobertura, segurança) e deploy no EKS por tag, com diagramas de cada etapa, credenciais e rollback
+- [Infraestrutura AWS](infra/README.md): Terraform do cluster EKS, do RDS e do secret que o deploy por tag espera encontrar
 - [Swagger](docs/swagger/): documentação da API gerada a partir dos handlers (UI disponível em `/swagger/index.html` com a aplicação no ar)
 - [Coleção Postman](.dev/postman/): coleção pronta para testar os endpoints da API
 
@@ -49,7 +50,11 @@ chmod +x .dev/scripts/setup.sh
 - sobe a API
 - ao final, imprime as credenciais dos usuários seedados (admin, atendente, mecânico, cliente) para testar a API
 
-Cada mudança de status da ordem de serviço dispara um e-mail ao cliente depois que a transição já foi persistida. Falha de envio, inclusive cliente não encontrado, fica no log e não desfaz o status. No envio e no reenvio do orçamento há um segundo e-mail, separado do aviso de status, com serviços, peças, quantidades e valores. O envio é síncrono e usa o contexto da requisição: a latência do provedor entra no tempo de resposta, e um cancelamento pode interromper o e-mail mesmo com o status já gravado. Uma fila ou Outbox para desacoplar essa entrega fica fora deste escopo. O provedor padrão é `log` (`EMAIL_PROVIDER`), que não exige AWS. Com `ses`, a aplicação usa Amazon SES e recusa subir sem `SES_FROM_ADDRESS`. No AWS Academy o SES opera em sandbox: só entrega para identidades verificadas. Um exemplo de Secret para injetar essas variáveis no cluster está em [`k8s/email-secret.example.yaml`](k8s/email-secret.example.yaml).
+Cada mudança de status da ordem de serviço dispara um e-mail ao cliente depois que a transição já foi persistida. Falha de envio, inclusive cliente não encontrado, fica no log e não desfaz o status. No envio e no reenvio do orçamento há um segundo e-mail, separado do aviso de status, com serviços, peças, quantidades e valores. O envio é síncrono e usa o contexto da requisição: a latência do provedor entra no tempo de resposta, e um cancelamento pode interromper o e-mail mesmo com o status já gravado. Uma fila ou Outbox para desacoplar essa entrega fica fora deste escopo. O provedor padrão é `log` (`EMAIL_PROVIDER`), que não exige AWS. Com `ses`, a aplicação usa Amazon SES e recusa subir sem `SES_FROM_ADDRESS`. No SES em sandbox a mensagem só chega a identidades verificadas. No EKS o overlay Kustomize coloca `EMAIL_PROVIDER`, `AWS_REGION` e `SES_FROM_ADDRESS` no ConfigMap que o Deployment já monta. O pod não recebe access key: usa a role do nó. Sem `SES_FROM_ADDRESS` no secret `oficina/api`, o CD sobe com `EMAIL_PROVIDER=log`.
+
+## Infraestrutura AWS
+
+O cluster EKS, o MySQL e o secret da aplicação saem do Terraform em [`infra/`](infra/). O workflow de CD não cria esses recursos: ele publica a imagem no ECR e faz o deploy quando alguém envia uma tag `MAJOR.MINOR.PATCH` a partir da `main`. O roteiro de `plan`, `apply` e `destroy` está em [`infra/README.md`](infra/README.md).
 
 ## Deploy em Kubernetes
 

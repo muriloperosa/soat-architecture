@@ -235,9 +235,8 @@ jobs:
     name: Deploy to EKS (migrations and rollout)
     needs: [guard, image, infra]
     # Runs when infra succeeded or was skipped; a skipped need would otherwise
-    # skip this job too.
-    # if: ${{ !cancelled() && needs.guard.result == 'success' && needs.image.result == 'success' && contains(fromJSON('["success", "skipped"]'), needs.infra.result) }}
-    if: false
+    # skip this job too. The infra job stays if: false until the S3 backend exists.
+    if: ${{ !cancelled() && needs.guard.result == 'success' && needs.image.result == 'success' && contains(fromJSON('["success", "skipped"]'), needs.infra.result) }}
     runs-on: ubuntu-24.04
     environment:
       name: aws-deploy
@@ -296,15 +295,23 @@ jobs:
           fi
           # The versioned overlay has placeholders for the database endpoint and
           # user. They are replaced only in the runner's checkout, never committed.
-          for placeholder in REPLACE_WITH_RDS_ENDPOINT REPLACE_WITH_RDS_USERNAME; do
+          for placeholder in REPLACE_WITH_RDS_ENDPOINT REPLACE_WITH_RDS_USERNAME REPLACE_WITH_EMAIL_PROVIDER REPLACE_WITH_SES_FROM_ADDRESS; do
             if ! grep -q "$placeholder" "$OVERLAY_FILE"; then
               echo "::error::Placeholder ${placeholder} não encontrado em ${OVERLAY_FILE}."
               exit 1
             fi
           done
+          ses_from="$(jq -r '.SES_FROM_ADDRESS // empty' <<<"$payload")"
+          if [[ -n "$ses_from" ]]; then
+            email_provider=ses
+          else
+            email_provider=log
+          fi
           sed -i \
             -e "s|REPLACE_WITH_RDS_ENDPOINT|${db_host}|" \
             -e "s|REPLACE_WITH_RDS_USERNAME|${db_user}|" \
+            -e "s|REPLACE_WITH_EMAIL_PROVIDER|${email_provider}|" \
+            -e "s|REPLACE_WITH_SES_FROM_ADDRESS|${ses_from}|" \
             "$OVERLAY_FILE"
 
       - name: Apply config, run migrations and roll out API
