@@ -27,7 +27,7 @@ func TestEntregarOrdemServicoUseCase_ComSucesso(t *testing.T) {
 		}).
 		Return(nil)
 
-	uc := app.NewEntregarOrdemServicoUseCase(repository)
+	uc := app.NewEntregarOrdemServicoUseCase(repository, notificadorComEnvio(t))
 	output, err := uc.Executar(context.Background(), app.EntregarOrdemServicoInput{
 		OrdemServicoID: 42,
 		UsuarioID:      7,
@@ -42,7 +42,7 @@ func TestEntregarOrdemServicoUseCase_OSInexistente(t *testing.T) {
 	repository := ordemservicomocks.NewOrdemServicoRepository(t)
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(999)).Return(nil, domain.ErrOrdemServicoNaoEncontrada)
 
-	uc := app.NewEntregarOrdemServicoUseCase(repository)
+	uc := app.NewEntregarOrdemServicoUseCase(repository, nil)
 	_, err := uc.Executar(context.Background(), app.EntregarOrdemServicoInput{OrdemServicoID: 999, UsuarioID: 7})
 
 	require.ErrorIs(t, err, domain.ErrOrdemServicoNaoEncontrada)
@@ -53,7 +53,7 @@ func TestEntregarOrdemServicoUseCase_TransicaoInvalida(t *testing.T) {
 	os := ordemServicoRecebida(t)
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 
-	uc := app.NewEntregarOrdemServicoUseCase(repository)
+	uc := app.NewEntregarOrdemServicoUseCase(repository, notificadorSemEnvio(t))
 	_, err := uc.Executar(context.Background(), app.EntregarOrdemServicoInput{OrdemServicoID: 42, UsuarioID: 7})
 
 	require.ErrorIs(t, err, domain.ErrTransicaoStatusInvalida)
@@ -66,7 +66,7 @@ func TestEntregarOrdemServicoUseCase_ErroAoPersistir(t *testing.T) {
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 	repository.EXPECT().Atualizar(mock.Anything, os).Return(erroBanco)
 
-	uc := app.NewEntregarOrdemServicoUseCase(repository)
+	uc := app.NewEntregarOrdemServicoUseCase(repository, nil)
 	_, err := uc.Executar(context.Background(), app.EntregarOrdemServicoInput{OrdemServicoID: 42, UsuarioID: 7})
 
 	var appErr *shared.AppError

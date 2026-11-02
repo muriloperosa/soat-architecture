@@ -3,10 +3,9 @@ package orcamento
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sort"
 
-	domaincliente "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
+	"github.com/muriloperosa/soat-architecture/internal/application/notificacao"
 	domainorcamento "github.com/muriloperosa/soat-architecture/internal/domain/orcamento"
 	domainordemservico "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
 	domainpeca "github.com/muriloperosa/soat-architecture/internal/domain/peca"
@@ -23,9 +22,9 @@ type AlterarQuantidadePecaOrcamentoUseCase struct {
 	ordemServicoRepository domainordemservico.OrdemServicoRepository
 	reservaRepository      domainreservapeca.Repository
 	pecaRepository         domainpeca.Repository
-	clienteRepository      domaincliente.ClienteRepository
 	transactionRunner      shared.TransactionRunner
-	emailSender            shared.EmailSender
+	notificadorStatus      *notificacao.NotificadorStatus
+	notificadorOrcamento   *notificacao.NotificadorOrcamento
 }
 
 func NewAlterarQuantidadePecaOrcamentoUseCase(
@@ -33,18 +32,18 @@ func NewAlterarQuantidadePecaOrcamentoUseCase(
 	ordemServicoRepository domainordemservico.OrdemServicoRepository,
 	reservaRepository domainreservapeca.Repository,
 	pecaRepository domainpeca.Repository,
-	clienteRepository domaincliente.ClienteRepository,
 	transactionRunner shared.TransactionRunner,
-	emailSender shared.EmailSender,
+	notificadorStatus *notificacao.NotificadorStatus,
+	notificadorOrcamento *notificacao.NotificadorOrcamento,
 ) *AlterarQuantidadePecaOrcamentoUseCase {
 	return &AlterarQuantidadePecaOrcamentoUseCase{
 		orcamentoRepository:    orcamentoRepository,
 		ordemServicoRepository: ordemServicoRepository,
 		reservaRepository:      reservaRepository,
 		pecaRepository:         pecaRepository,
-		clienteRepository:      clienteRepository,
 		transactionRunner:      transactionRunner,
-		emailSender:            emailSender,
+		notificadorStatus:      notificadorStatus,
+		notificadorOrcamento:   notificadorOrcamento,
 	}
 }
 
@@ -54,8 +53,7 @@ func (uc *AlterarQuantidadePecaOrcamentoUseCase) Executar(
 ) (OrcamentoOutput, error) {
 	var atualizado *domainorcamento.Orcamento
 	var reenviado bool
-	var clienteID uint64
-	var numeroOS string
+	var osReenviada *domainordemservico.OrdemServico
 
 	err := uc.transactionRunner.Executar(ctx, func(txCtx context.Context) error {
 		os, err := uc.ordemServicoRepository.BuscarPorID(txCtx, input.OrdemServicoID)
@@ -106,8 +104,7 @@ func (uc *AlterarQuantidadePecaOrcamentoUseCase) Executar(
 				return err
 			}
 
-			clienteID = os.ClienteID()
-			numeroOS = os.Numero().String()
+			osReenviada = os
 		}
 
 		if err := uc.orcamentoRepository.Atualizar(txCtx, orcamento); err != nil {
@@ -125,20 +122,9 @@ func (uc *AlterarQuantidadePecaOrcamentoUseCase) Executar(
 		return OrcamentoOutput{}, shared.NewInternalError("erro ao alterar quantidade da peça no orçamento", err)
 	}
 
-	if reenviado {
-		cliente, err := uc.clienteRepository.BuscarPorID(ctx, clienteID)
-		if err != nil {
-			if errors.Is(err, domaincliente.ErrClienteNaoEncontrado) {
-				return OrcamentoOutput{}, err
-			}
-			return OrcamentoOutput{}, shared.NewInternalError("erro ao buscar cliente", err)
-		}
-
-		assunto := fmt.Sprintf("Orçamento atualizado da Ordem de Serviço %s", numeroOS)
-		corpo := montarCorpoEmail(numeroOS, cliente.Nome(), atualizado)
-		if err := uc.emailSender.Enviar(ctx, cliente.Email().String(), assunto, corpo); err != nil {
-			return OrcamentoOutput{}, shared.NewInternalError("erro ao reenviar e-mail do orçamento", err)
-		}
+	if osReenviada != nil {
+		uc.notificadorStatus.Notificar(ctx, osReenviada, domainordemservico.StatusAprovada)
+		uc.notificadorOrcamento.Notificar(ctx, osReenviada, atualizado, true)
 	}
 
 	return toOutput(atualizado), nil

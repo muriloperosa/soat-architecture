@@ -67,7 +67,11 @@ func routerComBancoInacessivel(t *testing.T) *gin.Engine {
 		t.Fatalf("erro ao preparar conexão GORM: %v", err)
 	}
 
-	return httpinfra.NewRouter(wiring.NewContainer(testContainer.Config, db))
+	container, err := wiring.NewContainer(testContainer.Config, db)
+	if err != nil {
+		t.Fatalf("erro ao montar container: %v", err)
+	}
+	return httpinfra.NewRouter(container)
 }
 
 func TestHealthReady_Retorna503QuandoBancoInacessivel(t *testing.T) {

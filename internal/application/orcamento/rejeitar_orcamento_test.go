@@ -19,7 +19,7 @@ func TestRejeitarOrcamentoUseCase_RegistraMotivoNoHistorico(t *testing.T) {
 	repo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(o, nil)
 	repo.EXPECT().Atualizar(mock.Anything, o).Return(nil)
 
-	uc := app.NewRejeitarOrcamentoUseCase(repo)
+	uc := app.NewRejeitarOrcamentoUseCase(repo, notificadorOrcamento(t, true))
 	out, err := uc.Executar(context.Background(), app.RejeitarOrcamentoInput{
 		OrdemServicoID: 42,
 		ClienteID:      10,
@@ -38,7 +38,7 @@ func TestRejeitarOrcamentoUseCase_ErrosDeBuscaEAtualizacao(t *testing.T) {
 		repo := ordemservicomocks.NewOrdemServicoRepository(t)
 		repo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(nil, domainordemservico.ErrOrdemServicoNaoEncontrada)
 
-		uc := app.NewRejeitarOrcamentoUseCase(repo)
+		uc := app.NewRejeitarOrcamentoUseCase(repo, nil)
 		_, err := uc.Executar(context.Background(), app.RejeitarOrcamentoInput{OrdemServicoID: 42, ClienteID: 10})
 		require.ErrorIs(t, err, domainordemservico.ErrOrdemServicoNaoEncontrada)
 	})
@@ -48,7 +48,7 @@ func TestRejeitarOrcamentoUseCase_ErrosDeBuscaEAtualizacao(t *testing.T) {
 		cause := errors.New("banco indisponível")
 		repo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(nil, cause)
 
-		uc := app.NewRejeitarOrcamentoUseCase(repo)
+		uc := app.NewRejeitarOrcamentoUseCase(repo, nil)
 		_, err := uc.Executar(context.Background(), app.RejeitarOrcamentoInput{OrdemServicoID: 42, ClienteID: 10})
 		var appErr *shared.AppError
 		require.ErrorAs(t, err, &appErr)
@@ -62,7 +62,7 @@ func TestRejeitarOrcamentoUseCase_ErrosDeBuscaEAtualizacao(t *testing.T) {
 		repo.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 		repo.EXPECT().Atualizar(mock.Anything, os).Return(cause)
 
-		uc := app.NewRejeitarOrcamentoUseCase(repo)
+		uc := app.NewRejeitarOrcamentoUseCase(repo, nil)
 		_, err := uc.Executar(context.Background(), app.RejeitarOrcamentoInput{OrdemServicoID: 42, ClienteID: 10, Motivo: "Não aprovado"})
 		var appErr *shared.AppError
 		require.ErrorAs(t, err, &appErr)

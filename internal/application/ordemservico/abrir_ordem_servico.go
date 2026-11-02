@@ -7,6 +7,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/muriloperosa/soat-architecture/internal/application/notificacao"
 	domaincliente "github.com/muriloperosa/soat-architecture/internal/domain/cliente"
 	domainordemservico "github.com/muriloperosa/soat-architecture/internal/domain/ordemservico"
 	"github.com/muriloperosa/soat-architecture/internal/domain/shared"
@@ -17,17 +18,20 @@ type AbrirOrdemServicoUseCase struct {
 	ordemServicoRepository domainordemservico.OrdemServicoRepository
 	clienteRepository      domaincliente.ClienteRepository
 	veiculoRepository      domainveiculo.Repository
+	notificador            *notificacao.NotificadorStatus
 }
 
 func NewAbrirOrdemServicoUseCase(
 	ordemServicoRepository domainordemservico.OrdemServicoRepository,
 	clienteRepository domaincliente.ClienteRepository,
 	veiculoRepository domainveiculo.Repository,
+	notificador *notificacao.NotificadorStatus,
 ) *AbrirOrdemServicoUseCase {
 	return &AbrirOrdemServicoUseCase{
 		ordemServicoRepository: ordemServicoRepository,
 		clienteRepository:      clienteRepository,
 		veiculoRepository:      veiculoRepository,
+		notificador:            notificador,
 	}
 }
 
@@ -72,6 +76,8 @@ func (uc *AbrirOrdemServicoUseCase) Executar(
 	if err := uc.ordemServicoRepository.Salvar(ctx, os); err != nil {
 		return OrdemServicoOutput{}, shared.NewInternalError("erro ao salvar ordem de serviço", err)
 	}
+
+	uc.notificador.Notificar(ctx, os, "")
 
 	return toOutput(os), nil
 }

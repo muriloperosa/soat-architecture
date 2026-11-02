@@ -26,6 +26,9 @@ func TestLoad_UsaValoresDasEnvs(t *testing.T) {
 	require.Equal(t, "user", cfg.DBUser)
 	require.Equal(t, "pass", cfg.DBPassword)
 	require.Equal(t, "oficina_test", cfg.DBName)
+	require.Equal(t, "log", cfg.EmailProvider)
+	require.Equal(t, "us-east-1", cfg.AWSRegion)
+	require.Empty(t, cfg.SESFromAddress)
 }
 
 func TestLoad_UsaValoresDoPoolDasEnvs(t *testing.T) {

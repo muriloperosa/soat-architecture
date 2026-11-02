@@ -27,7 +27,7 @@ func TestIniciarExecucaoUseCase_ComSucesso(t *testing.T) {
 		}).
 		Return(nil)
 
-	uc := app.NewIniciarExecucaoUseCase(repository)
+	uc := app.NewIniciarExecucaoUseCase(repository, notificadorComEnvio(t))
 	output, err := uc.Executar(context.Background(), app.IniciarExecucaoInput{
 		OrdemServicoID: 42,
 		UsuarioID:      7,
@@ -42,7 +42,7 @@ func TestIniciarExecucaoUseCase_OSInexistente(t *testing.T) {
 	repository := ordemservicomocks.NewOrdemServicoRepository(t)
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(999)).Return(nil, domain.ErrOrdemServicoNaoEncontrada)
 
-	uc := app.NewIniciarExecucaoUseCase(repository)
+	uc := app.NewIniciarExecucaoUseCase(repository, nil)
 	_, err := uc.Executar(context.Background(), app.IniciarExecucaoInput{OrdemServicoID: 999, UsuarioID: 7})
 
 	require.ErrorIs(t, err, domain.ErrOrdemServicoNaoEncontrada)
@@ -53,7 +53,7 @@ func TestIniciarExecucaoUseCase_ErroAoBuscar(t *testing.T) {
 	erroBanco := errors.New("banco indisponível")
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(nil, erroBanco)
 
-	uc := app.NewIniciarExecucaoUseCase(repository)
+	uc := app.NewIniciarExecucaoUseCase(repository, nil)
 	_, err := uc.Executar(context.Background(), app.IniciarExecucaoInput{OrdemServicoID: 42, UsuarioID: 7})
 
 	var appErr *shared.AppError
@@ -66,7 +66,7 @@ func TestIniciarExecucaoUseCase_OSNula(t *testing.T) {
 	repository := ordemservicomocks.NewOrdemServicoRepository(t)
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(nil, nil)
 
-	uc := app.NewIniciarExecucaoUseCase(repository)
+	uc := app.NewIniciarExecucaoUseCase(repository, nil)
 	_, err := uc.Executar(context.Background(), app.IniciarExecucaoInput{OrdemServicoID: 42, UsuarioID: 7})
 
 	require.ErrorIs(t, err, domain.ErrOrdemServicoNaoEncontrada)
@@ -77,7 +77,7 @@ func TestIniciarExecucaoUseCase_TransicaoInvalida(t *testing.T) {
 	os := ordemServicoRecebida(t)
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 
-	uc := app.NewIniciarExecucaoUseCase(repository)
+	uc := app.NewIniciarExecucaoUseCase(repository, notificadorSemEnvio(t))
 	_, err := uc.Executar(context.Background(), app.IniciarExecucaoInput{OrdemServicoID: 42, UsuarioID: 7})
 
 	require.ErrorIs(t, err, domain.ErrTransicaoStatusInvalida)
@@ -90,7 +90,7 @@ func TestIniciarExecucaoUseCase_ErroAoPersistir(t *testing.T) {
 	repository.EXPECT().BuscarPorID(mock.Anything, uint64(42)).Return(os, nil)
 	repository.EXPECT().Atualizar(mock.Anything, os).Return(erroBanco)
 
-	uc := app.NewIniciarExecucaoUseCase(repository)
+	uc := app.NewIniciarExecucaoUseCase(repository, nil)
 	_, err := uc.Executar(context.Background(), app.IniciarExecucaoInput{OrdemServicoID: 42, UsuarioID: 7})
 
 	var appErr *shared.AppError
