@@ -285,7 +285,7 @@ jobs:
         shell: bash
         run: |
           payload="$(aws secretsmanager get-secret-value --secret-id "$APP_SECRET_ID" --query SecretString --output text)"
-          for key in DB_HOST DB_USER DB_PASSWORD JWT_SECRET; do
+          for key in DB_HOST DB_USER DB_PASSWORD JWT_SECRET APPROVAL_TOKEN_SECRET; do
             if [[ -z "$(jq -r --arg k "$key" '.[$k] // empty' <<<"$payload")" ]]; then
               echo "::error::Chave ${key} ausente no secret ${APP_SECRET_ID}."
               exit 1
@@ -293,8 +293,14 @@ jobs:
           done
           db_password="$(jq -r .DB_PASSWORD <<<"$payload")"
           jwt_secret="$(jq -r .JWT_SECRET <<<"$payload")"
+          approval_token_secret="$(jq -r .APPROVAL_TOKEN_SECRET <<<"$payload")"
           echo "::add-mask::${db_password}"
           echo "::add-mask::${jwt_secret}"
+          echo "::add-mask::${approval_token_secret}"
+          if [[ ! "$approval_token_secret" =~ ^[[:xdigit:]]{64}$ ]]; then
+            echo "::error::APPROVAL_TOKEN_SECRET no secret ${APP_SECRET_ID} deve conter 32 bytes aleatorios em hexadecimal."
+            exit 1
+          fi
           # The password goes into the migration Job's URL (ADR 0006).
           if [[ ! "$db_password" =~ ^[A-Za-z0-9]+$ ]]; then
             echo "::error::DB_PASSWORD precisa ter apenas letras e números."
@@ -302,6 +308,7 @@ jobs:
           fi
           umask 077
           printf 'DB_PASSWORD=%s\nJWT_SECRET=%s\n' "$db_password" "$jwt_secret" > "$SECRETS_FILE"
+          printf 'APPROVAL_TOKEN_SECRET=%s\nAPPROVAL_TOKEN_TTL_HOURS=24\n' "$approval_token_secret" >> "$SECRETS_FILE"
           db_host="$(jq -r .DB_HOST <<<"$payload")"
           db_user="$(jq -r .DB_USER <<<"$payload")"
           if [[ ! "$db_host" =~ ^[A-Za-z0-9.-]+$ || ! "$db_user" =~ ^[A-Za-z0-9_]+$ ]]; then
@@ -348,6 +355,41 @@ jobs:
             -e "s|REPLACE_WITH_EMAIL_PROVIDER|${email_provider}|" \
             -e "s|REPLACE_WITH_SES_FROM_ADDRESS|${ses_from}|" \
             "$OVERLAY_FILE"
+
+      # Without vars.PUBLIC_BASE_URL, the approval links use the LoadBalancer
+      # hostname, which changes with each lab account. Only the Namespace and
+      # Service are applied here, so the hostname exists before the API pods
+      # start on a first deploy. Runs after secrets.env exists, which the
+      # overlay's secretGenerator requires.
+      - name: Resolve PUBLIC_BASE_URL
+        env:
+          PUBLIC_BASE_URL_OVERRIDE: ${{ vars.PUBLIC_BASE_URL }}
+        shell: bash
+        run: |
+          url="$PUBLIC_BASE_URL_OVERRIDE"
+          if [[ -z "$url" ]]; then
+            kubectl kustomize "$(dirname "$OVERLAY_FILE")" \
+              | yq 'select(.kind == "Namespace" or .kind == "Service")' \
+              | kubectl --context "$KUBE_CONTEXT" apply -f -
+            host=""
+            for _ in $(seq 1 60); do
+              host="$(kubectl --context "$KUBE_CONTEXT" -n oficina get svc oficina-api \
+                -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
+              [[ -n "$host" ]] && break
+              sleep 5
+            done
+            if [[ -z "$host" ]]; then
+              echo "::error::O LoadBalancer oficina-api não recebeu hostname em 5 min. Defina PUBLIC_BASE_URL no environment aws-deploy ou rode o deploy de novo."
+              exit 1
+            fi
+            url="http://${host}"
+          fi
+          if [[ ! "$url" =~ ^https?://[A-Za-z0-9.-]+(:[0-9]+)?/?$ ]]; then
+            echo "::error::PUBLIC_BASE_URL deve ser a origem pública da API, sem caminho como /v1/health."
+            exit 1
+          fi
+          echo "Links de aprovação usarão ${url}"
+          printf 'PUBLIC_BASE_URL=%s\n' "$url" >> "$SECRETS_FILE"
 
       - name: Apply config, run migrations and roll out API
         env:

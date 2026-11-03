@@ -98,7 +98,7 @@ Cada mudança de status da ordem de serviço dispara um e-mail ao cliente depois
 
 O provedor-alvo é o **Amazon SES** (`EMAIL_PROVIDER=ses`), e o adapter está pronto e testado. Numa conta AWS comum, ele usa a role dos nós e exige só um remetente verificado em `SES_FROM_ADDRESS`. O AWS Academy Learner Lab, onde o projeto roda, nega `ses:VerifyEmailIdentity`, e sem identidade verificada o SES não envia nada. Por isso, no Academy, o envio usa o provedor `smtp`: SMTP autenticado com STARTTLS (Gmail: `smtp.gmail.com:587`, com senha de app). Fora do Academy, a aplicação volta ao SES trocando `EMAIL_PROVIDER` e configurando o remetente, sem mudança de código; o que muda no pipeline está na [ADR 0010](docs/adr/0010-smtp-no-lugar-do-ses-no-learner-lab.md). No SMTP, configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` e `SMTP_FROM_ADDRESS`; não versione a senha de app. No EKS, o Terraform grava a senha no Secrets Manager com um argumento write-only, sem persistir seu valor no state ou no plano.
 
-Quando a OS entra em `AGUARDANDO_APROVACAO`, o e-mail do orçamento inclui links temporários para aceitar ou recusar. A validade padrão é de 24 horas (`APPROVAL_TOKEN_TTL_HOURS`). Para habilitá-los, configure `APPROVAL_TOKEN_SECRET` com um segredo forte diferente de `JWT_SECRET` e `PUBLIC_BASE_URL` com uma URL alcançável pelo cliente. O link abre uma página de confirmação; somente o `POST` de decisão altera o orçamento. Os endpoints validam o token e reutilizam os mesmos casos de uso das rotas autenticadas. O `GET` não altera o estado, para evitar decisões causadas por scanners de e-mail. O fluxo usa a própria API e não exige webhook externo.
+Quando a OS entra em `AGUARDANDO_APROVACAO`, o e-mail do orçamento inclui links temporários para aceitar ou recusar. No deploy de produção, o Terraform gera `APPROVAL_TOKEN_SECRET` e o guarda no Secrets Manager junto com `JWT_SECRET`; o workflow lê o segredo, monta a URL dos links com o hostname do LoadBalancer e injeta ambos no Secret Kubernetes. Para outro endereço, como um domínio HTTPS, defina a variável `PUBLIC_BASE_URL` no environment `aws-deploy`. O segredo de aprovação é distinto e permanece estável entre deploys; rotacioná-lo invalida links ainda válidos. A validade padrão é de 24 horas (`APPROVAL_TOKEN_TTL_HOURS`). O link abre uma página de confirmação; somente o `POST` de decisão altera o orçamento. Os endpoints validam o token e reutilizam os mesmos casos de uso das rotas autenticadas. O `GET` não altera o estado, para evitar decisões causadas por scanners de e-mail. O fluxo usa a própria API e não exige webhook externo. O LoadBalancer atual expõe HTTP; para uso com clientes reais, publique a API via HTTPS antes de enviar os links. Consulte [AWS_SETUP.md](docs/AWS_SETUP.md#4-links-de-aprovação-do-orçamento).
 
 O versionamento do schema do banco é feito com `golang-migrate`, migrations em `migrations/mysql/`. As decisões estruturais do projeto estão registradas como ADRs em [`docs/adr/`](docs/adr/), e o detalhamento das convenções internas está em [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md).
 
@@ -210,10 +210,11 @@ O banco do RDS começa vazio. Depois do primeiro deploy, rode o workflow manual 
 
 A documentação da API é gerada com Swagger a partir das anotações dos handlers e fica em [`docs/swagger/`](docs/swagger/). Com a aplicação rodando, a UI abre em `/swagger/index.html` e faz as chamadas para o mesmo endereço em que foi aberta, seja localhost, Minikube ou EKS.
 
-Também deixamos duas collections do Postman em [`.dev/postman/`](.dev/postman/):
+Também deixamos três collections do Postman em [`.dev/postman/`](.dev/postman/):
 
 - `soat-architecture.postman_collection.json`, com todos os endpoints;
-- `soat-demo-fluxo-completo.postman_collection.json`, que percorre o fluxo da OS do login até a entrega e pode ser executada inteira no Collection Runner.
+- `soat-demo-fluxo-completo.postman_collection.json`, que percorre o fluxo da OS do login até a entrega;
+- `soat-fase-2.postman_collection.json`, focada nos requisitos de API do PDF da Fase 2, incluindo listagem priorizada com e sem filtro de status. Pode ser executada no Collection Runner; a variável `decisao_orcamento` seleciona aprovação ou rejeição.
 
 A variável `base_url` aponta para o EKS. Para testar localmente, use o valor de `local_url` (`http://localhost:8080`).
 
@@ -386,4 +387,4 @@ Um hook de `pre-push` local, instalado via `make hooks-install`, roda mocks, lin
 - [Preparação do Learner Lab](docs/AWS_SETUP.md): environment e credenciais da sessão do lab no GitHub
 - [CI/CD](docs/CI_CD.md): CI em GitHub Actions (testes, cobertura, segurança) e deploy no EKS por tag, com diagrams de cada etapa, credenciais e rollback
 - [Swagger](docs/swagger/): documentação da API gerada a partir dos handlers
-- [Collections Postman](.dev/postman/): todos os endpoints e o fluxo completo da demo
+- [Collections Postman](.dev/postman/): todos os endpoints, o fluxo completo da demo e o recorte de APIs da Fase 2
