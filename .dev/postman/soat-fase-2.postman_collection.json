@@ -1,0 +1,1047 @@
+{
+  "info": {
+    "name": "SOAT - Fase 2 (APIs do Tech Challenge)",
+    "description": "Collection para testar os requisitos da Fase 2: login, abertura e consulta de OS, listagem priorizada com e sem filtro, orçamento, e-mail com links de aprovação/recusa e transições de status. A decisão do cliente é feita no link recebido por e-mail; a collection não chama as rotas autenticadas /orcamento/aprovar ou /orcamento/rejeitar.\n\nExecute primeiro a pasta 01. Depois de receber o e-mail, abra o link escolhido e confirme a decisão na página exibida. Em seguida, execute a pasta 02 para consultar o status e continuar o fluxo. Se rodar as pastas separadamente pelo Runner, habilite a opção para manter os valores das variáveis entre execuções. O fluxo de execução/entrega é pulado quando o orçamento é rejeitado.\n\nAntes, inicie a API e aplique o seed. Login interno: admin@oficina.com / Senha@123. Para receber e-mails, configure cliente_email_base na aba Variables com um endereço válido; o valor de exemplo deve ser substituído. O script acrescenta +f2 e um identificador a cada execução. O SMTP deve estar configurado no ambiente.\n\nA URL padrão aponta para produção. Para rodar localmente, altere base_url para http://localhost:8080.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://a46a951a0837d4a5880d9697705ed40b-544073357.us-east-1.elb.amazonaws.com",
+      "type": "default"
+    },
+    {
+      "key": "local_url",
+      "value": "http://localhost:8080",
+      "type": "default"
+    },
+    {
+      "key": "admin_email",
+      "value": "admin@oficina.com",
+      "type": "default"
+    },
+    {
+      "key": "admin_password",
+      "value": "Senha@123",
+      "type": "default"
+    },
+    {
+      "key": "cliente_email_base",
+      "value": "seu-email@exemplo.com",
+      "type": "default",
+      "description": "Substitua por um endereço válido para receber os e-mails. O sufixo +f2 permite execuções repetidas."
+    },
+    {
+      "key": "cliente_password",
+      "value": "Senha@123",
+      "type": "default"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "cliente_access_token",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "cliente_id",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "cliente_email",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "cliente_documento",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "veiculo_id",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "veiculo_placa",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "servico_id",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "servico_nome",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "ordem_servico_id",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "run_id",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "status_decisao",
+      "value": "",
+      "type": "default"
+    }
+  ],
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "exec": [
+          "// Fluxo feliz: qualquer passo fora de 2xx quebra a demo.",
+          "pm.test(`${pm.info.requestName} responde 2xx`, function () {",
+          "    pm.expect(pm.response.code).to.be.within(200, 299);",
+          "});"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Preparar OS e enviar orçamento",
+      "description": "Execute esta pasta pelo Collection Runner. Ao terminar, confira o e-mail, abra o link de aprovar ou recusar e confirme a decisão na página HTML antes de executar a pasta 02.",
+      "item": [
+        {
+          "name": "01 - Login admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login admin retorna 200', () => pm.response.to.have.status(200));",
+                  "const response = pm.response.json();",
+                  "pm.collectionVariables.set('access_token', response.access_token);",
+                  "pm.expect(response.access_token).to.be.a('string').and.not.empty;"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"senha\": \"{{admin_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "02 - Criar cliente",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const emailBase = pm.collectionVariables.get('cliente_email_base') || '';",
+                  "if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(emailBase) || emailBase.toLowerCase().includes('exemplo.com')) {",
+                  "  throw new Error('Configure um endereco valido em cliente_email_base antes de executar a collection.');",
+                  "}",
+                  "const parts = emailBase.split('@');",
+                  "const email = parts[0] + '+f2' + suffix + '@' + parts[1];"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cliente criado', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "const response = pm.response.json();",
+                  "pm.collectionVariables.set('cliente_id', response.id);",
+                  "pm.expect(response.id).to.exist;"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documento\": \"{{cliente_documento}}\",\n  \"tipo_pessoa\": \"PF\",\n  \"nome\": \"Cliente Alternativo Fase 2 {{run_id}}\",\n  \"email\": \"{{cliente_email}}\",\n  \"senha\": \"{{cliente_password}}\",\n  \"telefone\": \"11988887777\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/clientes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "clientes"
+              ]
+            }
+          }
+        },
+        {
+          "name": "03 - Login cliente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login cliente retorna 200', () => pm.response.to.have.status(200));",
+                  "const response = pm.response.json();",
+                  "pm.collectionVariables.set('cliente_access_token', response.access_token);",
+                  "pm.expect(response.access_token).to.be.a('string').and.not.empty;"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{cliente_email}}\",\n  \"senha\": \"{{cliente_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/auth/cliente/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "cliente",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "04 - Cadastrar veículo",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const letras = 'ABCDEFGHJKLMNPRSTUVWXYZ';",
+                  "const placa = Array.from({ length: 3 }, () => letras[Math.floor(Math.random() * letras.length)]).join('') + Math.floor(Math.random() * 10) + letras[Math.floor(Math.random() * letras.length)] + String(Math.floor(10 + Math.random() * 90));",
+                  "pm.collectionVariables.set('veiculo_placa', placa);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Veiculo criado', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "pm.collectionVariables.set('veiculo_id', pm.response.json().id);",
+                  "pm.expect(pm.collectionVariables.get('veiculo_id')).to.exist;"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"placa\": \"{{veiculo_placa}}\",\n  \"marca\": \"Fiat\",\n  \"modelo\": \"Uno\",\n  \"ano\": 2020,\n  \"cor\": \"Prata\",\n  \"quilometragem_atual\": 15000\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/veiculos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "veiculos"
+              ]
+            }
+          }
+        },
+        {
+          "name": "05 - Cadastrar serviço",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('servico_nome', 'Troca de oleo Fase 2 ' + pm.collectionVariables.get('run_id'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Servico criado', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "pm.collectionVariables.set('servico_id', pm.response.json().id);",
+                  "pm.expect(pm.collectionVariables.get('servico_id')).to.exist;"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"{{servico_nome}}\",\n  \"descricao\": \"Troca de oleo e filtro para teste da Fase 2\",\n  \"preco_base\": 150.5,\n  \"tempo_estimado_minutos\": 60\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/servicos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "servicos"
+              ]
+            }
+          }
+        },
+        {
+          "name": "06 - Abrir OS",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Abertura da OS retorna 201', () => pm.response.to.have.status(201));",
+                  "const response = pm.response.json();",
+                  "pm.collectionVariables.set('ordem_servico_id', response.id);",
+                  "pm.test('OS comeca em RECEBIDA', () => pm.expect(response.status).to.eql('RECEBIDA'));",
+                  "pm.expect(response.id).to.exist;"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cliente_id\": {{cliente_id}},\n  \"veiculo_id\": {{veiculo_id}},\n  \"quilometragem_entrada\": 15000,\n  \"observacoes\": \"Ruido no motor - teste da Fase 2\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico"
+              ]
+            }
+          }
+        },
+        {
+          "name": "07 - Consultar status da OS",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "{{ordem_servico_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Consulta retorna 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status inicial e RECEBIDA', () => pm.expect(pm.response.json().status).to.eql('RECEBIDA'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "08 - Listar OS sem filtro de status por prioridade",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Listagem retorna 200', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json().items || [];",
+                  "const osId = Number(pm.collectionVariables.get('ordem_servico_id'));",
+                  "pm.test('Listagem inclui a OS aberta', () => pm.expect(items.some(item => item.id === osId)).to.be.true);",
+                  "pm.test('Listagem exclui FINALIZADA e ENTREGUE', () => pm.expect(items.every(item => !['FINALIZADA', 'ENTREGUE'].includes(item.status))).to.be.true);",
+                  "const order = { EM_EXECUCAO: 0, APROVADA: 1, AGUARDANDO_APROVACAO: 2, REJEITADA: 2, EM_DIAGNOSTICO: 3, RECEBIDA: 4 };",
+                  "pm.test('Listagem respeita prioridade e idade', () => {",
+                  "  for (let i = 1; i < items.length; i++) {",
+                  "    const previous = items[i - 1]; const current = items[i];",
+                  "    const previousPriority = order[previous.status]; const currentPriority = order[current.status];",
+                  "    if (previousPriority !== undefined && currentPriority !== undefined) {",
+                  "      pm.expect(currentPriority).to.be.at.least(previousPriority);",
+                  "      if (currentPriority === previousPriority) pm.expect(Date.parse(current.data_cadastro)).to.be.at.least(Date.parse(previous.data_cadastro));",
+                  "    }",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "09 - Listar OS com filtro de status RECEBIDA",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico?status=RECEBIDA",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "RECEBIDA"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Listagem filtrada retorna 200', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json().items || [];",
+                  "pm.test('Todos os resultados respeitam status=RECEBIDA', () => pm.expect(items.length).to.be.greaterThan(0) && pm.expect(items.every(item => item.status === 'RECEBIDA')).to.be.true);",
+                  "pm.test('OS RECEBIDA aparecem da mais antiga para a mais nova', () => { for (let i = 1; i < items.length; i++) { const previous = items[i - 1]; const current = items[i]; const previousTime = Date.parse(previous.data_cadastro); const currentTime = Date.parse(current.data_cadastro); pm.expect(currentTime).to.be.at.least(previousTime); if (currentTime === previousTime) pm.expect(current.id).to.be.at.least(previous.id); } });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10 - Iniciar diagnóstico",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/iniciar-diagnostico",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "{{ordem_servico_id}}",
+                "iniciar-diagnostico"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Inicio do diagnostico retorna 200', () => pm.response.to.have.status(200));",
+                  "pm.test('OS avanca para EM_DIAGNOSTICO', () => pm.expect(pm.response.json().status).to.eql('EM_DIAGNOSTICO'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11 - Registrar diagnóstico",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"diagnostico\": \"Trocar oleo e verificar ruido do motor\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/diagnostico",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "{{ordem_servico_id}}",
+                "diagnostico"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Diagnostico registrado', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12 - Gerar orçamento",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"observacoes\": \"Orcamento para teste da Fase 2\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/orcamento",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "{{ordem_servico_id}}",
+                "orcamento"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Orcamento criado', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "13 - Adicionar serviço ao orçamento",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"servico_id\": {{servico_id}},\n  \"quantidade\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/orcamento/itens-servico",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "{{ordem_servico_id}}",
+                "orcamento",
+                "itens-servico"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Servico incluido no orcamento', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14 - Enviar orçamento para aprovação",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/orcamento/enviar-aprovacao",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "{{ordem_servico_id}}",
+                "orcamento",
+                "enviar-aprovacao"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Orcamento enviado para aprovacao', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15 - Confirmar status AGUARDANDO_APROVACAO",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "{{ordem_servico_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Consulta retorna 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status e AGUARDANDO_APROVACAO', () => pm.expect(pm.response.json().status).to.eql('AGUARDANDO_APROVACAO'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 - Continuar após a decisão pelo link",
+      "description": "Execute somente depois de concluir a confirmação no navegador. A primeira request consulta o status e as próximas seguem o resultado real da decisão.",
+      "item": [
+        {
+          "name": "16 - Consultar status após decisão pelo link",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "{{ordem_servico_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Consulta retorna 200', () => pm.response.to.have.status(200));",
+                  "const status = pm.response.json().status;",
+                  "pm.test('A decisao pelo link foi registrada', () => pm.expect(status).to.be.oneOf(['APROVADA', 'REJEITADA']));",
+                  "pm.collectionVariables.set('status_decisao', status);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "17 - Iniciar execução (somente se aprovada)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/iniciar-execucao",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "{{ordem_servico_id}}",
+                "iniciar-execucao"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('status_decisao') !== 'APROVADA') pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Execucao iniciada', () => pm.response.to.have.status(200));",
+                  "pm.test('OS avanca para EM_EXECUCAO', () => pm.expect(pm.response.json().status).to.eql('EM_EXECUCAO'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "18 - Finalizar OS (somente se aprovada)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/finalizar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "{{ordem_servico_id}}",
+                "finalizar"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('status_decisao') !== 'APROVADA') pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('OS finalizada', () => pm.response.to.have.status(200));",
+                  "pm.test('Status e FINALIZADA', () => pm.expect(pm.response.json().status).to.eql('FINALIZADA'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "19 - Entregar OS (somente se aprovada)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico/{{ordem_servico_id}}/entregar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico",
+                "{{ordem_servico_id}}",
+                "entregar"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('status_decisao') !== 'APROVADA') pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('OS entregue', () => pm.response.to.have.status(200));",
+                  "pm.test('Status e ENTREGUE', () => pm.expect(pm.response.json().status).to.eql('ENTREGUE'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "20 - Confirmar que a listagem padrao oculta OS encerradas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Listagem retorna 200', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json().items || [];",
+                  "const osId = Number(pm.collectionVariables.get('ordem_servico_id'));",
+                  "const statusDecision = pm.collectionVariables.get('status_decisao');",
+                  "pm.test('Nenhuma OS encerrada aparece na listagem', () => pm.expect(items.every(item => !['FINALIZADA', 'ENTREGUE'].includes(item.status))).to.be.true);",
+                  "if (statusDecision === 'APROVADA') {",
+                  "  pm.test('OS entregue foi excluída da listagem', () => pm.expect(items.some(item => item.id === osId)).to.be.false);",
+                  "} else {",
+                  "  pm.test('OS rejeitada permanece na listagem', () => pm.expect(items.some(item => item.id === osId && item.status === 'REJEITADA')).to.be.true);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "21 - Listar OS entregues com filtro de status",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('status_decisao') !== 'APROVADA') pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Listagem filtrada retorna 200', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json().items || [];",
+                  "const osId = Number(pm.collectionVariables.get('ordem_servico_id'));",
+                  "pm.test('Filtro status=ENTREGUE mostra a OS do fluxo', () => pm.expect(items.some(item => item.id === osId && item.status === 'ENTREGUE')).to.be.true);",
+                  "pm.test('Todos os resultados estao ENTREGUE', () => pm.expect(items.every(item => item.status === 'ENTREGUE')).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/ordens-servico?status=ENTREGUE",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "ordens-servico"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "ENTREGUE"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
