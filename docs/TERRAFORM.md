@@ -67,7 +67,7 @@ Recursos criados, todos com a tag `Project = soat-oficina`:
 | DB subnet group | `oficina-db` | Subnets onde o RDS pode ficar |
 | Security group | `oficina-rds` | Libera a porta 3306 só a partir do security group do cluster |
 | RDS | `oficina-mysql` | MySQL 8 (última 8.0), 20 GiB gp3 criptografado, uma zona, database `mecanica` |
-| Secrets Manager | `oficina/api` | `DB_HOST`, `DB_USER`, `DB_PASSWORD` e `JWT_SECRET`, lidos pelo CD |
+| Secrets Manager | `oficina/api` | `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET` e `APPROVAL_TOKEN_SECRET`, lidos pelo CD |
 | Secrets Manager | `oficina/smtp` | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` e `SMTP_FROM_ADDRESS`. Envio de e-mail no AWS Academy, no lugar do SES |
 
 Fica de fora, de propósito:
@@ -356,7 +356,7 @@ O addon `metrics-server` ainda está subindo. Confira com `aws eks describe-addo
 
 ### State perdido
 
-Sem o `terraform.tfstate`, o Terraform não sabe o que já criou, e um novo `apply` falha com recursos duplicados. Apague os recursos pela tag `Project = soat-oficina` no console (EKS, RDS, roles `oficina-eks-*`, security group `oficina-rds`, secret `oficina/api`) ou importe cada um com `terraform import`. O state contém a senha do banco e o `JWT_SECRET`: guarde-o em lugar seguro e nunca o commite.
+Sem o `terraform.tfstate`, o Terraform não sabe o que já criou, e um novo `apply` falha com recursos duplicados. Apague os recursos pela tag `Project = soat-oficina` no console (EKS, RDS, roles `oficina-eks-*`, security group `oficina-rds`, secret `oficina/api`) ou importe cada um com `terraform import`. O state contém a senha do banco, o `JWT_SECRET` e o `APPROVAL_TOKEN_SECRET`: guarde-o em lugar seguro e nunca o commite.
 
 ## Limitações
 

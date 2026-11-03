@@ -8,6 +8,10 @@ resource "random_password" "jwt" {
   special = false
 }
 
+resource "random_id" "approval_token" {
+  byte_length = 32
+}
+
 resource "aws_secretsmanager_secret" "app" {
   name                    = var.app_secret_name
   recovery_window_in_days = 0
@@ -18,10 +22,11 @@ resource "aws_secretsmanager_secret" "app" {
 resource "aws_secretsmanager_secret_version" "app" {
   secret_id = aws_secretsmanager_secret.app.id
   secret_string = jsonencode({
-    DB_HOST          = aws_db_instance.this.address
-    DB_USER          = aws_db_instance.this.username
-    DB_PASSWORD      = random_password.db.result
-    JWT_SECRET       = random_password.jwt.result
+    DB_HOST               = aws_db_instance.this.address
+    DB_USER               = aws_db_instance.this.username
+    DB_PASSWORD           = random_password.db.result
+    JWT_SECRET            = random_password.jwt.result
+    APPROVAL_TOKEN_SECRET = random_id.approval_token.hex
   })
 }
 
