@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "SOAT - Fase 2 (APIs do Tech Challenge)",
-    "description": "Collection enxuta para os requisitos da Fase 2: login, abertura e consulta de OS, listagem priorizada com e sem filtro de status, sem OS encerradas, decisão do orçamento e transições de status que notificam por e-mail.\n\nOs cadastros de cliente, veículo e serviço são dados auxiliares para executar o fluxo em um banco preparado com o seed. Os dados únicos permitem reexecutar a collection.\n\nExecute na ordem pelo Collection Runner. Antes, inicie a API e aplique o seed. Login interno: admin@oficina.com / Senha@123. A variável decisao_orcamento aceita aprovar ou rejeitar (padrão: aprovar); ao rejeitar, execução, finalização e entrega são puladas.\n\nPara receber os e-mails, configure cliente_email_base na aba Variables da collection com o endereço que deseja usar. O valor de exemplo precisa ser substituído antes de executar. O script acrescenta um sufixo +f2 a cada execução para permitir novos cadastros; Gmail entrega esses aliases na mesma caixa. O SMTP deve estar configurado no ambiente. A collection verifica HTTP e status, não a entrega na caixa postal.\n\nA URL padrão aponta para o ambiente de produção. Para rodar localmente, altere base_url para http://localhost:8080.",
+    "description": "Collection enxuta para os requisitos da Fase 2: login, abertura e consulta de OS, listagem priorizada com e sem filtro de status, sem OS encerradas, decisão do orçamento e transições de status que notificam por e-mail.\n\nOs cadastros de cliente, veículo e serviço são dados auxiliares para executar o fluxo em um banco preparado com o seed. Os dados únicos permitem reexecutar a collection.\n\nExecute na ordem pelo Collection Runner. Antes, inicie a API e aplique o seed. Login interno: admin@oficina.com / Senha@123. A variável decisao_orcamento aceita aprovar ou rejeitar (padrão: aprovar); ao rejeitar, execução, finalização e entrega são puladas.\n\nPara receber os e-mails, configure cliente_email_base na aba Variables da collection com o endereço que deseja usar. O valor de exemplo precisa ser substituído antes de executar. O script acrescenta um sufixo +f2 a cada execução para permitir novos cadastros; Gmail entrega esses aliases na mesma caixa. O SMTP deve estar configurado no ambiente. A collection verifica HTTP e status, não a entrega na caixa postal.\n\nA URL padrão aponta para o ambiente de produção. Para rodar localmente, altere base_url para http://localhost:8080.\n\nDepois de aprovar e entregar a OS, a request 21 confirma que a listagem sem filtro a oculta; a request 22 usa status=ENTREGUE para exibi-la. A request 22 e pulada se a decisao for rejeitar.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -982,7 +982,7 @@
       ]
     },
     {
-      "name": "21 - Verificar filtro de OS encerradas",
+      "name": "21 - Confirmar que a listagem padrao oculta OS encerradas",
       "request": {
         "method": "GET",
         "header": [
@@ -1008,6 +1008,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "pm.test('Listagem retorna 200', () => pm.response.to.have.status(200));",
               "const items = pm.response.json().items || [];",
               "const osId = Number(pm.collectionVariables.get('ordem_servico_id'));",
               "const decision = pm.collectionVariables.get('decisao_orcamento');",
@@ -1018,6 +1019,58 @@
           }
         }
       ]
+    },
+    {
+      "name": "22 - Listar OS entregues com filtro de status",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.collectionVariables.get('decisao_orcamento') !== 'aprovar') pm.execution.skipRequest();"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Listagem filtrada retorna 200', () => pm.response.to.have.status(200));",
+              "const items = pm.response.json().items || [];",
+              "const osId = Number(pm.collectionVariables.get('ordem_servico_id'));",
+              "pm.test('Filtro status=ENTREGUE mostra a OS do fluxo', () => pm.expect(items.some(item => item.id === osId && item.status === 'ENTREGUE')).to.be.true);",
+              "pm.test('Todos os resultados estao ENTREGUE', () => pm.expect(items.every(item => item.status === 'ENTREGUE')).to.be.true);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/v1/ordens-servico?status=ENTREGUE",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "v1",
+            "ordens-servico"
+          ],
+          "query": [
+            {
+              "key": "status",
+              "value": "ENTREGUE"
+            }
+          ]
+        }
+      }
     }
   ]
 }
