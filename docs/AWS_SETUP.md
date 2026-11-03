@@ -22,7 +22,7 @@ Pré-requisitos:
 
 ## Resumo: o que configurar no GitHub
 
-Todos os secrets ficam no environment `aws-deploy` (**Settings → Environments → aws-deploy → Environment secrets**).
+As credenciais sensíveis ficam no environment `aws-deploy` (**Settings → Environments → aws-deploy → Environment secrets**); `PUBLIC_BASE_URL` é uma variable do mesmo environment.
 
 | Nome | Tipo | Quando atualizar | Valor |
 | --- | --- | --- | --- |
@@ -30,7 +30,6 @@ Todos os secrets ficam no environment `aws-deploy` (**Settings → Environments 
 | `AWS_SECRET_ACCESS_KEY` | Secret | **A cada sessão do lab** | `aws_secret_access_key` |
 | `AWS_SESSION_TOKEN` | Secret | **A cada sessão do lab** | `aws_session_token` |
 | `SMTP_PASSWORD` | Secret | Uma vez, e ao trocar a senha | Senha de app do Gmail remetente, sem espaços |
-| `APPROVAL_TOKEN_SECRET` | Secret | Uma vez, e ao rotacionar | 32 bytes aleatórios em hexadecimal; exclusivo dos links, diferente de `JWT_SECRET` |
 | `PUBLIC_BASE_URL` | Variable | Ao mudar o endereço público | Origem da API, com `http://` ou `https://`, sem `/v1/health` |
 | `SMTP_SECRET_VERSION` | Variable | Ao trocar `SMTP_PASSWORD` | Número inteiro, incrementado a cada troca (padrão `1`) |
 
@@ -75,12 +74,11 @@ gh variable set SMTP_SECRET_VERSION --repo "$REPO" --body '2'
 
 ## 4. Links de aprovação do orçamento
 
-O workflow exige estas configurações para gerar links assinados e incluí-los no e-mail enviado quando a OS entra em `AGUARDANDO_APROVACAO`:
+O Terraform gera automaticamente `APPROVAL_TOKEN_SECRET` como 32 bytes aleatórios em hexadecimal e o armazena no Secrets Manager `oficina/api`, separado do `JWT_SECRET`. Não é necessário cadastrar esse segredo no GitHub. O workflow o lê do Secrets Manager e o injeta no Secret Kubernetes.
 
-1. Gere um segredo dedicado com `openssl rand -hex 32` e cadastre a saída como **Environment Secret** `APPROVAL_TOKEN_SECRET` no environment `aws-deploy`. Não reutilize `JWT_SECRET`.
-2. Cadastre `PUBLIC_BASE_URL` como **Environment Variable** no mesmo environment. Use somente a origem pública da API, sem caminho, query ou fragmento. Por exemplo: `http://<hostname-do-load-balancer>` ou `https://api.seudominio.com`; não inclua `/v1/health`.
+Cadastre somente `PUBLIC_BASE_URL` como **Environment Variable** no environment `aws-deploy`. Use a origem pública da API, sem caminho, query ou fragmento. Por exemplo: `http://<hostname-do-load-balancer>` ou `https://api.seudominio.com`; não inclua `/v1/health`. O valor deve ser alcançável pelo cliente. O segredo gerado pelo Terraform permanece estável entre deploys; rotacioná-lo invalida links ainda válidos. A validade dos links é de 24 horas. Ao alterar `PUBLIC_BASE_URL`, rode novamente o workflow CD para atualizar a API.
 
-No GitHub, abra **Settings → Environments → aws-deploy**. Em **Environment secrets**, crie `APPROVAL_TOKEN_SECRET`; em **Environment variables**, crie `PUBLIC_BASE_URL`. Gere o segredo com `openssl rand -hex 32` e cole a saída somente no campo do secret; não a salve no repositório. O valor de `PUBLIC_BASE_URL` deve ser alcançável pelo cliente. O deployment injeta essas configurações no Secret Kubernetes e mantém a validade do link em 24 horas. Mantenha `APPROVAL_TOKEN_SECRET` estável: rotacioná-lo invalida links ainda não usados. Ao alterar qualquer configuração, rode novamente o workflow CD para atualizar a API.
+Se `APPROVAL_TOKEN_SECRET` já estiver cadastrado como GitHub Environment Secret de uma configuração anterior, ele deixa de ser usado e pode ser removido.
 
 **Transporte do link:** o Service atual do EKS expõe HTTP na porta 80. Isso permite testar o fluxo pelo LoadBalancer atual, mas o token do link funciona como uma credencial e fica visível no tráfego HTTP. Para enviar links a clientes reais, publique a API atrás de HTTPS e use essa origem em `PUBLIC_BASE_URL`.
 

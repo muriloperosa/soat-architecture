@@ -39,7 +39,7 @@ cp .env.example .env
 | `SMTP_FROM_ADDRESS` | Remetente das mensagens SMTP | *(vazio)* |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Credenciais AWS. No Docker Compose precisam estar no `.env` para chegar ao container | *(vazio)* |
 | `AWS_SESSION_TOKEN` | Token adicional para credenciais AWS temporárias, como AWS Academy/STS | *(vazio)* |
-| `APPROVAL_TOKEN_SECRET` | Segredo exclusivo dos links de aprovação, diferente de `JWT_SECRET` | *(vazio)* |
+| `APPROVAL_TOKEN_SECRET` | Segredo exclusivo dos links, distinto de `JWT_SECRET`; gerado pelo Terraform no EKS e configurado manualmente nos ambientes locais | *(vazio)* |
 | `APPROVAL_TOKEN_TTL_HOURS` | Validade dos links de aprovação por email | `24` |
 | `PUBLIC_BASE_URL` | URL pública da API usada nos links, por exemplo `http://localhost:8080` | *(vazio)* |
 | `SONAR_HOST_PORT` | Porta exposta no host para o SonarQube (só usada pelo `compose.tools.yml`) | `9000` |

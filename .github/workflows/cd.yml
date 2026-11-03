@@ -264,7 +264,6 @@ jobs:
       KUBE_CONTEXT: oficina-eks
       SECRETS_FILE: k8s/overlays/eks/secrets.env
       OVERLAY_FILE: k8s/overlays/eks/kustomization.yaml
-      APPROVAL_TOKEN_SECRET: ${{ secrets.APPROVAL_TOKEN_SECRET }}
       PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL }}
     steps:
       - name: Checkout
@@ -286,21 +285,16 @@ jobs:
       - name: Validate approval-link configuration
         shell: bash
         run: |
-          if [[ ! "$APPROVAL_TOKEN_SECRET" =~ ^[[:xdigit:]]{64}$ ]]; then
-            echo "::error::Configure APPROVAL_TOKEN_SECRET no environment aws-deploy com 32 bytes aleatorios em hexadecimal (openssl rand -hex 32)."
-            exit 1
-          fi
           if [[ ! "$PUBLIC_BASE_URL" =~ ^https?://[A-Za-z0-9.-]+(:[0-9]+)?/?$ ]]; then
             echo "::error::Configure PUBLIC_BASE_URL como origem publica da API, sem caminho como /v1/health."
             exit 1
           fi
-          echo "::add-mask::${APPROVAL_TOKEN_SECRET}"
 
       - name: Load application secrets from Secrets Manager
         shell: bash
         run: |
           payload="$(aws secretsmanager get-secret-value --secret-id "$APP_SECRET_ID" --query SecretString --output text)"
-          for key in DB_HOST DB_USER DB_PASSWORD JWT_SECRET; do
+          for key in DB_HOST DB_USER DB_PASSWORD JWT_SECRET APPROVAL_TOKEN_SECRET; do
             if [[ -z "$(jq -r --arg k "$key" '.[$k] // empty' <<<"$payload")" ]]; then
               echo "::error::Chave ${key} ausente no secret ${APP_SECRET_ID}."
               exit 1
@@ -308,8 +302,14 @@ jobs:
           done
           db_password="$(jq -r .DB_PASSWORD <<<"$payload")"
           jwt_secret="$(jq -r .JWT_SECRET <<<"$payload")"
+          approval_token_secret="$(jq -r .APPROVAL_TOKEN_SECRET <<<"$payload")"
           echo "::add-mask::${db_password}"
           echo "::add-mask::${jwt_secret}"
+          echo "::add-mask::${approval_token_secret}"
+          if [[ ! "$approval_token_secret" =~ ^[[:xdigit:]]{64}$ ]]; then
+            echo "::error::APPROVAL_TOKEN_SECRET no secret ${APP_SECRET_ID} deve conter 32 bytes aleatorios em hexadecimal."
+            exit 1
+          fi
           # The password goes into the migration Job's URL (ADR 0006).
           if [[ ! "$db_password" =~ ^[A-Za-z0-9]+$ ]]; then
             echo "::error::DB_PASSWORD precisa ter apenas letras e números."
@@ -318,7 +318,7 @@ jobs:
           umask 077
           printf 'DB_PASSWORD=%s\nJWT_SECRET=%s\n' "$db_password" "$jwt_secret" > "$SECRETS_FILE"
           printf 'APPROVAL_TOKEN_SECRET=%s\nAPPROVAL_TOKEN_TTL_HOURS=24\nPUBLIC_BASE_URL=%s\n' \
-            "$APPROVAL_TOKEN_SECRET" "$PUBLIC_BASE_URL" >> "$SECRETS_FILE"
+            "$approval_token_secret" "$PUBLIC_BASE_URL" >> "$SECRETS_FILE"
           db_host="$(jq -r .DB_HOST <<<"$payload")"
           db_user="$(jq -r .DB_USER <<<"$payload")"
           if [[ ! "$db_host" =~ ^[A-Za-z0-9.-]+$ || ! "$db_user" =~ ^[A-Za-z0-9_]+$ ]]; then
