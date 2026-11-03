@@ -264,7 +264,6 @@ jobs:
       KUBE_CONTEXT: oficina-eks
       SECRETS_FILE: k8s/overlays/eks/secrets.env
       OVERLAY_FILE: k8s/overlays/eks/kustomization.yaml
-      PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -281,14 +280,6 @@ jobs:
 
       - name: Configure kubectl
         run: aws eks update-kubeconfig --region "$AWS_REGION" --name "$EKS_CLUSTER_NAME" --alias "$KUBE_CONTEXT"
-
-      - name: Validate approval-link configuration
-        shell: bash
-        run: |
-          if [[ ! "$PUBLIC_BASE_URL" =~ ^https?://[A-Za-z0-9.-]+(:[0-9]+)?/?$ ]]; then
-            echo "::error::Configure PUBLIC_BASE_URL como origem publica da API, sem caminho como /v1/health."
-            exit 1
-          fi
 
       - name: Load application secrets from Secrets Manager
         shell: bash
@@ -317,8 +308,7 @@ jobs:
           fi
           umask 077
           printf 'DB_PASSWORD=%s\nJWT_SECRET=%s\n' "$db_password" "$jwt_secret" > "$SECRETS_FILE"
-          printf 'APPROVAL_TOKEN_SECRET=%s\nAPPROVAL_TOKEN_TTL_HOURS=24\nPUBLIC_BASE_URL=%s\n' \
-            "$approval_token_secret" "$PUBLIC_BASE_URL" >> "$SECRETS_FILE"
+          printf 'APPROVAL_TOKEN_SECRET=%s\nAPPROVAL_TOKEN_TTL_HOURS=24\n' "$approval_token_secret" >> "$SECRETS_FILE"
           db_host="$(jq -r .DB_HOST <<<"$payload")"
           db_user="$(jq -r .DB_USER <<<"$payload")"
           if [[ ! "$db_host" =~ ^[A-Za-z0-9.-]+$ || ! "$db_user" =~ ^[A-Za-z0-9_]+$ ]]; then
@@ -365,6 +355,41 @@ jobs:
             -e "s|REPLACE_WITH_EMAIL_PROVIDER|${email_provider}|" \
             -e "s|REPLACE_WITH_SES_FROM_ADDRESS|${ses_from}|" \
             "$OVERLAY_FILE"
+
+      # Without vars.PUBLIC_BASE_URL, the approval links use the LoadBalancer
+      # hostname, which changes with each lab account. Only the Namespace and
+      # Service are applied here, so the hostname exists before the API pods
+      # start on a first deploy. Runs after secrets.env exists, which the
+      # overlay's secretGenerator requires.
+      - name: Resolve PUBLIC_BASE_URL
+        env:
+          PUBLIC_BASE_URL_OVERRIDE: ${{ vars.PUBLIC_BASE_URL }}
+        shell: bash
+        run: |
+          url="$PUBLIC_BASE_URL_OVERRIDE"
+          if [[ -z "$url" ]]; then
+            kubectl kustomize "$(dirname "$OVERLAY_FILE")" \
+              | yq 'select(.kind == "Namespace" or .kind == "Service")' \
+              | kubectl --context "$KUBE_CONTEXT" apply -f -
+            host=""
+            for _ in $(seq 1 60); do
+              host="$(kubectl --context "$KUBE_CONTEXT" -n oficina get svc oficina-api \
+                -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
+              [[ -n "$host" ]] && break
+              sleep 5
+            done
+            if [[ -z "$host" ]]; then
+              echo "::error::O LoadBalancer oficina-api não recebeu hostname em 5 min. Defina PUBLIC_BASE_URL no environment aws-deploy ou rode o deploy de novo."
+              exit 1
+            fi
+            url="http://${host}"
+          fi
+          if [[ ! "$url" =~ ^https?://[A-Za-z0-9.-]+(:[0-9]+)?/?$ ]]; then
+            echo "::error::PUBLIC_BASE_URL deve ser a origem pública da API, sem caminho como /v1/health."
+            exit 1
+          fi
+          echo "Links de aprovação usarão ${url}"
+          printf 'PUBLIC_BASE_URL=%s\n' "$url" >> "$SECRETS_FILE"
 
       - name: Apply config, run migrations and roll out API
         env:

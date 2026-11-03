@@ -211,6 +211,8 @@ sequenceDiagram
     GH->>K: aws eks update-kubeconfig (credenciais do lab)
     GH->>AWS: lê o secret oficina/api
     AWS-->>GH: DB_HOST, DB_USER, DB_PASSWORD, JWT_SECRET, APPROVAL_TOKEN_SECRET
+    GH->>K: aplica Namespace e Service (sem PUBLIC_BASE_URL definida)
+    K-->>GH: hostname do LoadBalancer, usado em PUBLIC_BASE_URL
     GH->>K: aplica ConfigMap e Secret
     GH->>K: recria ConfigMap com os .sql e o Job de migration
     K->>J: inicia o Job
@@ -279,7 +281,7 @@ Configuração no GitHub ([`AWS_SETUP.md`](AWS_SETUP.md)):
 | Onde | Nome | Valor |
 | --- | --- | --- |
 | Secrets do environment `aws-deploy` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`, `SMTP_PASSWORD` | Credenciais AWS do Learner Lab e senha de app Gmail |
-| Variables do environment `aws-deploy` | `PUBLIC_BASE_URL` | Origem pública da API, sem caminho como `/v1/health` |
+| Variables do environment `aws-deploy` (opcional) | `PUBLIC_BASE_URL` | Origem pública dos links de aprovação, sem caminho como `/v1/health`. Padrão: `http://<hostname do LoadBalancer>` |
 | Variables do repositório (opcionais) | `AWS_REGION`, `EKS_CLUSTER_NAME`, `ECR_REPOSITORY`, `APP_SECRET_ID`, `SMTP_SECRET_ID`, `SMTP_SECRET_VERSION`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_FROM_ADDRESS`, `TF_STATE_BUCKET` | Padrões: `us-east-1`, `oficina`, `oficina-api`, `oficina/api`, `oficina/smtp`, `1`, Gmail `smtp.gmail.com:587`, remetente `soatoficinapos@gmail.com`, `oficina-tfstate-<conta>` |
 | Environments | `aws-deploy` | Restrinja a **tags** com o padrão `[0-9]*.[0-9]*.[0-9]*` |
 
@@ -298,7 +300,7 @@ Os jobs de deploy declaram o environment `aws-deploy`. Eles também podem ler Re
 
 O Terraform cria o secret SMTP indicado por `SMTP_SECRET_ID` (padrão `oficina/smtp`) e a versão inicial. A senha vem do Environment Secret `SMTP_PASSWORD`; `secret_string_wo` grava o valor sem persistir a senha no state ou no plano. O CD carrega o payload no Secret Kubernetes e seleciona `EMAIL_PROVIDER=smtp`. O host, porta, usuário e remetente usam os padrões Gmail descritos em [`AWS_SETUP.md`](AWS_SETUP.md); podem ser sobrescritos pelas variables `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME` e `SMTP_FROM_ADDRESS`. Ao trocar a senha, atualize o Environment Secret e incremente `SMTP_SECRET_VERSION` para que o Terraform publique outra versão. O provedor-alvo é o Amazon SES, mas o Learner Lab nega `ses:VerifyEmailIdentity`, e sem remetente verificado o SES não envia. Por isso, no AWS Academy, o CD usa SMTP; o adapter SES continua no código, e o que é preciso para voltar a ele está na [ADR 0010](adr/0010-smtp-no-lugar-do-ses-no-learner-lab.md).
 
-O job `deploy` lê os secrets e mascara os valores sensíveis no log (`::add-mask::`). `DB_PASSWORD`, `JWT_SECRET`, `APPROVAL_TOKEN_SECRET`, `PUBLIC_BASE_URL` e SMTP vão para `k8s/overlays/eks/secrets.env` (permissão 600, apagado no fim do job), de onde o Kustomize gera o Secret `oficina-api-secrets`. O Terraform gera e armazena `APPROVAL_TOKEN_SECRET` no secret `oficina/api`; o workflow lê esse valor e exige apenas a origem pública em `PUBLIC_BASE_URL`. `DB_HOST`, `DB_USER`, `EMAIL_PROVIDER` e `SES_FROM_ADDRESS` substituem os placeholders do overlay EKS, só na cópia do repositório dentro do runner. O pod não recebe access key da AWS: ele usa a `LabRole` dos nós pelo IMDS. A role usada pelo GitHub Actions precisa de `secretsmanager:GetSecretValue` para os secrets SMTP e da aplicação criados pelo Terraform. Consulte [AWS_SETUP.md](AWS_SETUP.md#4-links-de-aprovação-do-orçamento) para configurar a URL pública.
+O job `deploy` lê os secrets e mascara os valores sensíveis no log (`::add-mask::`). `DB_PASSWORD`, `JWT_SECRET`, `APPROVAL_TOKEN_SECRET`, `PUBLIC_BASE_URL` e SMTP vão para `k8s/overlays/eks/secrets.env` (permissão 600, apagado no fim do job), de onde o Kustomize gera o Secret `oficina-api-secrets`. O Terraform gera e armazena `APPROVAL_TOKEN_SECRET` no secret `oficina/api`. `PUBLIC_BASE_URL` vem da variable de mesmo nome ou, sem ela, do hostname do LoadBalancer: o job aplica antes só o Namespace e o Service e espera o ELB receber o hostname. `DB_HOST`, `DB_USER`, `EMAIL_PROVIDER` e `SES_FROM_ADDRESS` substituem os placeholders do overlay EKS, só na cópia do repositório dentro do runner. O pod não recebe access key da AWS: ele usa a `LabRole` dos nós pelo IMDS. A role usada pelo GitHub Actions precisa de `secretsmanager:GetSecretValue` para os secrets SMTP e da aplicação criados pelo Terraform. Consulte [AWS_SETUP.md](AWS_SETUP.md#4-links-de-aprovação-do-orçamento) para usar outro endereço público.
 
 ### Custos
 

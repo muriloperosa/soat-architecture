@@ -22,7 +22,7 @@ Pré-requisitos:
 
 ## Resumo: o que configurar no GitHub
 
-As credenciais sensíveis ficam no environment `aws-deploy` (**Settings → Environments → aws-deploy → Environment secrets**); `PUBLIC_BASE_URL` é uma variable do mesmo environment.
+Todos os secrets ficam no environment `aws-deploy` (**Settings → Environments → aws-deploy → Environment secrets**).
 
 | Nome | Tipo | Quando atualizar | Valor |
 | --- | --- | --- | --- |
@@ -30,10 +30,9 @@ As credenciais sensíveis ficam no environment `aws-deploy` (**Settings → Envi
 | `AWS_SECRET_ACCESS_KEY` | Secret | **A cada sessão do lab** | `aws_secret_access_key` |
 | `AWS_SESSION_TOKEN` | Secret | **A cada sessão do lab** | `aws_session_token` |
 | `SMTP_PASSWORD` | Secret | Uma vez, e ao trocar a senha | Senha de app do Gmail remetente, sem espaços |
-| `PUBLIC_BASE_URL` | Variable | Ao mudar o endereço público | Origem da API, com `http://` ou `https://`, sem `/v1/health` |
 | `SMTP_SECRET_VERSION` | Variable | Ao trocar `SMTP_PASSWORD` | Número inteiro, incrementado a cada troca (padrão `1`) |
 
-As demais variables são opcionais (passo 4).
+As demais variables são opcionais (passo 5).
 
 ## 1. Environment `aws-deploy` (uma vez)
 
@@ -76,11 +75,11 @@ gh variable set SMTP_SECRET_VERSION --repo "$REPO" --body '2'
 
 O Terraform gera automaticamente `APPROVAL_TOKEN_SECRET` como 32 bytes aleatórios em hexadecimal e o armazena no Secrets Manager `oficina/api`, separado do `JWT_SECRET`. Não é necessário cadastrar esse segredo no GitHub. O workflow o lê do Secrets Manager e o injeta no Secret Kubernetes.
 
-Cadastre somente `PUBLIC_BASE_URL` como **Environment Variable** no environment `aws-deploy`. Use a origem pública da API, sem caminho, query ou fragmento. Por exemplo: `http://<hostname-do-load-balancer>` ou `https://api.seudominio.com`; não inclua `/v1/health`. O valor deve ser alcançável pelo cliente. O segredo gerado pelo Terraform permanece estável entre deploys; rotacioná-lo invalida links ainda válidos. A validade dos links é de 24 horas. Ao alterar `PUBLIC_BASE_URL`, rode novamente o workflow CD para atualizar a API.
+A URL dos links (`PUBLIC_BASE_URL`) também não precisa ser cadastrada. O CD cria o Service LoadBalancer antes de subir a API, espera o hostname do ELB e usa `http://<hostname>`. Como o hostname muda a cada conta do lab, ele é resolvido em todo deploy. Para usar outro endereço, como `https://api.seudominio.com`, cadastre `PUBLIC_BASE_URL` como **Environment Variable** no environment `aws-deploy`: ela substitui o hostname. Use a origem pública da API, sem caminho, query ou fragmento; não inclua `/v1/health`. Ao alterar a variable, rode novamente o workflow CD para atualizar a API. O segredo gerado pelo Terraform permanece estável entre deploys; rotacioná-lo invalida links ainda válidos. A validade dos links é de 24 horas.
 
 Se `APPROVAL_TOKEN_SECRET` já estiver cadastrado como GitHub Environment Secret de uma configuração anterior, ele deixa de ser usado e pode ser removido.
 
-**Transporte do link:** o Service atual do EKS expõe HTTP na porta 80. Isso permite testar o fluxo pelo LoadBalancer atual, mas o token do link funciona como uma credencial e fica visível no tráfego HTTP. Para enviar links a clientes reais, publique a API atrás de HTTPS e use essa origem em `PUBLIC_BASE_URL`.
+**Transporte do link:** o Service atual do EKS expõe HTTP na porta 80. Isso permite testar o fluxo pelo LoadBalancer atual, mas o token do link funciona como uma credencial e fica visível no tráfego HTTP. Para enviar links a clientes reais, publique a API atrás de HTTPS e cadastre essa origem em `PUBLIC_BASE_URL`.
 
 ## 5. Variables opcionais
 
@@ -99,6 +98,7 @@ Todas têm padrão no workflow:
 | `SMTP_PORT` | `587` |
 | `SMTP_USERNAME` | `soatoficinapos@gmail.com` |
 | `SMTP_FROM_ADDRESS` | `soatoficinapos@gmail.com` |
+| `PUBLIC_BASE_URL` | `http://<hostname do LoadBalancer>`, resolvido a cada deploy (variable do environment `aws-deploy`) |
 
 Ao usar outra conta Gmail, altere `SMTP_USERNAME` e `SMTP_FROM_ADDRESS` junto com o `SMTP_PASSWORD`.
 
