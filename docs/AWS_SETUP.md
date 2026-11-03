@@ -30,6 +30,8 @@ Todos os secrets ficam no environment `aws-deploy` (**Settings → Environments 
 | `AWS_SECRET_ACCESS_KEY` | Secret | **A cada sessão do lab** | `aws_secret_access_key` |
 | `AWS_SESSION_TOKEN` | Secret | **A cada sessão do lab** | `aws_session_token` |
 | `SMTP_PASSWORD` | Secret | Uma vez, e ao trocar a senha | Senha de app do Gmail remetente, sem espaços |
+| `APPROVAL_TOKEN_SECRET` | Secret | Uma vez, e ao rotacionar | 32 bytes aleatórios em hexadecimal; exclusivo dos links, diferente de `JWT_SECRET` |
+| `PUBLIC_BASE_URL` | Variable | Ao mudar o endereço público | Origem da API, com `http://` ou `https://`, sem `/v1/health` |
 | `SMTP_SECRET_VERSION` | Variable | Ao trocar `SMTP_PASSWORD` | Número inteiro, incrementado a cada troca (padrão `1`) |
 
 As demais variables são opcionais (passo 4).
@@ -71,7 +73,18 @@ Ao trocar a senha, atualize o secret e incremente `SMTP_SECRET_VERSION`. Sem iss
 gh variable set SMTP_SECRET_VERSION --repo "$REPO" --body '2'
 ```
 
-## 4. Variables opcionais
+## 4. Links de aprovação do orçamento
+
+O workflow exige estas configurações para gerar links assinados e incluí-los no e-mail enviado quando a OS entra em `AGUARDANDO_APROVACAO`:
+
+1. Gere um segredo dedicado com `openssl rand -hex 32` e cadastre a saída como **Environment Secret** `APPROVAL_TOKEN_SECRET` no environment `aws-deploy`. Não reutilize `JWT_SECRET`.
+2. Cadastre `PUBLIC_BASE_URL` como **Environment Variable** no mesmo environment. Use somente a origem pública da API, sem caminho, query ou fragmento. Por exemplo: `http://<hostname-do-load-balancer>` ou `https://api.seudominio.com`; não inclua `/v1/health`.
+
+No GitHub, abra **Settings → Environments → aws-deploy**. Em **Environment secrets**, crie `APPROVAL_TOKEN_SECRET`; em **Environment variables**, crie `PUBLIC_BASE_URL`. Gere o segredo com `openssl rand -hex 32` e cole a saída somente no campo do secret; não a salve no repositório. O valor de `PUBLIC_BASE_URL` deve ser alcançável pelo cliente. O deployment injeta essas configurações no Secret Kubernetes e mantém a validade do link em 24 horas. Mantenha `APPROVAL_TOKEN_SECRET` estável: rotacioná-lo invalida links ainda não usados. Ao alterar qualquer configuração, rode novamente o workflow CD para atualizar a API.
+
+**Transporte do link:** o Service atual do EKS expõe HTTP na porta 80. Isso permite testar o fluxo pelo LoadBalancer atual, mas o token do link funciona como uma credencial e fica visível no tráfego HTTP. Para enviar links a clientes reais, publique a API atrás de HTTPS e use essa origem em `PUBLIC_BASE_URL`.
+
+## 5. Variables opcionais
 
 Todas têm padrão no workflow:
 
@@ -91,7 +104,7 @@ Todas têm padrão no workflow:
 
 Ao usar outra conta Gmail, altere `SMTP_USERNAME` e `SMTP_FROM_ADDRESS` junto com o `SMTP_PASSWORD`.
 
-## 5. Primeiro deploy
+## 6. Primeiro deploy
 
 ```bash
 git switch main && git pull
@@ -101,7 +114,7 @@ git push origin 1.0.0
 
 Acompanhe em **Actions → CD (Continuous Deployment)**. O primeiro run cria o bucket do state e todo o ambiente, e leva por volta de 20 minutos (cluster EKS e RDS).
 
-## 6. Conta nova do lab
+## 7. Conta nova do lab
 
 Se o lab for reiniciado (**Reset**) ou trocado, a conta volta vazia. Atualize os três secrets AWS (passo 2) e crie uma tag: o CD recria o bucket do state, os secrets `oficina/api` e `oficina/smtp` e o ambiente do zero. `SMTP_PASSWORD` fica no GitHub e não precisa ser cadastrado de novo.
 
