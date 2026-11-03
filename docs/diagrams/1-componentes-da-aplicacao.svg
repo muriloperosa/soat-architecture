@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="720" viewBox="0 0 1500 720" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <marker id="arrow-strong" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#b45309"/>
+    </marker>
+    <marker id="arrow-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+    <style>
+      .title { font-size: 16px; font-weight: 600; }
+      .sub { font-size: 13px; }
+      .group { font-size: 14px; font-weight: 600; letter-spacing: 0.2px; }
+      .edge { fill: none; stroke: #475569; stroke-width: 1.6; }
+      .edge-dash { fill: none; stroke: #475569; stroke-width: 1.4; stroke-dasharray: 5 4; }
+      .edge-muted { fill: none; stroke: #94a3b8; stroke-width: 1.4; stroke-dasharray: 5 4; }
+      .edge-strong { fill: none; stroke: #b45309; stroke-width: 3; }
+      .label { font-size: 13px; fill: #334155; }
+      .label-bg { fill: #ffffff; }
+      .tf { fill: #dcfce7; stroke: #16a34a; }
+      .tf-t { fill: #14532d; }
+      .k8s { fill: #dbeafe; stroke: #2563eb; }
+      .k8s-t { fill: #1e3a8a; }
+      .ext { fill: #fef3c7; stroke: #d97706; }
+      .ext-t { fill: #78350f; }
+      .neutral { fill: #ffffff; stroke: #64748b; }
+      .neutral-t { fill: #0f172a; }
+      .off { fill: #f8fafc; stroke: #94a3b8; stroke-dasharray: 5 4; }
+      .off-t { fill: #475569; }
+      .node { stroke-width: 1.5; filter: url(#shadow); }
+    </style>
+  </defs>
+
+  <rect width="1500" height="720" fill="#ffffff"/>
+
+  <!-- ===== Camadas ===== -->
+  <rect x="80" y="100" width="1000" height="160" rx="12" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="240" y="124" class="group" fill="#334155">Infraestrutura · internal/infrastructure</text>
+
+  <rect x="80" y="320" width="1000" height="140" rx="12" fill="#eff6ff" stroke="#60a5fa" stroke-width="1.5"/>
+  <text x="98" y="344" class="group" fill="#1e3a8a">Aplicação · internal/application</text>
+
+  <rect x="80" y="520" width="1000" height="170" rx="12" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="98" y="544" class="group" fill="#14532d">Domínio · internal/domain</text>
+
+  <rect x="1130" y="100" width="340" height="360" rx="12" fill="#fffaf3" stroke="#fdba74" stroke-dasharray="5 4" stroke-width="1.5"/>
+  <text x="1148" y="124" class="group" fill="#9a3412">Serviços externos</text>
+
+  <!-- Regra de dependência -->
+  <path d="M40,110 V676" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow-muted)"/>
+  <text transform="translate(30,393) rotate(-90)" text-anchor="middle" class="label" fill="#64748b">dependências apontam para dentro</text>
+
+  <!-- ===== Arestas ===== -->
+  <!-- Requisição → Middlewares -->
+  <path class="edge" d="M210,62 V143" marker-end="url(#arrow)"/>
+  <!-- Middlewares → Handlers -->
+  <path class="edge" d="M300,195 H358" marker-end="url(#arrow)"/>
+  <!-- Handlers → Casos de uso -->
+  <path class="edge" d="M450,235 V373" marker-end="url(#arrow)"/>
+  <!-- Casos de uso → Agregados / Interfaces -->
+  <path class="edge" d="M410,435 V615 H332" marker-end="url(#arrow)"/>
+  <path class="edge" d="M490,435 V615 H628" marker-end="url(#arrow)"/>
+  <!-- Repositórios e EmailSender implementam as interfaces -->
+  <path class="edge-dash" d="M710,235 V573" marker-end="url(#arrow)"/>
+  <rect class="label-bg" x="676" y="481" width="68" height="17" rx="3"/>
+  <text x="710" y="494" text-anchor="middle" class="label">implementa</text>
+  <path class="edge-dash" d="M960,235 V573" marker-end="url(#arrow)"/>
+  <rect class="label-bg" x="926" y="481" width="68" height="17" rx="3"/>
+  <text x="960" y="494" text-anchor="middle" class="label">implementa</text>
+  <!-- Repositórios → MySQL -->
+  <path class="edge" d="M760,155 V80 H1448 V405 H1394" marker-end="url(#arrow)"/>
+  <rect class="label-bg" x="1000" y="71" width="56" height="17" rx="3"/>
+  <text x="1028" y="84" text-anchor="middle" class="label">SQL</text>
+  <!-- EmailSender → SMTP (AWS Academy) -->
+  <path class="edge-strong" d="M1040,190 H1184" marker-end="url(#arrow-strong)"/>
+  <rect class="label-bg" x="1088" y="166" width="92" height="18" rx="3"/>
+  <text x="1134" y="180" text-anchor="middle" class="label" font-weight="600" fill="#b45309">AWS Academy</text>
+  <!-- EmailSender → SES (provedor-alvo) -->
+  <path class="edge-muted" d="M1040,220 H1100 V296 H1186" marker-end="url(#arrow-muted)"/>
+  <rect class="label-bg" x="1090" y="313" width="92" height="17" rx="3"/>
+  <text x="1136" y="326" text-anchor="middle" class="label" fill="#64748b">provedor-alvo</text>
+
+  <!-- ===== Nós ===== -->
+  <rect class="node ext" x="120" y="18" width="180" height="44" rx="22"/>
+  <text x="210" y="45" text-anchor="middle" class="title ext-t">Requisição HTTP</text>
+
+  <rect class="node neutral" x="120" y="145" width="180" height="90" rx="8"/>
+  <text x="210" y="176" text-anchor="middle" class="title neutral-t">Middlewares</text>
+  <text x="210" y="197" text-anchor="middle" class="sub" fill="#475569">autenticação JWT</text>
+  <text x="210" y="216" text-anchor="middle" class="sub" fill="#475569">autorização por papel</text>
+
+  <rect class="node neutral" x="360" y="155" width="180" height="80" rx="8"/>
+  <text x="450" y="189" text-anchor="middle" class="title neutral-t">Handlers HTTP</text>
+  <text x="450" y="210" text-anchor="middle" class="sub" fill="#475569">DTOs e mappers</text>
+
+  <rect class="node neutral" x="620" y="155" width="180" height="80" rx="8"/>
+  <text x="710" y="189" text-anchor="middle" class="title neutral-t">Repositórios GORM</text>
+  <text x="710" y="210" text-anchor="middle" class="sub" fill="#475569">TransactionRunner</text>
+
+  <rect class="node neutral" x="870" y="155" width="170" height="80" rx="8"/>
+  <text x="955" y="189" text-anchor="middle" class="title neutral-t">EmailSender</text>
+  <text x="955" y="210" text-anchor="middle" class="sub" fill="#475569">log · SMTP · SES</text>
+
+  <rect class="node k8s" x="360" y="375" width="180" height="60" rx="8"/>
+  <text x="450" y="401" text-anchor="middle" class="title k8s-t">Casos de uso</text>
+  <text x="450" y="421" text-anchor="middle" class="sub k8s-t">orquestram o domínio</text>
+
+  <rect class="node tf" x="120" y="575" width="210" height="80" rx="8"/>
+  <text x="225" y="609" text-anchor="middle" class="title tf-t">Agregados</text>
+  <text x="225" y="630" text-anchor="middle" class="sub tf-t">e Value Objects</text>
+
+  <rect class="node tf" x="630" y="575" width="410" height="80" rx="8"/>
+  <text x="835" y="609" text-anchor="middle" class="title tf-t">Interfaces (portas)</text>
+  <text x="835" y="630" text-anchor="middle" class="sub tf-t">repositórios e serviços externos</text>
+
+  <g class="node">
+    <path class="neutral" stroke-width="1.5" d="M1210,375 v56 a90,10 0 0 0 180,0 v-56"/>
+    <ellipse class="neutral" stroke-width="1.5" cx="1300" cy="375" rx="90" ry="10"/>
+  </g>
+  <text x="1300" y="411" text-anchor="middle" class="title neutral-t">MySQL 8</text>
+  <text x="1300" y="431" text-anchor="middle" class="sub" fill="#475569">RDS na AWS</text>
+
+  <rect class="node ext" x="1186" y="160" width="230" height="62" rx="8"/>
+  <text x="1301" y="186" text-anchor="middle" class="title ext-t">Servidor SMTP</text>
+  <text x="1301" y="207" text-anchor="middle" class="sub ext-t">STARTTLS · Gmail</text>
+
+  <rect class="node off" x="1188" y="265" width="228" height="62" rx="8"/>
+  <text x="1302" y="291" text-anchor="middle" class="title off-t">Amazon SES</text>
+  <text x="1302" y="312" text-anchor="middle" class="sub off-t">bloqueado no Learner Lab</text>
+
+  <!-- ===== Legenda ===== -->
+  <rect x="1130" y="500" width="340" height="190" rx="10" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="1148" y="526" class="group" fill="#334155">Legenda</text>
+  <line x1="1148" y1="552" x2="1176" y2="552" class="edge"/>
+  <text x="1188" y="557" class="sub" fill="#334155">Chamada / dependência</text>
+  <line x1="1148" y1="584" x2="1176" y2="584" class="edge-dash"/>
+  <text x="1188" y="589" class="sub" fill="#334155">Implementa a interface do domínio</text>
+  <line x1="1148" y1="616" x2="1176" y2="616" class="edge-strong"/>
+  <text x="1188" y="621" class="sub" fill="#334155">E-mail no AWS Academy</text>
+  <line x1="1148" y1="648" x2="1176" y2="648" class="edge-muted"/>
+  <text x="1188" y="653" class="sub" fill="#334155">E-mail fora do Academy</text>
+</svg>
