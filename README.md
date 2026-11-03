@@ -202,10 +202,11 @@ O banco do RDS começa vazio. Depois do primeiro deploy, rode o workflow manual 
 
 A documentação da API é gerada com Swagger a partir das anotações dos handlers e fica em [`docs/swagger/`](docs/swagger/). Com a aplicação rodando, a UI abre em `/swagger/index.html` e faz as chamadas para o mesmo endereço em que foi aberta, seja localhost, Minikube ou EKS.
 
-Também deixamos duas collections do Postman em [`.dev/postman/`](.dev/postman/):
+Também deixamos três collections do Postman em [`.dev/postman/`](.dev/postman/):
 
 - `soat-architecture.postman_collection.json`, com todos os endpoints;
-- `soat-demo-fluxo-completo.postman_collection.json`, que percorre o fluxo da OS do login até a entrega e pode ser executada inteira no Collection Runner.
+- `soat-demo-fluxo-completo.postman_collection.json`, que percorre o fluxo da OS do login até a entrega;
+- `soat-fase-2.postman_collection.json`, focada nos requisitos de API do PDF da Fase 2, incluindo listagem priorizada com e sem filtro de status. Pode ser executada no Collection Runner; a variável `decisao_orcamento` seleciona aprovação ou rejeição.
 
 A variável `base_url` aponta para o EKS. Para testar localmente, use o valor de `local_url` (`http://localhost:8080`).
 
@@ -378,4 +379,4 @@ Um hook de `pre-push` local, instalado via `make hooks-install`, roda mocks, lin
 - [Preparação do Learner Lab](docs/AWS_SETUP.md): environment e credenciais da sessão do lab no GitHub
 - [CI/CD](docs/CI_CD.md): CI em GitHub Actions (testes, cobertura, segurança) e deploy no EKS por tag, com diagramas de cada etapa, credenciais e rollback
 - [Swagger](docs/swagger/): documentação da API gerada a partir dos handlers
-- [Collections Postman](.dev/postman/): todos os endpoints e o fluxo completo da demo
+- [Collections Postman](.dev/postman/): todos os endpoints, o fluxo completo da demo e o recorte de APIs da Fase 2
